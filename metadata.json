@@ -1,0 +1,8 @@
+{
+  "name": "Remix APSIWA - Andhra Pradesh Solar Integrators Welfare Association",
+  "description": "Official institutional portal for Andhra Pradesh Solar Integrators Welfare Association (APSIWA), providing member enrolment with firm registration, media activities gallery, industry representation, and state solar network governance.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

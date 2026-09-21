@@ -7,7 +7,6 @@ import { HomeScreen } from './components/HomeScreen';
 import { AboutScreen } from './components/AboutScreen';
 import { GalleryScreen } from './components/GalleryScreen';
 import { MembershipScreen } from './components/MembershipScreen';
-import { AuthScreen } from './components/AuthScreen';
 import { SplashScreen } from './components/SplashScreen';
 import { GalleryLightbox } from './components/GalleryLightbox';
 import { StatusTrackerModal } from './components/StatusTrackerModal';
@@ -30,9 +29,6 @@ export function App() {
   // Splash Screen State (2 seconds duration)
   const [showSplash, setShowSplash] = useState(true);
 
-  // Post-Splash Authentication Screen (Login & Signup with Skip Now)
-  const [showPostSplashAuth, setShowPostSplashAuth] = useState(true);
-
   // Active Navigation Tab
   const [currentTab, setCurrentTab] = useState<NavTab>('home');
   const [selectedGalleryItem, setSelectedGalleryItem] = useState<GalleryItem | null>(null);
@@ -41,7 +37,7 @@ export function App() {
   // Dynamic Website Settings (Fees, QR code, bank info, secretariat contacts)
   const [websiteSettings, setWebsiteSettings] = useState<WebsiteSettings>(() => fetchWebsiteSettings());
 
-  // User Authentication State
+  // Current Admin / Active Session State
   const [currentUser, setCurrentUser] = useState<UserProfile | null>(() => {
     try {
       const saved = localStorage.getItem('apsiwa_current_user');
@@ -50,8 +46,6 @@ export function App() {
       return null;
     }
   });
-  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
-  const [authModalMode, setAuthModalMode] = useState<'login' | 'signup'>('login');
 
   // Pending Membership Application Payload for Payment Screen
   const [pendingApplicationData, setPendingApplicationData] = useState<Partial<MembershipApplication> | null>(null);
@@ -74,28 +68,16 @@ export function App() {
     }
   };
 
-  // Handle Auth open
-  const handleOpenAuth = (mode: 'login' | 'signup' = 'login') => {
-    setAuthModalMode(mode);
-    setIsAuthModalOpen(true);
-  };
-
-  // Handle Login / Signup Success (Directly Redirects into Membership Page)
-  const handleLoginSuccess = (user: UserProfile) => {
-    setCurrentUser(user);
-    try {
-      localStorage.setItem('apsiwa_current_user', JSON.stringify(user));
-    } catch (err) {
-      console.error('Failed to persist user session', err);
-    }
-    setIsAuthModalOpen(false);
-    setShowPostSplashAuth(false);
-    // Redirect directly into membership page
-    setCurrentTab('membership');
-  };
-
   // Handle Switching to Admin User for demo / governance testing
   const handleSwitchToAdminUser = (adminEmail: string) => {
+    if (!adminEmail) {
+      setCurrentUser(null);
+      try {
+        localStorage.removeItem('apsiwa_current_user');
+      } catch {}
+      return;
+    }
+
     const adminUser: UserProfile = {
       id: `admin-${adminEmail.replace(/[^a-zA-Z0-9]/g, '')}`,
       email: adminEmail,
@@ -118,29 +100,25 @@ export function App() {
     setWebsiteSettings(newSettings);
   };
 
-  // Check active Supabase session on startup & listen to auth changes
+  // Check active Supabase session on startup & listen to auth changes (for Admin users)
   useEffect(() => {
     if (isSupabaseConfigured()) {
-      // Get initial session
       supabase.auth.getSession().then(({ data: { session } }) => {
         if (session?.user) {
           const profile = mapSupabaseUserToProfile(session.user);
           setCurrentUser(profile);
-          setShowPostSplashAuth(false);
           fetchUserApplications(session.user.email).then((apps) => {
             if (apps && apps.length > 0) setApplications(apps);
           });
         }
       });
 
-      // Listen to auth state changes (login, logout, token refresh)
       const {
         data: { subscription },
       } = supabase.auth.onAuthStateChange((_event, session) => {
         if (session?.user) {
           const profile = mapSupabaseUserToProfile(session.user);
           setCurrentUser(profile);
-          setShowPostSplashAuth(false);
           try {
             localStorage.setItem('apsiwa_current_user', JSON.stringify(profile));
           } catch {}
@@ -212,16 +190,10 @@ export function App() {
       {/* 2-Second Splash Screen on initial load */}
       {showSplash && <SplashScreen onFinish={() => setShowSplash(false)} />}
 
-      {/* Post-Splash Authentication View: Login & Signup with Skip Now */}
-      {!showSplash && showPostSplashAuth && !currentUser ? (
-        <AuthScreen
-          initialMode="login"
-          onLoginSuccess={handleLoginSuccess}
-          onSkip={() => setShowPostSplashAuth(false)}
-        />
-      ) : (
+      {/* Main Website Flow */}
+      {!showSplash && (
         <>
-          {/* Sticky Header with First Line (Logo + Become Member + Profile) & Second Line (Navigation) */}
+          {/* Sticky Header with First Line (Logo + Become Member + Admin Portal) & Second Line (Navigation) */}
           <Header
             currentTab={currentTab}
             onNavigate={(tab) => setCurrentTab(tab)}
@@ -229,7 +201,6 @@ export function App() {
             applicationCount={applications.length}
             currentUser={currentUser}
             onLogout={handleLogout}
-            onOpenAuth={handleOpenAuth}
           />
 
           {/* Main Content View Container (pt-28 for 2-line header offset) */}
@@ -276,7 +247,6 @@ export function App() {
                 onUpdateUser={handleUpdateUser}
                 applications={applications}
                 onNavigateMembership={() => setCurrentTab('membership')}
-                onOpenAuth={() => handleOpenAuth('login')}
               />
             )}
 
@@ -293,14 +263,6 @@ export function App() {
             )}
 
             {currentTab === 'about' && <AboutScreen onNavigate={(tab) => setCurrentTab(tab)} />}
-
-            {currentTab === 'auth' && (
-              <AuthScreen
-                initialMode={authModalMode}
-                onLoginSuccess={handleLoginSuccess}
-                onNavigate={(tab) => setCurrentTab(tab)}
-              />
-            )}
           </main>
 
           {/* Global Footer */}
@@ -320,16 +282,6 @@ export function App() {
             onClose={() => setIsTrackerOpen(false)}
             applications={applications}
           />
-
-          {/* Login / Sign Up Modal */}
-          {isAuthModalOpen && (
-            <AuthScreen
-              isModal={true}
-              initialMode={authModalMode}
-              onLoginSuccess={handleLoginSuccess}
-              onClose={() => setIsAuthModalOpen(false)}
-            />
-          )}
         </>
       )}
     </div>

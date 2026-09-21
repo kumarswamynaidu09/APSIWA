@@ -32,15 +32,14 @@ interface ProfileScreenProps {
   onUpdateUser: (updated: UserProfile) => void;
   applications: MembershipApplication[];
   onNavigateMembership: () => void;
-  onOpenAuth: () => void;
+  onOpenAuth?: () => void;
 }
 
 export const ProfileScreen: React.FC<ProfileScreenProps> = ({
   user,
   onUpdateUser,
   applications,
-  onNavigateMembership,
-  onOpenAuth
+  onNavigateMembership
 }) => {
   const [activeTab, setActiveTab] = useState<'details' | 'status' | 'card'>('card');
   const [cardSide, setCardSide] = useState<'front' | 'back' | 'both'>('front');
@@ -68,6 +67,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
     gstNumber: user?.gstNumber || linkedApp?.gstNumber || '37AAAAA0000A1Z5',
     bloodGroup: user?.bloodGroup || 'O +ve',
     address: user?.address || linkedApp?.officeAddress || 'Andhra Pradesh, India',
+    avatarUrl: user?.avatarUrl || linkedApp?.photoUrl,
     membershipId: user?.membershipId || linkedApp?.id || `APSIWA-LM-${new Date().getFullYear()}-0101`,
     joinedDate: user?.joinedDate || linkedApp?.submissionDate || '2026',
     validUntil: user?.validUntil || '31-MAR-2029',
@@ -190,30 +190,6 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
     window.print();
   };
 
-  if (!user) {
-    return (
-      <div className="max-w-4xl mx-auto px-4 py-16 text-center">
-        <div className="bg-white rounded-3xl p-10 border border-[#e0e3e6] shadow-sm max-w-lg mx-auto space-y-6">
-          <div className="w-16 h-16 rounded-2xl bg-[#f2f4f7] flex items-center justify-center mx-auto text-[#003477]">
-            <User size={32} />
-          </div>
-          <div className="space-y-2">
-            <h2 className="text-2xl font-bold text-[#191c1e]">Member Authentication Required</h2>
-            <p className="text-sm text-[#434752] leading-relaxed">
-              Please sign in or register your account to view your APSIWA member profile, track enrolment status, and download your official Membership ID card.
-            </p>
-          </div>
-          <button
-            onClick={onOpenAuth}
-            className="w-full py-3 rounded-xl bg-[#003477] hover:bg-[#024aa3] text-white text-sm font-bold shadow-md transition-all cursor-pointer"
-          >
-            Sign In / Register Account
-          </button>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="max-w-7xl mx-auto px-margin py-8 space-y-8 animate-in fade-in duration-300">
       {/* PROFILE BANNER / HEADER */}
@@ -227,8 +203,8 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-5">
             <div className="relative group">
               <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl bg-white p-1 shadow-md border-2 border-[#ffbe3b]/60 flex items-center justify-center overflow-hidden">
-                {user.avatarUrl ? (
-                  <img src={user.avatarUrl} alt={memberData.name} className="w-full h-full object-cover rounded-xl" />
+                {memberData.avatarUrl ? (
+                  <img src={memberData.avatarUrl} alt={memberData.name} className="w-full h-full object-cover rounded-xl" />
                 ) : (
                   <div className="w-full h-full bg-[#f2f4f7] rounded-xl flex items-center justify-center text-[#003477] font-bold text-2xl">
                     {memberData.name.charAt(0)}
@@ -432,8 +408,8 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                   {/* Member Photo */}
                   <div className="flex flex-col items-center gap-1 shrink-0">
                     <div className="w-20 h-24 rounded-lg bg-[#f2f4f7] border-2 border-[#003477] overflow-hidden flex items-center justify-center shadow-inner">
-                      {user.avatarUrl ? (
-                        <img src={user.avatarUrl} alt={memberData.name} className="w-full h-full object-cover" />
+                      {memberData.avatarUrl ? (
+                        <img src={memberData.avatarUrl} alt={memberData.name} className="w-full h-full object-cover" />
                       ) : (
                         <div className="w-full h-full bg-gradient-to-br from-[#003477] to-[#024aa3] text-white flex items-center justify-center font-bold text-2xl">
                           {memberData.name.charAt(0)}
@@ -566,8 +542,8 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                   {/* Member Photo */}
                   <div className="flex flex-col items-center gap-1.5 shrink-0">
                     <div className="w-22 h-26 rounded-xl bg-[#f2f4f7] border-2 border-[#003477] overflow-hidden flex items-center justify-center shadow-md">
-                      {user.avatarUrl ? (
-                        <img src={user.avatarUrl} alt={memberData.name} className="w-full h-full object-cover" />
+                      {memberData.avatarUrl ? (
+                        <img src={memberData.avatarUrl} alt={memberData.name} className="w-full h-full object-cover" />
                       ) : (
                         <div className="w-full h-full bg-gradient-to-br from-[#003477] to-[#024aa3] text-white flex items-center justify-center font-extrabold text-3xl">
                           {memberData.name.charAt(0)}

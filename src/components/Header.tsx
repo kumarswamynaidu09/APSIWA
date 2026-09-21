@@ -10,7 +10,6 @@ interface HeaderProps {
   applicationCount: number;
   currentUser: UserProfile | null;
   onLogout: () => void;
-  onOpenAuth: (mode?: 'login' | 'signup') => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -19,8 +18,7 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenStatusTracker,
   applicationCount,
   currentUser,
-  onLogout,
-  onOpenAuth
+  onLogout
 }) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
@@ -82,23 +80,70 @@ export const Header: React.FC<HeaderProps> = ({
           {/* Right: Become Member CTA & Profile Section */}
           <div className="flex items-center justify-end gap-2.5 sm:gap-3.5 shrink-0">
             {/* Admin Dashboard Quick Button for Admins or direct access */}
-            <button
-              onClick={() => {
-                onNavigate('admin');
-                window.scrollTo({ top: 0, behavior: 'smooth' });
-              }}
-              className={`inline-flex items-center gap-1.5 px-3 py-1.5 sm:py-2 text-[12px] font-bold rounded-xl border transition-all cursor-pointer whitespace-nowrap shadow-2xs ${
-                currentTab === 'admin'
-                  ? 'bg-[#003477] text-white border-[#003477]'
-                  : isAdmin
-                  ? 'bg-[#ffbe3b]/20 text-[#00285e] border-[#ffbe3b] hover:bg-[#ffbe3b]/30'
-                  : 'bg-[#f2f4f7] text-[#003477] border-[#e0e3e6] hover:bg-[#e0e3e6]'
-              }`}
-              title="APSIWA Secretariat Admin Portal"
-            >
-              <ShieldAlert size={15} className={isAdmin ? 'text-[#b25e00]' : 'text-[#003477]'} />
-              <span className="hidden sm:inline">Admin Portal</span>
-            </button>
+            {isAdmin ? (
+              <div className="relative" ref={dropdownRef}>
+                <button
+                  onClick={() => setProfileDropdownOpen(!profileDropdownOpen)}
+                  className="flex items-center gap-2 py-1.5 px-3 rounded-xl bg-[#ffbe3b]/20 hover:bg-[#ffbe3b]/30 border border-[#ffbe3b] text-[#00285e] transition-colors cursor-pointer whitespace-nowrap"
+                >
+                  <ShieldAlert size={15} className="text-[#b25e00]" />
+                  <span className="text-[12px] font-bold hidden sm:inline">Admin: {currentUser?.email?.split('@')[0]}</span>
+                  <ChevronDown
+                    size={14}
+                    className={`text-[#737783] transition-transform ${
+                      profileDropdownOpen ? 'rotate-180' : ''
+                    }`}
+                  />
+                </button>
+
+                {profileDropdownOpen && (
+                  <div className="absolute right-0 top-full mt-2 w-56 bg-white rounded-2xl shadow-xl border border-[#e0e3e6] py-2 z-50 animate-in fade-in zoom-in-95 duration-150">
+                    <div className="px-4 py-2.5 border-b border-[#e0e3e6]">
+                      <p className="text-[10px] text-[#737783] uppercase font-bold">Secretariat Council</p>
+                      <p className="text-[12px] font-bold text-[#191c1e] truncate">{currentUser?.email}</p>
+                    </div>
+                    <div className="py-1">
+                      <button
+                        onClick={() => {
+                          setProfileDropdownOpen(false);
+                          onNavigate('admin');
+                        }}
+                        className="w-full text-left px-4 py-2 text-[13px] text-[#003477] font-bold hover:bg-[#f2f4f7] flex items-center gap-2 cursor-pointer"
+                      >
+                        <ShieldAlert size={15} />
+                        <span>Admin Dashboard</span>
+                      </button>
+                      <button
+                        onClick={() => {
+                          setProfileDropdownOpen(false);
+                          onLogout();
+                        }}
+                        className="w-full text-left px-4 py-2 text-[13px] text-[#ba1a1a] font-semibold hover:bg-[#ffdad6]/40 flex items-center gap-2 cursor-pointer"
+                      >
+                        <LogOut size={15} />
+                        <span>Sign Out Admin</span>
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <button
+                onClick={() => {
+                  onNavigate('admin');
+                  window.scrollTo({ top: 0, behavior: 'smooth' });
+                }}
+                className={`inline-flex items-center gap-1.5 px-3 py-1.5 sm:py-2 text-[12px] font-bold rounded-xl border transition-all cursor-pointer whitespace-nowrap shadow-2xs ${
+                  currentTab === 'admin'
+                    ? 'bg-[#003477] text-white border-[#003477]'
+                    : 'bg-[#f2f4f7] text-[#003477] border-[#e0e3e6] hover:bg-[#e0e3e6]'
+                }`}
+                title="APSIWA Secretariat Admin Portal"
+              >
+                <ShieldAlert size={15} className="text-[#003477]" />
+                <span>Admin Portal</span>
+              </button>
+            )}
 
             {/* Become a Member Button with Blinking Pulse Effect & 60% Expo Discount Badge */}
             <button
@@ -114,145 +159,6 @@ export const Header: React.FC<HeaderProps> = ({
               <span className="material-symbols-outlined text-[17px] sm:text-[19px]">how_to_reg</span>
               <span>Become a Member</span>
             </button>
-
-            {/* Profile & Account Section in First Line */}
-            <div className="relative" ref={dropdownRef}>
-              {currentUser ? (
-                /* Logged In Profile Trigger */
-                <button
-                  onClick={() => setProfileDropdownOpen(!profileDropdownOpen)}
-                  className="flex items-center gap-2 py-1.5 px-2 sm:px-3 rounded-xl bg-[#f2f4f7] hover:bg-[#eceef1] border border-[#e0e3e6] transition-colors cursor-pointer group whitespace-nowrap"
-                >
-                  <div className="w-8 h-8 rounded-full bg-[#003477] text-white flex items-center justify-center font-bold text-[12px] shadow-xs shrink-0">
-                    {currentUser.name ? currentUser.name.charAt(0).toUpperCase() : 'U'}
-                  </div>
-                  <div className="hidden md:flex flex-col text-left">
-                    <span className="text-[12px] font-bold text-[#191c1e] max-w-[110px] truncate leading-tight">
-                      {currentUser.name}
-                    </span>
-                    <span className="text-[10px] text-[#006e2e] font-semibold flex items-center gap-0.5">
-                      <CheckCircle2 size={10} />
-                      {isAdmin ? 'Admin' : 'Member'}
-                    </span>
-                  </div>
-                  <ChevronDown
-                    size={14}
-                    className={`text-[#737783] transition-transform ${
-                      profileDropdownOpen ? 'rotate-180' : ''
-                    }`}
-                  />
-                </button>
-              ) : (
-                /* Not Logged In: Profile / Sign In Button */
-                <button
-                  onClick={() => onOpenAuth('login')}
-                  className="flex items-center gap-1.5 py-2 px-3 sm:px-3.5 rounded-xl bg-[#f2f4f7] hover:bg-[#e0e3e6] border border-[#e0e3e6] text-[#003477] text-[13px] font-semibold transition-colors cursor-pointer whitespace-nowrap"
-                  title="Sign In / Register Profile"
-                >
-                  <User size={16} />
-                  <span className="hidden sm:inline">Profile / Sign In</span>
-                </button>
-              )}
-
-              {/* Profile Dropdown Menu */}
-              {profileDropdownOpen && currentUser && (
-                <div className="absolute right-0 top-full mt-2 w-64 bg-white rounded-2xl shadow-xl border border-[#e0e3e6] py-2 z-50 animate-in fade-in zoom-in-95 duration-150">
-                  <div className="px-4 py-3 border-b border-[#e0e3e6] space-y-1">
-                    <p className="text-[13px] font-bold text-[#191c1e] truncate">{currentUser.name}</p>
-                    <p className="text-[11px] text-[#737783] truncate">{currentUser.email}</p>
-                    {currentUser.phoneNumber && (
-                      <p className="text-[11px] text-[#434752]">{currentUser.phoneNumber}</p>
-                    )}
-                    <span className="inline-block mt-1 px-2 py-0.5 rounded bg-[#8bf69d]/20 text-[#006e2e] text-[10px] font-bold">
-                      {currentUser.membershipId || (isAdmin ? 'APSIWA Admin' : 'APSIWA Verified')}
-                    </span>
-                  </div>
-
-                  <div className="py-1">
-                    {/* Admin Dashboard Link in Dropdown */}
-                    <button
-                      onClick={() => {
-                        setProfileDropdownOpen(false);
-                        onNavigate('admin');
-                      }}
-                      className="w-full text-left px-4 py-2 text-[13px] text-[#b25e00] font-bold hover:bg-[#fff8e6] flex items-center justify-between cursor-pointer"
-                    >
-                      <span className="flex items-center gap-2">
-                        <ShieldAlert size={16} />
-                        <span>Admin Dashboard</span>
-                      </span>
-                      <span className="px-1.5 py-0.5 bg-[#ffbe3b] text-[#00285e] text-[10px] font-black rounded-full">
-                        Admin
-                      </span>
-                    </button>
-
-                    <button
-                      onClick={() => {
-                        setProfileDropdownOpen(false);
-                        onNavigate('profile');
-                      }}
-                      className="w-full text-left px-4 py-2 text-[13px] text-[#003477] font-semibold hover:bg-[#f2f4f7] flex items-center justify-between cursor-pointer"
-                    >
-                      <span className="flex items-center gap-2">
-                        <span className="material-symbols-outlined text-[18px]">
-                          account_circle
-                        </span>
-                        <span>My Profile &amp; ID Card</span>
-                      </span>
-                      <span className="px-1.5 py-0.5 bg-[#006e2e] text-white text-[10px] font-bold rounded-full">
-                        Active
-                      </span>
-                    </button>
-
-                    <button
-                      onClick={() => {
-                        setProfileDropdownOpen(false);
-                        onNavigate('profile');
-                      }}
-                      className="w-full text-left px-4 py-2 text-[13px] text-[#191c1e] hover:bg-[#f2f4f7] flex items-center justify-between cursor-pointer"
-                    >
-                      <span className="flex items-center gap-2">
-                        <span className="material-symbols-outlined text-[18px] text-[#003477]">
-                          verified_user
-                        </span>
-                        <span>Enrolment Status</span>
-                      </span>
-                      {applicationCount > 0 && (
-                        <span className="px-1.5 py-0.5 bg-[#006e2e] text-white text-[10px] font-bold rounded-full">
-                          {applicationCount}
-                        </span>
-                      )}
-                    </button>
-
-                    <button
-                      onClick={() => {
-                        setProfileDropdownOpen(false);
-                        onNavigate('profile');
-                      }}
-                      className="w-full text-left px-4 py-2 text-[13px] text-[#191c1e] hover:bg-[#f2f4f7] flex items-center gap-2 cursor-pointer"
-                    >
-                      <span className="material-symbols-outlined text-[18px] text-[#003477]">
-                        badge
-                      </span>
-                      <span>Download ID Card</span>
-                    </button>
-                  </div>
-
-                  <div className="pt-1 border-t border-[#e0e3e6]">
-                    <button
-                      onClick={() => {
-                        setProfileDropdownOpen(false);
-                        onLogout();
-                      }}
-                      className="w-full text-left px-4 py-2 text-[13px] text-[#ba1a1a] hover:bg-[#ffdad6]/40 flex items-center gap-2 cursor-pointer font-medium"
-                    >
-                      <LogOut size={16} />
-                      <span>Sign Out</span>
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
 
             {/* Quick Status Tracker Icon with Application Badge */}
             <button
@@ -355,18 +261,7 @@ export const Header: React.FC<HeaderProps> = ({
               <span>Admin Secretariat Dashboard</span>
             </button>
 
-            {!currentUser ? (
-              <button
-                onClick={() => {
-                  setMobileMenuOpen(false);
-                  onOpenAuth('login');
-                }}
-                className="w-full py-2.5 px-4 bg-[#003477] text-white rounded-xl text-center font-semibold text-[13px] flex items-center justify-center gap-2"
-              >
-                <User size={16} />
-                <span>Sign In / Sign Up</span>
-              </button>
-            ) : (
+            {isAdmin && currentUser && (
               <div className="p-3 bg-[#f2f4f7] rounded-xl flex items-center justify-between text-[12px]">
                 <div>
                   <p className="font-bold text-[#191c1e]">{currentUser.name}</p>
@@ -377,9 +272,9 @@ export const Header: React.FC<HeaderProps> = ({
                     setMobileMenuOpen(false);
                     onLogout();
                   }}
-                  className="px-2.5 py-1 text-[#ba1a1a] bg-white rounded border border-[#e0e3e6] font-semibold"
+                  className="px-2.5 py-1 text-[#ba1a1a] bg-white rounded border border-[#e0e3e6] font-semibold cursor-pointer"
                 >
-                  Sign Out
+                  Sign Out Admin
                 </button>
               </div>
             )}

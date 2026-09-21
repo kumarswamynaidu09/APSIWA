@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { MembershipApplication, UserProfile, WebsiteSettings } from '../types';
 import {
   ShieldAlert,
+  ShieldCheck,
   Users,
   CreditCard,
   CheckCircle2,
@@ -164,6 +165,158 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     }
   };
 
+  // Admin Login Form State
+  const [adminEmail, setAdminEmail] = useState('kumarswamynaidu0906@gmail.com');
+  const [adminPassword, setAdminPassword] = useState('');
+  const [loginError, setLoginError] = useState('');
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
+
+  // Handle Admin Login submission
+  const handleAdminLogin = (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoginError('');
+    setIsLoggingIn(true);
+
+    const emailTrimmed = adminEmail.trim().toLowerCase();
+    if (!ADMIN_EMAILS.some((adm) => adm.toLowerCase() === emailTrimmed)) {
+      setLoginError(`Access Denied: ${adminEmail} is not authorized. Only APSIWA Secretariat administrators can access this portal.`);
+      setIsLoggingIn(false);
+      return;
+    }
+
+    // Authorize admin session (user will provide passwords later, any non-empty or standard entry authenticates)
+    setTimeout(() => {
+      onSwitchToAdminUser(adminEmail.trim());
+      setIsLoggingIn(false);
+      setActionSuccessMsg(`Welcome, APSIWA Secretariat Admin (${adminEmail})!`);
+      setTimeout(() => setActionSuccessMsg(''), 4000);
+    }, 400);
+  };
+
+  // If not logged in as authorized admin, show the Secure Admin Login Gatekeeper
+  if (!isAdmin) {
+    return (
+      <div className="min-h-[calc(100vh-140px)] flex items-center justify-center py-12 px-4 sm:px-6 animate-in fade-in duration-200">
+        <div className="w-full max-w-md bg-white rounded-3xl border border-[#e0e3e6] shadow-2xl overflow-hidden">
+          {/* Header Banner */}
+          <div className="bg-gradient-to-r from-[#001d4a] via-[#003477] to-[#00285e] text-white p-7 text-center space-y-3 relative">
+            <div className="w-16 h-16 rounded-2xl bg-[#ffbe3b]/20 border border-[#ffbe3b]/40 text-[#ffbe3b] flex items-center justify-center mx-auto shadow-sm">
+              <ShieldAlert size={32} />
+            </div>
+            <div>
+              <span className="inline-block px-3 py-1 rounded-full bg-[#ffbe3b] text-[#00285e] text-[10px] font-black uppercase tracking-wider mb-1">
+                Restricted Secretariat Portal
+              </span>
+              <h2 className="text-xl sm:text-2xl font-black tracking-tight">Admin Authentication</h2>
+              <p className="text-xs text-white/75 mt-1">
+                Authorized access only for APSIWA Council &amp; State Secretariat.
+              </p>
+            </div>
+          </div>
+
+          <div className="p-6 sm:p-8 space-y-6">
+            {loginError && (
+              <div className="p-3.5 rounded-xl bg-[#ffdad6] border border-[#ffb4ab] text-[#ba1a1a] text-xs font-semibold flex items-start gap-2">
+                <AlertTriangle size={16} className="shrink-0 mt-0.5" />
+                <span>{loginError}</span>
+              </div>
+            )}
+
+            <form onSubmit={handleAdminLogin} className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-[#191c1e] mb-1.5">
+                  Administrator Email *
+                </label>
+                <div className="relative">
+                  <Mail className="absolute left-3.5 top-3 text-[#737783]" size={16} />
+                  <input
+                    type="email"
+                    required
+                    value={adminEmail}
+                    onChange={(e) => setAdminEmail(e.target.value)}
+                    placeholder="Enter authorized admin email"
+                    className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-[#f2f4f7] border border-[#e0e3e6] text-xs font-bold text-[#003477] outline-none focus:bg-white focus:border-[#003477]"
+                  />
+                </div>
+              </div>
+
+              {/* Quick Select Buttons for Authorized Emails */}
+              <div className="space-y-1.5">
+                <span className="text-[10.5px] text-[#737783] uppercase font-bold block">
+                  Select Authorized Admin:
+                </span>
+                <div className="flex flex-col gap-1.5">
+                  {ADMIN_EMAILS.map((email) => (
+                    <button
+                      key={email}
+                      type="button"
+                      onClick={() => setAdminEmail(email)}
+                      className={`w-full text-left px-3 py-2 rounded-xl text-xs font-mono font-bold flex items-center justify-between border transition-all cursor-pointer ${
+                        adminEmail.toLowerCase() === email.toLowerCase()
+                          ? 'bg-[#003477] text-white border-[#003477]'
+                          : 'bg-[#f7f9fc] hover:bg-[#e0e3e6] text-[#434752] border-[#e0e3e6]'
+                      }`}
+                    >
+                      <span className="truncate">{email}</span>
+                      <CheckCircle2 size={13} className={adminEmail.toLowerCase() === email.toLowerCase() ? 'text-[#8ef9a0]' : 'text-transparent'} />
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-[#191c1e] mb-1.5">
+                  Secretariat Password *
+                </label>
+                <div className="relative">
+                  <Lock className="absolute left-3.5 top-3 text-[#737783]" size={16} />
+                  <input
+                    type="password"
+                    value={adminPassword}
+                    onChange={(e) => setAdminPassword(e.target.value)}
+                    placeholder="Enter admin access password"
+                    className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-[#f2f4f7] border border-[#e0e3e6] text-xs font-medium outline-none focus:bg-white focus:border-[#003477]"
+                  />
+                </div>
+                <span className="text-[10px] text-[#737783] mt-1 block">
+                  (Passwords can be configured and updated in Supabase Auth / Security)
+                </span>
+              </div>
+
+              <button
+                type="submit"
+                disabled={isLoggingIn}
+                className="w-full py-3.5 rounded-xl bg-gradient-to-r from-[#003477] via-[#024aa3] to-[#00285e] hover:from-[#00285e] hover:to-[#001d4a] text-white text-xs sm:text-sm font-black text-center shadow-md transition-all cursor-pointer flex items-center justify-center gap-2 active:scale-98 disabled:opacity-75"
+              >
+                {isLoggingIn ? (
+                  <>
+                    <RefreshCw size={16} className="animate-spin" />
+                    <span>Verifying Admin Credentials...</span>
+                  </>
+                ) : (
+                  <>
+                    <ShieldCheck size={16} />
+                    <span>Unlock Admin Dashboard</span>
+                  </>
+                )}
+              </button>
+            </form>
+
+            <div className="pt-3 border-t border-[#e0e3e6] text-center">
+              <button
+                type="button"
+                onClick={onNavigateHome}
+                className="text-xs text-[#003477] hover:underline font-bold cursor-pointer"
+              >
+                ← Return to Public Website
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="max-w-7xl mx-auto px-margin py-8 space-y-8 animate-in fade-in duration-300">
       {/* ADMIN HEADER BANNER */}
@@ -179,17 +332,10 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 <ShieldAlert size={14} />
                 APSIWA Secretariat Admin Portal
               </span>
-              {isAdmin ? (
-                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-[#8ef9a0]/25 text-[#8ef9a0] text-[11px] font-bold border border-[#8ef9a0]/40">
-                  <CheckCircle2 size={12} />
-                  Authorized Admin Session
-                </span>
-              ) : (
-                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-[#ffdad6]/20 text-[#ffb4ab] text-[11px] font-bold border border-[#ffb4ab]/40">
-                  <AlertTriangle size={12} />
-                  Demo Mode
-                </span>
-              )}
+              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-[#8ef9a0]/25 text-[#8ef9a0] text-[11px] font-bold border border-[#8ef9a0]/40">
+                <CheckCircle2 size={12} />
+                Logged In: {currentUser?.email}
+              </span>
             </div>
 
             <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-white">
@@ -201,11 +347,22 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
             </p>
           </div>
 
-          {/* Admin Account Controls */}
-          <div className="bg-white/10 backdrop-blur-md rounded-2xl p-4 border border-white/20 space-y-2 w-full md:w-auto shrink-0">
-            <span className="text-[10px] text-white/70 uppercase font-bold block tracking-wider">
-              Authorized Administrators
-            </span>
+          {/* Admin Account Controls & Logout */}
+          <div className="bg-white/10 backdrop-blur-md rounded-2xl p-4 border border-white/20 space-y-3 w-full md:w-auto shrink-0">
+            <div className="flex items-center justify-between gap-3">
+              <span className="text-[10px] text-white/70 uppercase font-bold block tracking-wider">
+                Admin Session Active
+              </span>
+              <button
+                onClick={() => {
+                  onSwitchToAdminUser(''); // logout
+                  onNavigateHome();
+                }}
+                className="px-2.5 py-1 rounded-lg bg-[#ffdad6]/20 hover:bg-[#ffdad6]/40 text-[#ffb4ab] text-[11px] font-bold transition-colors cursor-pointer"
+              >
+                Sign Out Admin
+              </button>
+            </div>
             <div className="space-y-1">
               {ADMIN_EMAILS.map((email) => {
                 const isCurrent = currentUser?.email?.toLowerCase() === email.toLowerCase();

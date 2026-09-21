@@ -1,4 +1,4 @@
-export type NavTab = 'home' | 'gallery' | 'membership' | 'about' | 'contact' | 'auth' | 'profile';
+export type NavTab = 'home' | 'gallery' | 'membership' | 'payment' | 'about' | 'contact' | 'auth' | 'profile';
 
 export interface UserProfile {
   id: string;

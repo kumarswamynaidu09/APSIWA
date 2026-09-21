@@ -12,6 +12,7 @@ import { SplashScreen } from './components/SplashScreen';
 import { GalleryLightbox } from './components/GalleryLightbox';
 import { StatusTrackerModal } from './components/StatusTrackerModal';
 import { ProfileScreen } from './components/ProfileScreen';
+import { PaymentScreen } from './components/PaymentScreen';
 import { supabase, mapSupabaseUserToProfile, signOut, isSupabaseConfigured } from './lib/supabase';
 
 export function App() {
@@ -37,6 +38,9 @@ export function App() {
   });
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [authModalMode, setAuthModalMode] = useState<'login' | 'signup'>('login');
+
+  // Pending Membership Application Payload for Payment Screen
+  const [pendingApplicationData, setPendingApplicationData] = useState<Partial<MembershipApplication> | null>(null);
 
   // Stored Applications
   const [applications, setApplications] = useState<MembershipApplication[]>([
@@ -65,7 +69,7 @@ export function App() {
     setIsAuthModalOpen(true);
   };
 
-  // Handle Login / Signup Success
+  // Handle Login / Signup Success (Directly Redirects into Membership Page)
   const handleLoginSuccess = (user: UserProfile) => {
     setCurrentUser(user);
     try {
@@ -75,9 +79,8 @@ export function App() {
     }
     setIsAuthModalOpen(false);
     setShowPostSplashAuth(false);
-    if (currentTab === 'auth') {
-      setCurrentTab('home');
-    }
+    // Redirect directly into membership page
+    setCurrentTab('membership');
   };
 
   // Check active Supabase session on startup & listen to auth changes
@@ -136,9 +139,26 @@ export function App() {
     } catch {}
   };
 
-  // Handle new membership application submission
-  const handleSubmitApplication = (newApp: MembershipApplication) => {
-    setApplications((prev) => [...prev, newApp]);
+  // Handle Proceed from Membership Page to Payment Page
+  const handleProceedToPayment = (formData: Partial<MembershipApplication>) => {
+    setPendingApplicationData(formData);
+    setCurrentTab('payment');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  // Handle Payment Complete
+  const handlePaymentSuccess = (newApp: MembershipApplication) => {
+    setApplications((prev) => [newApp, ...prev]);
+    if (currentUser) {
+      const updatedUser: UserProfile = {
+        ...currentUser,
+        membershipId: newApp.id,
+        companyName: newApp.companyName,
+        district: newApp.district,
+        membershipStatus: 'Active'
+      };
+      handleUpdateUser(updatedUser);
+    }
   };
 
   // Scroll to top on tab change
@@ -172,7 +192,7 @@ export function App() {
           />
 
           {/* Main Content View Container (pt-28 for 2-line header offset) */}
-          {/* Flow: Home -> Gallery -> Membership -> Profile -> About */}
+          {/* Flow: Home -> Gallery -> Membership -> Payment -> Profile -> About */}
           <main className="flex-1 pt-28 sm:pt-32">
             {currentTab === 'home' && (
               <HomeScreen
@@ -191,9 +211,19 @@ export function App() {
 
             {currentTab === 'membership' && (
               <MembershipScreen
-                onSubmitApplication={handleSubmitApplication}
+                currentUser={currentUser}
+                onProceedToPayment={handleProceedToPayment}
                 onNavigateHome={() => setCurrentTab('home')}
-                onOpenTracker={() => setIsTrackerOpen(true)}
+              />
+            )}
+
+            {currentTab === 'payment' && (
+              <PaymentScreen
+                applicationData={pendingApplicationData}
+                currentUser={currentUser}
+                onPaymentSuccess={handlePaymentSuccess}
+                onBackToMembership={() => setCurrentTab('membership')}
+                onNavigateProfile={() => setCurrentTab('profile')}
               />
             )}
 

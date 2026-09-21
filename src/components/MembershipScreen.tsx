@@ -7,13 +7,15 @@ import {
   Phone,
   Calendar,
   MapPin,
-  FileText,
   Upload,
   CheckCircle2,
   ShieldCheck,
   ArrowRight,
   Sparkles,
-  CreditCard
+  CreditCard,
+  Percent,
+  Tag,
+  Flame
 } from 'lucide-react';
 
 interface MembershipScreenProps {
@@ -81,35 +83,31 @@ export const MembershipScreen: React.FC<MembershipScreenProps> = ({
   currentUser,
   onProceedToPayment
 }) => {
-  // Representative Details State
-  const [fullName, setFullName] = useState(currentUser?.name || 'Er. B. Raghava Choudhary');
-  const [designation, setDesignation] = useState('Managing Director');
-  const [mobileNumber, setMobileNumber] = useState(currentUser?.phoneNumber || '98480 32190');
-  const [emailAddress, setEmailAddress] = useState(currentUser?.email || 'raghava.solar@amaravati-epc.in');
-  const [dob, setDob] = useState('1988-06-15');
-  const [bloodGroup, setBloodGroup] = useState('O +ve');
+  // Representative Details State (Realtime - Initialized from real logged-in user or empty)
+  const [fullName, setFullName] = useState(currentUser?.name || '');
+  const [designation, setDesignation] = useState(currentUser?.designation || '');
+  const [mobileNumber, setMobileNumber] = useState(currentUser?.phoneNumber || '');
+  const [emailAddress, setEmailAddress] = useState(currentUser?.email || '');
+  const [dob, setDob] = useState('');
+  const [bloodGroup, setBloodGroup] = useState(currentUser?.bloodGroup || 'O +ve');
 
   // Representative Photo State
-  const [memberPhotoUrl, setMemberPhotoUrl] = useState<string>(
-    currentUser?.avatarUrl ||
-      'https://lh3.googleusercontent.com/aida-public/AB6AXuDxboUC-jIFd6gy0Rk8AY1BSfmhxdF6jOsxXocg7EqCSqShZipOt7pK1rv6SIPEBx2XBWpuqHe3TO0XTse86szzJ2KeTaKJzn9YLVslaYu5ussZvZs1ZsSfeNjHWjSMuLpQSrsjeDdvtSrEPhOipY-4DXjJfDa5SS_RWxkF5RbpA3UfMjXw-oLhQ7oEKNXFgoygyo4M0woc1TA-2BpIqFf4K0JW7gL-uyDSt8GYZq_cvWi4ZqEiJzc6Wg'
-  );
-  const [photoFileName, setPhotoFileName] = useState('official_portrait.jpg');
+  const [memberPhotoUrl, setMemberPhotoUrl] = useState<string>(currentUser?.avatarUrl || '');
+  const [photoFileName, setPhotoFileName] = useState('');
 
-  // Business / Firm Details State
-  const [companyName, setCompanyName] = useState('Amaravati SunTech Solar Solutions Pvt Ltd');
-  const [businessType, setBusinessType] = useState('Private Limited Company');
-  const [gstNumber, setGstNumber] = useState('37AABCU9603R1ZM');
-  const [district, setDistrict] = useState('NTR (Vijayawada)');
-  const [experience, setExperience] = useState('5 - 10 Years');
-  const [officeAddress, setOfficeAddress] = useState('D.No. 40-1-52, APIIC Industrial Area, Auto Nagar, Vijayawada');
-  const [pincode, setPincode] = useState('520007');
+  // Business / Firm Details State (Realtime empty inputs)
+  const [companyName, setCompanyName] = useState(currentUser?.companyName || '');
+  const [businessType, setBusinessType] = useState(currentUser?.businessType || 'Private Limited Company');
+  const [gstNumber, setGstNumber] = useState(currentUser?.gstNumber || '');
+  const [district, setDistrict] = useState(currentUser?.district || 'NTR (Vijayawada)');
+  const [experience, setExperience] = useState('1 - 3 Years');
+  const [officeAddress, setOfficeAddress] = useState(currentUser?.address || '');
+  const [pincode, setPincode] = useState('');
   const [selectedScopes, setSelectedScopes] = useState<string[]>([
-    'Residential Rooftop (PM Surya Ghar)',
-    'Commercial & Industrial (C&I)'
+    'Residential Rooftop (PM Surya Ghar)'
   ]);
 
-  const [declarationAccepted, setDeclarationAccepted] = useState(true);
+  const [declarationAccepted, setDeclarationAccepted] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
 
   const toggleScope = (scope: string) => {
@@ -134,18 +132,28 @@ export const MembershipScreen: React.FC<MembershipScreenProps> = ({
     e.preventDefault();
     setErrorMsg('');
 
-    if (!fullName.trim() || !mobileNumber.trim() || !emailAddress.trim()) {
-      setErrorMsg('Please complete all mandatory Representative Details.');
+    if (!fullName.trim()) {
+      setErrorMsg('Please enter the Representative Full Name.');
       return;
     }
 
-    if (!companyName.trim() || !officeAddress.trim() || !pincode.trim()) {
-      setErrorMsg('Please provide complete Business & Firm Information.');
+    if (!mobileNumber.trim() || !emailAddress.trim()) {
+      setErrorMsg('Please provide valid Mobile Number and Email Address.');
+      return;
+    }
+
+    if (!companyName.trim()) {
+      setErrorMsg('Please enter your Company / Firm Legal Name.');
+      return;
+    }
+
+    if (!officeAddress.trim() || !pincode.trim()) {
+      setErrorMsg('Please provide complete Registered Office Address and Pincode.');
       return;
     }
 
     if (!declarationAccepted) {
-      setErrorMsg('Please confirm the institutional declaration before proceeding.');
+      setErrorMsg('Please confirm the institutional declaration before proceeding to payment.');
       return;
     }
 
@@ -161,7 +169,7 @@ export const MembershipScreen: React.FC<MembershipScreenProps> = ({
       district: district,
       officeAddress: officeAddress.trim(),
       pincode: pincode.trim(),
-      photoUrl: memberPhotoUrl
+      photoUrl: memberPhotoUrl || undefined
     };
 
     onProceedToPayment(applicationPayload);
@@ -170,11 +178,11 @@ export const MembershipScreen: React.FC<MembershipScreenProps> = ({
   return (
     <div className="min-h-[calc(100vh-140px)] flex items-center justify-center py-10 px-4 sm:px-6">
       <div className="w-full max-w-4xl mx-auto space-y-8 animate-in fade-in duration-300">
-        {/* Top Centered Header */}
+        {/* Top Centered Header & Special Expo Offer Callout */}
         <div className="text-center space-y-3">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#003477]/10 text-[#003477] text-xs font-bold uppercase tracking-wider">
+          <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-[#003477]/10 text-[#003477] text-xs font-bold uppercase tracking-wider">
             <ShieldCheck size={14} />
-            <span>State Solar Integrators Welfare Association</span>
+            <span>State Solar Integrators Welfare Association (APSIWA)</span>
           </div>
 
           <h1 className="text-2xl sm:text-3xl font-extrabold text-[#191c1e] tracking-tight">
@@ -182,8 +190,35 @@ export const MembershipScreen: React.FC<MembershipScreenProps> = ({
           </h1>
 
           <p className="text-xs sm:text-sm text-[#434752] max-w-2xl mx-auto leading-relaxed">
-            Fill in your authorized representative information, upload your portrait photo, and provide registered firm credentials to join the official Andhra Pradesh solar network.
+            Register your solar EPC enterprise or installer firm into the official Andhra Pradesh state registry.
           </p>
+
+          {/* SPECIAL EXPO OFFER BANNER (60% DISCOUNT) */}
+          <div className="max-w-2xl mx-auto mt-2 bg-gradient-to-r from-[#ffbe3b]/20 via-[#ffbe3b]/30 to-[#8ef9a0]/30 border-2 border-[#ffbe3b] rounded-2xl p-3.5 sm:p-4 text-[#00285e] shadow-sm flex flex-col sm:flex-row items-center justify-between gap-3">
+            <div className="flex items-center gap-2.5 text-left">
+              <div className="w-10 h-10 rounded-xl bg-[#003477] text-[#ffbe3b] flex items-center justify-center font-bold shrink-0 shadow-xs animate-bounce">
+                <Flame size={22} />
+              </div>
+              <div>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-xs font-black uppercase tracking-wider text-[#003477]">
+                    Special Solar Expo Inaugural Offer
+                  </span>
+                  <span className="px-2 py-0.5 rounded-full bg-[#006e2e] text-white text-[10.5px] font-black uppercase tracking-wide">
+                    60% OFF
+                  </span>
+                </div>
+                <p className="text-[11.5px] text-[#434752] font-semibold">
+                  Regular Membership Fee <span className="line-through text-[#ba1a1a]">₹5,000</span> • Special Expo Fee <span className="font-extrabold text-[#006e2e] text-[13px]">₹2,000 / Year</span>
+                </p>
+              </div>
+            </div>
+
+            <div className="bg-white/80 rounded-xl px-3 py-1.5 border border-[#ffbe3b]/60 text-right shrink-0">
+              <span className="text-[10px] text-[#737783] block uppercase font-bold">You Save</span>
+              <span className="text-sm font-black text-[#006e2e]">₹3,000 (60% Discount)</span>
+            </div>
+          </div>
 
           {/* Stepper (Centered) */}
           <div className="flex items-center justify-center gap-3 pt-2">
@@ -194,7 +229,7 @@ export const MembershipScreen: React.FC<MembershipScreenProps> = ({
             <span className="text-[#ccd0d5]">→</span>
             <div className="flex items-center gap-1.5 text-xs font-semibold text-[#737783]">
               <CreditCard size={14} />
-              <span>2. Payment &amp; UTR Verification</span>
+              <span>2. Payment (₹2,000 Expo Offer)</span>
             </div>
           </div>
         </div>
@@ -206,15 +241,16 @@ export const MembershipScreen: React.FC<MembershipScreenProps> = ({
             <div className="flex items-center gap-3">
               <img src="/logo.png" alt="APSIWA" className="h-9 w-auto object-contain bg-white rounded p-0.5" />
               <div>
-                <h3 className="text-base font-extrabold leading-tight">APSIWA Enrolment Form</h3>
+                <h3 className="text-base font-extrabold leading-tight">APSIWA Realtime Enrolment Form</h3>
                 <span className="text-[11px] text-[#8ef9a0] font-semibold">
                   Andhra Pradesh Solar Integrators Welfare Association
                 </span>
               </div>
             </div>
-            <span className="hidden sm:inline-flex px-3 py-1 rounded-full bg-[#ffbe3b] text-[#00285e] text-xs font-black uppercase">
-              Annual Fee: ₹5,000
-            </span>
+            <div className="text-right">
+              <span className="text-[10px] text-[#8ef9a0] uppercase font-bold block">Expo Special Offer</span>
+              <span className="text-sm font-black text-[#ffbe3b]">₹2,000 <span className="line-through text-xs text-white/60 font-normal">₹5,000</span></span>
+            </div>
           </div>
 
           {errorMsg && (
@@ -246,19 +282,18 @@ export const MembershipScreen: React.FC<MembershipScreenProps> = ({
                       required
                       value={fullName}
                       onChange={(e) => setFullName(e.target.value)}
-                      placeholder="e.g. Er. B. Raghava Choudhary"
+                      placeholder="Enter Full Name"
                       className="w-full pl-9 pr-3.5 py-2 rounded-xl bg-[#f2f4f7] border border-[#e0e3e6] text-xs font-medium focus:bg-white focus:border-[#003477] outline-none"
                     />
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-[#191c1e] mb-1">Designation *</label>
+                  <label className="block text-xs font-bold text-[#191c1e] mb-1">Designation</label>
                   <div className="relative">
                     <Building2 className="absolute left-3.5 top-3 text-[#737783]" size={15} />
                     <input
                       type="text"
-                      required
                       value={designation}
                       onChange={(e) => setDesignation(e.target.value)}
                       placeholder="Managing Director / Partner / Proprietor"
@@ -276,7 +311,7 @@ export const MembershipScreen: React.FC<MembershipScreenProps> = ({
                       required
                       value={emailAddress}
                       onChange={(e) => setEmailAddress(e.target.value)}
-                      placeholder="raghava@amaravati-epc.in"
+                      placeholder="email@company.com"
                       className="w-full pl-9 pr-3.5 py-2 rounded-xl bg-[#f2f4f7] border border-[#e0e3e6] text-xs font-medium focus:bg-white focus:border-[#003477] outline-none"
                     />
                   </div>
@@ -291,7 +326,7 @@ export const MembershipScreen: React.FC<MembershipScreenProps> = ({
                       required
                       value={mobileNumber}
                       onChange={(e) => setMobileNumber(e.target.value)}
-                      placeholder="+91 98480 32190"
+                      placeholder="+91 98765 43210"
                       className="w-full pl-9 pr-3.5 py-2 rounded-xl bg-[#f2f4f7] border border-[#e0e3e6] text-xs font-medium focus:bg-white focus:border-[#003477] outline-none"
                     />
                   </div>
@@ -348,19 +383,17 @@ export const MembershipScreen: React.FC<MembershipScreenProps> = ({
                 </div>
 
                 <div className="flex-1 space-y-1 text-center sm:text-left">
-                  <h4 className="text-xs font-bold text-[#191c1e]">{photoFileName}</h4>
+                  <h4 className="text-xs font-bold text-[#191c1e]">
+                    {photoFileName || (memberPhotoUrl ? 'Photo Uploaded' : 'Upload Passport Size Photo')}
+                  </h4>
                   <p className="text-[11px] text-[#737783]">
                     This official photo will appear on your government-recognized APSIWA Smart Identity Card.
                   </p>
-                  <span className="inline-flex items-center gap-1 text-[10px] text-[#006e2e] font-semibold">
-                    <CheckCircle2 size={11} />
-                    High-Res Photo Ready
-                  </span>
                 </div>
 
                 <label className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-white border border-[#e0e3e6] text-xs font-bold text-[#003477] hover:bg-[#f2f4f7] cursor-pointer shadow-2xs transition-colors shrink-0">
                   <Upload size={14} />
-                  <span>Change Photo</span>
+                  <span>{memberPhotoUrl ? 'Change Photo' : 'Upload Photo'}</span>
                   <input type="file" accept="image/*" onChange={handlePhotoUpload} className="hidden" />
                 </label>
               </div>
@@ -389,7 +422,7 @@ export const MembershipScreen: React.FC<MembershipScreenProps> = ({
                       required
                       value={companyName}
                       onChange={(e) => setCompanyName(e.target.value)}
-                      placeholder="e.g. Amaravati SunTech Solar Solutions Pvt Ltd"
+                      placeholder="e.g. Surya Renewable Power Pvt Ltd"
                       className="w-full pl-9 pr-3.5 py-2 rounded-xl bg-[#f2f4f7] border border-[#e0e3e6] text-xs font-medium focus:bg-white focus:border-[#003477] outline-none"
                     />
                   </div>
@@ -414,13 +447,13 @@ export const MembershipScreen: React.FC<MembershipScreenProps> = ({
 
                 <div>
                   <label className="block text-xs font-bold text-[#191c1e] mb-1">
-                    GSTIN Number (Optional/Mandatory for Pvt Ltd)
+                    GSTIN Number (Optional)
                   </label>
                   <input
                     type="text"
                     value={gstNumber}
                     onChange={(e) => setGstNumber(e.target.value.toUpperCase())}
-                    placeholder="37AABCU9603R1ZM"
+                    placeholder="37AAAAA0000A1Z5"
                     className="w-full px-3.5 py-2 rounded-xl bg-[#f2f4f7] border border-[#e0e3e6] text-xs font-mono font-bold text-[#003477] focus:bg-white focus:border-[#003477] outline-none"
                   />
                 </div>
@@ -483,7 +516,7 @@ export const MembershipScreen: React.FC<MembershipScreenProps> = ({
                     required
                     value={pincode}
                     onChange={(e) => setPincode(e.target.value)}
-                    placeholder="520007"
+                    placeholder="e.g. 520001"
                     className="w-full px-3.5 py-2 rounded-xl bg-[#f2f4f7] border border-[#e0e3e6] text-xs font-medium focus:bg-white focus:border-[#003477] outline-none"
                   />
                 </div>
@@ -534,14 +567,14 @@ export const MembershipScreen: React.FC<MembershipScreenProps> = ({
             {/* PROCEED TO PAYMENT ACTION BUTTON */}
             <div className="pt-4 border-t border-[#e0e3e6] flex flex-col sm:flex-row items-center justify-between gap-4">
               <div className="text-xs text-[#737783] text-center sm:text-left">
-                Step 1 of 2: Details will be locked upon proceeding to the secure payment screen.
+                Step 1 of 2: Details will be locked upon proceeding to the secure payment screen (₹2,000 Expo Offer).
               </div>
 
               <button
                 type="submit"
                 className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-8 py-3.5 rounded-xl bg-[#006e2e] hover:bg-[#005322] text-white text-sm font-extrabold shadow-md transition-all cursor-pointer active:scale-98"
               >
-                <span>Confirm Details &amp; Proceed to Payment</span>
+                <span>Confirm Details &amp; Proceed to Payment (₹2,000)</span>
                 <ArrowRight size={16} />
               </button>
             </div>

@@ -13,7 +13,13 @@ import { GalleryLightbox } from './components/GalleryLightbox';
 import { StatusTrackerModal } from './components/StatusTrackerModal';
 import { ProfileScreen } from './components/ProfileScreen';
 import { PaymentScreen } from './components/PaymentScreen';
-import { supabase, mapSupabaseUserToProfile, signOut, isSupabaseConfigured } from './lib/supabase';
+import {
+  supabase,
+  mapSupabaseUserToProfile,
+  signOut,
+  isSupabaseConfigured,
+  fetchUserApplications
+} from './lib/supabase';
 
 export function App() {
   // Splash Screen State (2 seconds duration)
@@ -42,26 +48,15 @@ export function App() {
   // Pending Membership Application Payload for Payment Screen
   const [pendingApplicationData, setPendingApplicationData] = useState<Partial<MembershipApplication> | null>(null);
 
-  // Stored Applications
-  const [applications, setApplications] = useState<MembershipApplication[]>([
-    {
-      id: 'APSIWA-2026-48192',
-      fullName: 'B. Raghava Choudhary',
-      mobileNumber: '98480 32190',
-      emailAddress: 'raghava.solar@amaravati-epc.in',
-      dob: '1988-06-15',
-      companyName: 'SuryaTeja Clean Energy Infra LLP',
-      photoUrl:
-        'https://lh3.googleusercontent.com/aida-public/AB6AXuDxboUC-jIFd6gy0Rk8AY1BSfmhxdF6jOsxXocg7EqCSqShZipOt7pK1rv6SIPEBx2XBWpuqHe3TO0XTse86szzJ2KeTaKJzn9YLVslaYu5ussZvZs1ZsSfeNjHWjSMuLpQSrsjeDdvtSrEPhOipY-4DXjJfDa5SS_RWxkF5RbpA3UfMjXw-oLhQ7oEKNXFgoygyo4M0woc1TA-2BpIqFf4K0JW7gL-uyDSt8GYZq_cvWi4ZqEiJzc6Wg',
-      utrNumber: '409218204910',
-      paymentDate: '2026-03-01',
-      amountPaid: '₹ 5,000.00',
-      paymentScreenshotUrl:
-        'https://lh3.googleusercontent.com/aida-public/AB6AXuDKQoPqerF6MxsFeWOQEuqjZRMOpmIHXD4ubJsjC-HLBkb6H8aH9E9q4bIuwFwOaQ9HK3Sl8Oi7yGFQsqhG4gzs4IAJR6F5Q4YqVeAWJmOkjit-g7lwqdHivjTfhp8-bLHcRqeadCaE1t74t3t6gYv7azrvqiE2k6DlgVUwMN8KJCsNkOaLr8bg1e3HlnPyaCfMTDN4U0wMK5fgZI_vn5mcEVrdfVRypfOrTx3_NkRqVrmFLkSMKtwx4A',
-      submissionDate: 'Mar 01, 2026',
-      status: 'Pending Verification'
+  // Realtime Stored Applications (loaded from Supabase / localStorage)
+  const [applications, setApplications] = useState<MembershipApplication[]>(() => {
+    try {
+      const raw = localStorage.getItem('apsiwa_membership_applications');
+      return raw ? JSON.parse(raw) : [];
+    } catch {
+      return [];
     }
-  ]);
+  });
 
   // Handle Auth open
   const handleOpenAuth = (mode: 'login' | 'signup' = 'login') => {
@@ -92,6 +87,9 @@ export function App() {
           const profile = mapSupabaseUserToProfile(session.user);
           setCurrentUser(profile);
           setShowPostSplashAuth(false);
+          fetchUserApplications(session.user.email).then((apps) => {
+            if (apps && apps.length > 0) setApplications(apps);
+          });
         }
       });
 
@@ -106,6 +104,9 @@ export function App() {
           try {
             localStorage.setItem('apsiwa_current_user', JSON.stringify(profile));
           } catch {}
+          fetchUserApplications(session.user.email).then((apps) => {
+            if (apps && apps.length > 0) setApplications(apps);
+          });
         } else {
           setCurrentUser(null);
           try {

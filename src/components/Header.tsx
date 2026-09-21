@@ -78,14 +78,17 @@ export const Header: React.FC<HeaderProps> = ({
 
           {/* Right: Become Member CTA & Profile Section */}
           <div className="flex items-center justify-end gap-2.5 sm:gap-3.5 shrink-0">
-            {/* Become a Member Button in First Line */}
+            {/* Become a Member Button with Blinking Pulse Effect & 60% Expo Discount Badge */}
             <button
               onClick={() => {
                 onNavigate('membership');
                 window.scrollTo({ top: 0, behavior: 'smooth' });
               }}
-              className="inline-flex items-center gap-2 px-3.5 sm:px-5 py-2 sm:py-2.5 bg-[#024aa3] text-[#ffffff] text-[12.5px] sm:text-[13.5px] font-semibold rounded-xl hover:bg-[#003477] transition-all duration-150 shadow-sm cursor-pointer whitespace-nowrap active:scale-98"
+              className="relative inline-flex items-center gap-1.5 sm:gap-2 px-3.5 sm:px-5 py-2 sm:py-2.5 bg-gradient-to-r from-[#006e2e] via-[#008738] to-[#006e2e] text-[#ffffff] text-[12.5px] sm:text-[13.5px] font-extrabold rounded-xl shadow-md hover:shadow-lg hover:scale-105 transition-all duration-200 cursor-pointer whitespace-nowrap active:scale-95 animate-pulse ring-2 ring-[#8ef9a0]/70"
             >
+              <span className="absolute -top-2.5 -right-1 px-1.5 py-0.5 rounded-full bg-[#ffbe3b] text-[#00285e] text-[9px] font-black uppercase tracking-wider shadow-sm animate-bounce">
+                60% OFF
+              </span>
               <span className="material-symbols-outlined text-[17px] sm:text-[19px]">how_to_reg</span>
               <span>Become a Member</span>
             </button>
@@ -336,10 +339,10 @@ export const Header: React.FC<HeaderProps> = ({
                 setMobileMenuOpen(false);
                 window.scrollTo({ top: 0, behavior: 'smooth' });
               }}
-              className="w-full py-2.5 px-4 bg-[#024aa3] text-white rounded-xl text-center font-semibold text-[13px] flex items-center justify-center gap-2"
+              className="w-full py-2.5 px-4 bg-gradient-to-r from-[#006e2e] via-[#008738] to-[#006e2e] text-white rounded-xl text-center font-extrabold text-[13px] flex items-center justify-center gap-2 animate-pulse shadow-md"
             >
               <span className="material-symbols-outlined text-[18px]">how_to_reg</span>
-              <span>Become a Member (₹5,000 / Year)</span>
+              <span>Become a Member (₹2,000 • 60% Expo OFF)</span>
             </button>
 
             <button

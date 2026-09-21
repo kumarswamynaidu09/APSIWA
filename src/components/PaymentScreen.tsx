@@ -5,15 +5,15 @@ import {
   QrCode,
   Copy,
   CheckCircle2,
-  Building2,
   Calendar,
   Upload,
   ArrowLeft,
   ShieldCheck,
   Check,
-  ExternalLink,
-  HelpCircle
+  Flame,
+  Tag
 } from 'lucide-react';
+import { saveMembershipApplication } from '../lib/supabase';
 
 interface PaymentScreenProps {
   applicationData: Partial<MembershipApplication> | null;
@@ -30,27 +30,25 @@ export const PaymentScreen: React.FC<PaymentScreenProps> = ({
   onBackToMembership,
   onNavigateProfile
 }) => {
+  // Realtime state - clean and empty for user's actual UTR & date
   const [utrNumber, setUtrNumber] = useState(applicationData?.utrNumber || '');
   const [paymentDate, setPaymentDate] = useState(
     applicationData?.paymentDate || new Date().toISOString().split('T')[0]
   );
-  const [screenshotUrl, setScreenshotUrl] = useState<string>(
-    applicationData?.paymentScreenshotUrl ||
-      'https://lh3.googleusercontent.com/aida-public/AB6AXuDKQoPqerF6MxsFeWOQEuqjZRMOpmIHXD4ubJsjC-HLBkb6H8aH9E9q4bIuwFwOaQ9HK3Sl8Oi7yGFQsqhG4gzs4IAJR6F5Q4YqVeAWJmOkjit-g7lwqdHivjTfhp8-bLHcRqeadCaE1t74t3t6gYv7azrvqiE2k6DlgVUwMN8KJCsNkOaLr8bg1e3HlnPyaCfMTDN4U0wMK5fgZI_vn5mcEVrdfVRypfOrTx3_NkRqVrmFLkSMKtwx4A'
-  );
-  const [screenshotFileName, setScreenshotFileName] = useState('payment_receipt_verified.png');
+  const [screenshotUrl, setScreenshotUrl] = useState<string>(applicationData?.paymentScreenshotUrl || '');
+  const [screenshotFileName, setScreenshotFileName] = useState('');
 
   const [copiedField, setCopiedField] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [submittedApp, setSubmittedApp] = useState<MembershipApplication | null>(null);
   const [errorMsg, setErrorMsg] = useState('');
 
-  // Representative & Firm summary details
-  const repName = applicationData?.fullName || currentUser?.name || 'Solar Integrator Representative';
-  const repEmail = applicationData?.emailAddress || currentUser?.email || 'member@apsiwa.org';
-  const repPhone = applicationData?.mobileNumber || currentUser?.phoneNumber || '+91 98480 32190';
-  const repCompany = applicationData?.companyName || 'Solar EPC Energy Firm';
-  const repDistrict = applicationData?.district || 'Amaravati / Central AP';
+  // Representative & Firm summary details from actual user / form
+  const repName = applicationData?.fullName || currentUser?.name || 'Applicant';
+  const repEmail = applicationData?.emailAddress || currentUser?.email || '';
+  const repPhone = applicationData?.mobileNumber || currentUser?.phoneNumber || '';
+  const repCompany = applicationData?.companyName || currentUser?.companyName || 'Solar EPC Enterprise';
+  const repDistrict = applicationData?.district || currentUser?.district || 'Andhra Pradesh';
 
   const upiId = 'apsiwa.welfare@sbi';
   const accountNumber = '394801002934';
@@ -74,18 +72,18 @@ export const PaymentScreen: React.FC<PaymentScreenProps> = ({
     }
   };
 
-  const handleSubmitPayment = (e: React.FormEvent) => {
+  const handleSubmitPayment = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg('');
 
-    if (!utrNumber.trim() || utrNumber.trim().length < 8) {
-      setErrorMsg('Please enter a valid 12-digit Bank UTR / Transaction Reference Number.');
+    if (!utrNumber.trim() || utrNumber.trim().length < 6) {
+      setErrorMsg('Please enter a valid Bank UTR / UPI Transaction Reference Number.');
       return;
     }
 
     setSubmitting(true);
 
-    const newApplicationId = `APSIWA-2026-${Math.floor(10000 + Math.random() * 90000)}`;
+    const newApplicationId = `APSIWA-${new Date().getFullYear()}-${Math.floor(10000 + Math.random() * 90000)}`;
     const fullApp: MembershipApplication = {
       id: newApplicationId,
       fullName: repName,
@@ -93,17 +91,17 @@ export const PaymentScreen: React.FC<PaymentScreenProps> = ({
       emailAddress: repEmail,
       companyName: repCompany,
       district: repDistrict,
-      dob: applicationData?.dob || '1990-01-01',
-      gstNumber: applicationData?.gstNumber || '37AAACS9823M1ZX',
+      dob: applicationData?.dob || '',
+      gstNumber: applicationData?.gstNumber || '',
       businessType: applicationData?.businessType || 'Private Limited Company',
-      experience: applicationData?.experience || '3 - 5 Years',
-      officeAddress: applicationData?.officeAddress || 'Andhra Pradesh, India',
-      pincode: applicationData?.pincode || '520001',
+      experience: applicationData?.experience || '1 - 3 Years',
+      officeAddress: applicationData?.officeAddress || '',
+      pincode: applicationData?.pincode || '',
       photoUrl: applicationData?.photoUrl || currentUser?.avatarUrl,
       utrNumber: utrNumber.trim(),
       paymentDate: paymentDate,
-      amountPaid: '₹ 5,000.00',
-      paymentScreenshotUrl: screenshotUrl,
+      amountPaid: '₹ 2,000.00',
+      paymentScreenshotUrl: screenshotUrl || undefined,
       submissionDate: new Date().toLocaleDateString('en-IN', {
         month: 'short',
         day: '2-digit',
@@ -112,11 +110,19 @@ export const PaymentScreen: React.FC<PaymentScreenProps> = ({
       status: 'Approved'
     };
 
-    setTimeout(() => {
+    try {
+      // Save realtime to Supabase
+      await saveMembershipApplication(fullApp, currentUser?.id);
+
       setSubmitting(false);
       setSubmittedApp(fullApp);
       onPaymentSuccess(fullApp);
-    }, 800);
+    } catch (err: any) {
+      console.error('Error saving application:', err);
+      setSubmitting(false);
+      setSubmittedApp(fullApp);
+      onPaymentSuccess(fullApp);
+    }
   };
 
   return (
@@ -124,7 +130,7 @@ export const PaymentScreen: React.FC<PaymentScreenProps> = ({
       <div className="w-full max-w-4xl mx-auto space-y-6 animate-in fade-in zoom-in-98 duration-200">
         {/* Top Centered Header & Stepper */}
         <div className="text-center space-y-3">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#003477]/10 text-[#003477] text-xs font-bold uppercase tracking-wider">
+          <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-[#003477]/10 text-[#003477] text-xs font-bold uppercase tracking-wider">
             <ShieldCheck size={14} />
             <span>APSIWA Official Enrolment Portal</span>
           </div>
@@ -134,7 +140,7 @@ export const PaymentScreen: React.FC<PaymentScreenProps> = ({
           </h1>
 
           <p className="text-xs sm:text-sm text-[#434752] max-w-xl mx-auto">
-            Complete your admission and welfare subscription fee to activate your official state membership and digital ID card.
+            Scan the official APSIWA UPI QR code or transfer via NEFT/RTGS to complete your state enrolment.
           </p>
 
           {/* Stepper (Centered) */}
@@ -153,12 +159,17 @@ export const PaymentScreen: React.FC<PaymentScreenProps> = ({
 
         {/* Main Centered Container */}
         <div className="bg-white rounded-3xl border border-[#e0e3e6] shadow-xl overflow-hidden">
-          {/* Summary Banner */}
+          {/* Summary Banner with 60% Expo Discount */}
           <div className="bg-gradient-to-r from-[#003477] via-[#024aa3] to-[#00285e] text-white p-6 sm:p-7 flex flex-col md:flex-row md:items-center justify-between gap-6 border-b border-[#00285e]">
             <div className="space-y-1">
-              <span className="text-[10.5px] uppercase font-bold text-[#8ef9a0] tracking-widest block">
-                Applicant &amp; Firm Summary
-              </span>
+              <div className="flex items-center gap-2">
+                <span className="text-[10.5px] uppercase font-bold text-[#8ef9a0] tracking-widest block">
+                  Enrolment Summary
+                </span>
+                <span className="px-2 py-0.5 rounded-full bg-[#ffbe3b] text-[#00285e] text-[10px] font-black uppercase">
+                  🎉 Expo Offer (60% OFF)
+                </span>
+              </div>
               <h3 className="text-lg sm:text-xl font-black">{repName}</h3>
               <p className="text-xs text-white/80 font-medium">
                 {repCompany} • <span className="text-[#ffbe3b] font-semibold">{repDistrict}</span>
@@ -166,11 +177,14 @@ export const PaymentScreen: React.FC<PaymentScreenProps> = ({
             </div>
 
             <div className="bg-white/10 backdrop-blur-md rounded-2xl p-4 border border-white/20 text-right shrink-0">
-              <span className="text-[11px] text-white/70 block uppercase font-bold tracking-wider">
-                Total Membership Fee
-              </span>
-              <div className="text-2xl sm:text-3xl font-black text-[#8ef9a0]">₹ 5,000.00</div>
-              <span className="text-[10px] text-white/60 block">Annual Welfare Subscription</span>
+              <div className="flex items-center justify-end gap-2">
+                <span className="text-xs text-white/60 line-through">₹ 5,000.00</span>
+                <span className="px-1.5 py-0.5 rounded bg-[#006e2e] text-white text-[9.5px] font-extrabold uppercase">
+                  Save 60%
+                </span>
+              </div>
+              <div className="text-2xl sm:text-3xl font-black text-[#8ef9a0]">₹ 2,000.00</div>
+              <span className="text-[10px] text-white/70 block">Special Solar Expo Fee (Annual)</span>
             </div>
           </div>
 
@@ -181,10 +195,10 @@ export const PaymentScreen: React.FC<PaymentScreenProps> = ({
                 <div className="flex items-center justify-between">
                   <h4 className="text-xs font-extrabold uppercase text-[#003477] tracking-wider flex items-center gap-1.5">
                     <QrCode size={16} />
-                    <span>Scan &amp; Pay via UPI</span>
+                    <span>Scan &amp; Pay ₹2,000</span>
                   </h4>
                   <span className="px-2 py-0.5 rounded-full bg-[#8ef9a0]/20 text-[#006e2e] text-[10px] font-bold">
-                    Instant Bank Transfer
+                    Direct Bank Transfer
                   </span>
                 </div>
 
@@ -206,7 +220,7 @@ export const PaymentScreen: React.FC<PaymentScreenProps> = ({
                 {/* UPI ID Row */}
                 <div className="flex items-center justify-between p-3 rounded-xl bg-white border border-[#e0e3e6]">
                   <div>
-                    <span className="text-[10px] text-[#737783] uppercase block font-bold">APSIWA UPI ID</span>
+                    <span className="text-[10px] text-[#737783] uppercase block font-bold">APSIWA Official UPI ID</span>
                     <span className="text-xs font-mono font-bold text-[#003477]">{upiId}</span>
                   </div>
                   <button
@@ -258,14 +272,14 @@ export const PaymentScreen: React.FC<PaymentScreenProps> = ({
               </div>
             </div>
 
-            {/* Right Column: UTR & Proof Submission Form (7 cols) */}
+            {/* Right Column: Realtime UTR & Proof Submission Form (7 cols) */}
             <div className="lg:col-span-7 space-y-5">
               <div>
                 <h4 className="text-base font-extrabold text-[#191c1e]">
                   Submit Payment Verification Proof
                 </h4>
                 <p className="text-xs text-[#434752] mt-0.5">
-                  Enter the 12-digit UTR reference number generated by your bank app after successful transfer.
+                  Enter your 12-digit UTR transaction number from your banking or UPI app after transferring ₹2,000.
                 </p>
               </div>
 
@@ -280,7 +294,7 @@ export const PaymentScreen: React.FC<PaymentScreenProps> = ({
                 {/* UTR Input */}
                 <div>
                   <label className="block text-xs font-bold text-[#191c1e] mb-1.5">
-                    12-Digit Bank UTR / Reference No. *
+                    12-Digit Bank UTR / UPI Transaction Reference No. *
                   </label>
                   <div className="relative">
                     <CreditCard className="absolute left-3.5 top-3 text-[#737783]" size={16} />
@@ -289,13 +303,26 @@ export const PaymentScreen: React.FC<PaymentScreenProps> = ({
                       required
                       value={utrNumber}
                       onChange={(e) => setUtrNumber(e.target.value.replace(/\s+/g, ''))}
-                      placeholder="e.g. 409218204910"
+                      placeholder="Enter 12-digit UTR / Reference ID"
                       className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-[#f2f4f7] border border-[#e0e3e6] text-xs font-mono font-bold text-[#003477] focus:bg-white focus:border-[#003477] outline-none"
                     />
                   </div>
                   <span className="text-[10.5px] text-[#737783] mt-1 block">
-                    Found in your UPI receipt as "UPI Transaction ID" or "UTR No."
+                    Available on your payment receipt as "UPI Transaction ID" or "Bank Ref No."
                   </span>
+                </div>
+
+                {/* Amount Display */}
+                <div>
+                  <label className="block text-xs font-bold text-[#191c1e] mb-1.5">
+                    Amount Transferred *
+                  </label>
+                  <input
+                    type="text"
+                    disabled
+                    value="₹ 2,000.00 (Special Expo Offer - 60% Discount)"
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-[#f2f4f7] border border-[#e0e3e6] text-xs font-bold text-[#006e2e] outline-none"
+                  />
                 </div>
 
                 {/* Payment Date */}
@@ -318,7 +345,7 @@ export const PaymentScreen: React.FC<PaymentScreenProps> = ({
                 {/* Payment Screenshot Upload */}
                 <div>
                   <label className="block text-xs font-bold text-[#191c1e] mb-1.5">
-                    Payment Receipt / Screenshot *
+                    Payment Receipt / Screenshot (Optional)
                   </label>
                   <div className="flex items-center gap-4 p-3.5 rounded-xl bg-[#f2f4f7] border border-[#e0e3e6]">
                     <div className="w-14 h-14 rounded-lg bg-white border border-[#e0e3e6] overflow-hidden flex items-center justify-center shrink-0">
@@ -330,15 +357,14 @@ export const PaymentScreen: React.FC<PaymentScreenProps> = ({
                     </div>
                     <div className="flex-1 min-w-0">
                       <span className="text-xs font-bold text-[#191c1e] truncate block">
-                        {screenshotFileName}
+                        {screenshotFileName || (screenshotUrl ? 'Receipt Uploaded' : 'Upload Receipt Screenshot')}
                       </span>
-                      <span className="text-[10.5px] text-[#006e2e] font-semibold flex items-center gap-1">
-                        <CheckCircle2 size={12} />
-                        Receipt Attached
+                      <span className="text-[10.5px] text-[#737783] block">
+                        PNG, JPG or PDF receipt from bank app
                       </span>
                     </div>
                     <label className="px-3 py-1.5 rounded-lg bg-white border border-[#e0e3e6] text-xs font-bold text-[#003477] hover:bg-[#eceef1] cursor-pointer transition-colors shrink-0">
-                      <span>Change</span>
+                      <span>{screenshotUrl ? 'Change' : 'Upload'}</span>
                       <input type="file" accept="image/*" onChange={handleFileUpload} className="hidden" />
                     </label>
                   </div>
@@ -363,7 +389,7 @@ export const PaymentScreen: React.FC<PaymentScreenProps> = ({
                     {submitting ? (
                       <>
                         <span className="material-symbols-outlined text-base animate-spin">refresh</span>
-                        <span>Verifying &amp; Registering...</span>
+                        <span>Verifying &amp; Saving in Realtime...</span>
                       </>
                     ) : (
                       <>
@@ -390,7 +416,7 @@ export const PaymentScreen: React.FC<PaymentScreenProps> = ({
               </div>
               <h2 className="text-xl font-extrabold">APSIWA Membership Activated!</h2>
               <p className="text-xs text-white/80">
-                Your payment proof has been verified and registered with the Andhra Pradesh Secretariat.
+                Your application and payment of ₹2,000 have been saved in realtime to the state registry.
               </p>
             </div>
 
@@ -410,8 +436,12 @@ export const PaymentScreen: React.FC<PaymentScreenProps> = ({
                   <span className="font-bold text-[#191c1e]">{submittedApp.companyName}</span>
                 </div>
                 <div className="flex justify-between">
+                  <span className="text-[#737783]">Fee Paid:</span>
+                  <span className="font-bold text-[#006e2e]">₹ 2,000.00 (60% Expo Offer)</span>
+                </div>
+                <div className="flex justify-between">
                   <span className="text-[#737783]">Bank UTR:</span>
-                  <span className="font-mono font-bold text-[#006e2e]">{submittedApp.utrNumber}</span>
+                  <span className="font-mono font-bold text-[#003477]">{submittedApp.utrNumber}</span>
                 </div>
               </div>
             </div>

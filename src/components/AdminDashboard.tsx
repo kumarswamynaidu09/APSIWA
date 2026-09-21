@@ -83,11 +83,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   // Filtered applications list
   const filteredApps = applications.filter((app) => {
     const matchesSearch =
-      app.fullName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      app.companyName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      app.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      app.utrNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      app.emailAddress.toLowerCase().includes(searchQuery.toLowerCase());
+      (app.fullName || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (app.companyName || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (app.id || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (app.utrNumber || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (app.emailAddress || '').toLowerCase().includes(searchQuery.toLowerCase());
 
     const matchesStatus = statusFilter === 'All' || app.status === statusFilter;
     const matchesDistrict = districtFilter === 'All' || app.district === districtFilter;

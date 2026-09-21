@@ -39,7 +39,7 @@ export function App() {
   const [isTrackerOpen, setIsTrackerOpen] = useState(false);
 
   // Dynamic Website Settings (Fees, QR code, bank info, secretariat contacts)
-  const [websiteSettings, setWebsiteSettings] = useState<WebsiteSettings>(DEFAULT_WEBSITE_SETTINGS);
+  const [websiteSettings, setWebsiteSettings] = useState<WebsiteSettings>(() => fetchWebsiteSettings());
 
   // User Authentication State
   const [currentUser, setCurrentUser] = useState<UserProfile | null>(() => {
@@ -65,13 +65,6 @@ export function App() {
       return [];
     }
   });
-
-  // Load website settings & applications on start
-  useEffect(() => {
-    fetchWebsiteSettings().then((settings) => {
-      if (settings) setWebsiteSettings(settings);
-    });
-  }, []);
 
   // Reload applications helper
   const handleRefreshApplications = async () => {

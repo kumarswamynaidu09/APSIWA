@@ -33,6 +33,9 @@ export interface UserProfile {
   businessType?: string;
   bloodGroup?: string;
   address?: string;
+  experience?: string;
+  officeAddress?: string;
+  pincode?: string;
   validUntil?: string;
   membershipTier?: string;
   membershipStatus?: 'Active' | 'Pending Verification' | 'In Review' | 'Expired';

@@ -62,7 +62,7 @@ export const Header: React.FC<HeaderProps> = ({
               <img
                 alt="APSIWA Official Logo"
                 className="h-11 sm:h-13 w-auto object-contain transition-transform group-hover:scale-105 shrink-0"
-                src="https://lh3.googleusercontent.com/aida/AEtjO1XtZkjiEfKiqomreBUaiGljqTkyNgi1FUkOKJ3HvrCFYW8jYu8s7SUfAaG_WWw1VyG9kMbiZYBFjTbThj1g23WGqAkfylwD0MzfiMx2scfOtl_9YCFQzWF49omfwDGWJLCRAcjX99Jhbi1k8hQC5aG4ZRZ9o2CYYASYm1smUcxiC_FvrnMSfYE1H3_ZOdLP6sTUBjgaUTVNLcNGHLUFkzc5aCOd771sc1SKjEmXcbNyjyFgIn_OkJJwzUs3"
+                src="/logo.png"
               />
               <div className="flex flex-col min-w-0">
                 <span className="text-[17px] sm:text-[20px] font-extrabold text-[#003477] tracking-tight leading-none">

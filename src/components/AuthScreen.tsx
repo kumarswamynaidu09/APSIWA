@@ -143,7 +143,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <img
-            src="https://lh3.googleusercontent.com/aida/AEtjO1XtZkjiEfKiqomreBUaiGljqTkyNgi1FUkOKJ3HvrCFYW8jYu8s7SUfAaG_WWw1VyG9kMbiZYBFjTbThj1g23WGqAkfylwD0MzfiMx2scfOtl_9YCFQzWF49omfwDGWJLCRAcjX99Jhbi1k8hQC5aG4ZRZ9o2CYYASYm1smUcxiC_FvrnMSfYE1H3_ZOdLP6sTUBjgaUTVNLcNGHLUFkzc5aCOd771sc1SKjEmXcbNyjyFgIn_OkJJwzUs3"
+            src="/logo.png"
             alt="APSIWA"
             className="h-10 w-auto object-contain"
           />

@@ -54,7 +54,7 @@ export const SplashScreen: React.FC<SplashScreenProps> = ({ onFinish }) => {
           <div className="absolute -inset-3 rounded-full bg-gradient-to-tr from-[#ffbe3b]/30 to-[#8ef9a0]/20 blur-lg animate-pulse" />
           <div className="relative w-28 h-28 sm:w-32 sm:h-32 rounded-3xl bg-white p-3 shadow-2xl flex items-center justify-center border-2 border-white/20">
             <img
-              src="https://lh3.googleusercontent.com/aida/AEtjO1XtZkjiEfKiqomreBUaiGljqTkyNgi1FUkOKJ3HvrCFYW8jYu8s7SUfAaG_WWw1VyG9kMbiZYBFjTbThj1g23WGqAkfylwD0MzfiMx2scfOtl_9YCFQzWF49omfwDGWJLCRAcjX99Jhbi1k8hQC5aG4ZRZ9o2CYYASYm1smUcxiC_FvrnMSfYE1H3_ZOdLP6sTUBjgaUTVNLcNGHLUFkzc5aCOd771sc1SKjEmXcbNyjyFgIn_OkJJwzUs3"
+              src="/logo.png"
               alt="APSIWA Official Emblem"
               className="w-full h-full object-contain"
             />

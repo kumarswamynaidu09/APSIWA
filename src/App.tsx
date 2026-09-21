@@ -11,6 +11,7 @@ import { AuthScreen } from './components/AuthScreen';
 import { SplashScreen } from './components/SplashScreen';
 import { GalleryLightbox } from './components/GalleryLightbox';
 import { StatusTrackerModal } from './components/StatusTrackerModal';
+import { supabase, mapSupabaseUserToProfile, signOut, isSupabaseConfigured } from './lib/supabase';
 
 export function App() {
   // Splash Screen State (2 seconds duration)
@@ -78,8 +79,46 @@ export function App() {
     }
   };
 
+  // Check active Supabase session on startup & listen to auth changes
+  useEffect(() => {
+    if (isSupabaseConfigured()) {
+      // Get initial session
+      supabase.auth.getSession().then(({ data: { session } }) => {
+        if (session?.user) {
+          const profile = mapSupabaseUserToProfile(session.user);
+          setCurrentUser(profile);
+          setShowPostSplashAuth(false);
+        }
+      });
+
+      // Listen to auth state changes (login, logout, token refresh)
+      const {
+        data: { subscription },
+      } = supabase.auth.onAuthStateChange((_event, session) => {
+        if (session?.user) {
+          const profile = mapSupabaseUserToProfile(session.user);
+          setCurrentUser(profile);
+          setShowPostSplashAuth(false);
+          try {
+            localStorage.setItem('apsiwa_current_user', JSON.stringify(profile));
+          } catch {}
+        } else {
+          setCurrentUser(null);
+          try {
+            localStorage.removeItem('apsiwa_current_user');
+          } catch {}
+        }
+      });
+
+      return () => {
+        subscription.unsubscribe();
+      };
+    }
+  }, []);
+
   // Handle Logout
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    await signOut();
     setCurrentUser(null);
     try {
       localStorage.removeItem('apsiwa_current_user');

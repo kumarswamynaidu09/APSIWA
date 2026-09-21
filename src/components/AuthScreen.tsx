@@ -1,6 +1,12 @@
 import React, { useState } from 'react';
 import { UserProfile, NavTab } from '../types';
-import { Eye, EyeOff, Lock, Mail, User, Phone, ArrowLeft, CheckCircle2 } from 'lucide-react';
+import { Eye, EyeOff, Lock, Mail, User, Phone, CheckCircle2, ShieldCheck, KeyRound } from 'lucide-react';
+import {
+  signInWithEmail,
+  signUpWithEmail,
+  sendPasswordResetEmail,
+  isSupabaseConfigured
+} from '../lib/supabase';
 
 interface AuthScreenProps {
   initialMode?: 'login' | 'signup';
@@ -14,78 +20,72 @@ interface AuthScreenProps {
 export const AuthScreen: React.FC<AuthScreenProps> = ({
   initialMode = 'login',
   onLoginSuccess,
-  onNavigate,
   isModal = false,
   onClose,
   onSkip
 }) => {
-  const [mode, setMode] = useState<'login' | 'signup'>(initialMode);
+  const [mode, setMode] = useState<'login' | 'signup' | 'reset'>(initialMode);
 
-  // Login form state (strictly email and password as requested)
+  // Login form state
   const [loginEmail, setLoginEmail] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
 
-  // Signup form state (strictly name, phone number, email and password as requested)
+  // Signup form state
   const [signupName, setSignupName] = useState('');
   const [signupPhone, setSignupPhone] = useState('');
   const [signupEmail, setSignupEmail] = useState('');
   const [signupPassword, setSignupPassword] = useState('');
+
+  // Reset password state
+  const [resetEmail, setResetEmail] = useState('');
 
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
 
-  const handleLogin = (e: React.FormEvent) => {
+  const isConfigured = isSupabaseConfigured();
+
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg('');
+    setSuccessMsg('');
+
     if (!loginEmail.trim() || !loginPassword.trim()) {
       setErrorMsg('Please enter both your email address and password.');
       return;
     }
 
     setLoading(true);
-    setTimeout(() => {
-      // Check existing accounts in localStorage or fallback
-      const storedUsersRaw = localStorage.getItem('apsiwa_registered_users');
-      let registeredUsers: any[] = storedUsersRaw ? JSON.parse(storedUsersRaw) : [];
 
-      const existingUser = registeredUsers.find(
-        (u) => u.email.toLowerCase() === loginEmail.trim().toLowerCase()
-      );
+    try {
+      const { user, error } = await signInWithEmail(loginEmail, loginPassword);
 
-      const loggedInUser: UserProfile = existingUser
-        ? {
-            id: existingUser.id,
-            name: existingUser.name,
-            email: existingUser.email,
-            phoneNumber: existingUser.phoneNumber,
-            membershipId: existingUser.membershipId || 'APSIWA-MEM-2026',
-            joinedDate: existingUser.joinedDate || '2026'
-          }
-        : {
-            id: `usr_${Date.now()}`,
-            name: loginEmail.split('@')[0].replace(/[._-]/g, ' '),
-            email: loginEmail.trim(),
-            membershipId: 'APSIWA-MEM-2026',
-            joinedDate: new Date().toLocaleDateString('en-IN', {
-              month: 'short',
-              year: 'numeric'
-            })
-          };
+      if (error) {
+        setErrorMsg(error);
+        setLoading(false);
+        return;
+      }
 
+      if (user) {
+        setSuccessMsg('Signed in successfully!');
+        setTimeout(() => {
+          onLoginSuccess(user);
+          if (onClose) onClose();
+        }, 500);
+      }
+    } catch (err: any) {
+      setErrorMsg(err.message || 'Failed to sign in.');
+    } finally {
       setLoading(false);
-      setSuccessMsg('Signed in successfully!');
-      setTimeout(() => {
-        onLoginSuccess(loggedInUser);
-        if (onClose) onClose();
-      }, 500);
-    }, 600);
+    }
   };
 
-  const handleSignup = (e: React.FormEvent) => {
+  const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg('');
+    setSuccessMsg('');
+
     if (!signupName.trim() || !signupPhone.trim() || !signupEmail.trim() || !signupPassword.trim()) {
       setErrorMsg('Please provide name, phone number, email, and password.');
       return;
@@ -97,39 +97,69 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
     }
 
     setLoading(true);
-    setTimeout(() => {
-      const newUser: UserProfile = {
-        id: `usr_${Date.now()}`,
-        name: signupName.trim(),
-        phoneNumber: signupPhone.trim(),
-        email: signupEmail.trim().toLowerCase(),
-        membershipId: `APSIWA-2026-${Math.floor(10000 + Math.random() * 90000)}`,
-        joinedDate: new Date().toLocaleDateString('en-IN', {
-          month: 'short',
-          year: 'numeric'
-        })
-      };
 
-      // Save to localStorage for future logins
-      try {
-        const storedUsersRaw = localStorage.getItem('apsiwa_registered_users');
-        const registeredUsers: any[] = storedUsersRaw ? JSON.parse(storedUsersRaw) : [];
-        registeredUsers.push({
-          ...newUser,
-          password: signupPassword
-        });
-        localStorage.setItem('apsiwa_registered_users', JSON.stringify(registeredUsers));
-      } catch (err) {
-        console.error('Failed to save user', err);
+    try {
+      const { user, error, needsEmailConfirmation } = await signUpWithEmail(
+        signupEmail,
+        signupPassword,
+        {
+          name: signupName,
+          phoneNumber: signupPhone,
+        }
+      );
+
+      if (error) {
+        setErrorMsg(error);
+        setLoading(false);
+        return;
       }
 
+      if (needsEmailConfirmation) {
+        setSuccessMsg(
+          'Account created! Please check your email to verify your address before signing in.'
+        );
+        setTimeout(() => {
+          setMode('login');
+          setLoginEmail(signupEmail);
+        }, 3000);
+      } else if (user) {
+        setSuccessMsg('Account registered successfully!');
+        setTimeout(() => {
+          onLoginSuccess(user);
+          if (onClose) onClose();
+        }, 600);
+      }
+    } catch (err: any) {
+      setErrorMsg(err.message || 'Registration failed. Please try again.');
+    } finally {
       setLoading(false);
-      setSuccessMsg('Account created successfully!');
-      setTimeout(() => {
-        onLoginSuccess(newUser);
-        if (onClose) onClose();
-      }, 500);
-    }, 600);
+    }
+  };
+
+  const handleResetPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setErrorMsg('');
+    setSuccessMsg('');
+
+    if (!resetEmail.trim()) {
+      setErrorMsg('Please enter your registered email address.');
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const { error } = await sendPasswordResetEmail(resetEmail);
+      if (error) {
+        setErrorMsg(error);
+      } else {
+        setSuccessMsg('Password reset instructions have been sent to your email.');
+      }
+    } catch (err: any) {
+      setErrorMsg(err.message || 'Failed to send reset email.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleDemoLogin = () => {
@@ -148,11 +178,23 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
             className="h-10 w-auto object-contain"
           />
           <div>
-            <span className="text-[10px] font-bold tracking-widest text-[#003477] uppercase block">
-              APSIWA Member Portal
-            </span>
+            <div className="flex items-center gap-1.5">
+              <span className="text-[10px] font-bold tracking-widest text-[#003477] uppercase block">
+                APSIWA Portal
+              </span>
+              {isConfigured && (
+                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-[#8bf69d]/20 text-[#006e2e] text-[9px] font-bold">
+                  <ShieldCheck size={10} />
+                  Supabase
+                </span>
+              )}
+            </div>
             <span className="text-[13px] font-bold text-[#191c1e]">
-              {mode === 'login' ? 'Authorized Member Sign In' : 'Create Member Account'}
+              {mode === 'login'
+                ? 'Authorized Member Sign In'
+                : mode === 'signup'
+                ? 'Create Member Account'
+                : 'Reset Account Password'}
             </span>
           </div>
         </div>
@@ -183,38 +225,40 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
       </div>
 
       {/* Tabs */}
-      <div className="flex rounded-xl bg-[#f2f4f7] p-1 border border-[#e0e3e6]">
-        <button
-          type="button"
-          onClick={() => {
-            setMode('login');
-            setErrorMsg('');
-            setSuccessMsg('');
-          }}
-          className={`flex-1 py-2 text-[13px] font-bold rounded-lg transition-all cursor-pointer ${
-            mode === 'login'
-              ? 'bg-white text-[#003477] shadow-xs'
-              : 'text-[#434752] hover:text-[#191c1e]'
-          }`}
-        >
-          Sign In
-        </button>
-        <button
-          type="button"
-          onClick={() => {
-            setMode('signup');
-            setErrorMsg('');
-            setSuccessMsg('');
-          }}
-          className={`flex-1 py-2 text-[13px] font-bold rounded-lg transition-all cursor-pointer ${
-            mode === 'signup'
-              ? 'bg-white text-[#003477] shadow-xs'
-              : 'text-[#434752] hover:text-[#191c1e]'
-          }`}
-        >
-          Sign Up
-        </button>
-      </div>
+      {mode !== 'reset' && (
+        <div className="flex rounded-xl bg-[#f2f4f7] p-1 border border-[#e0e3e6]">
+          <button
+            type="button"
+            onClick={() => {
+              setMode('login');
+              setErrorMsg('');
+              setSuccessMsg('');
+            }}
+            className={`flex-1 py-2 text-[13px] font-bold rounded-lg transition-all cursor-pointer ${
+              mode === 'login'
+                ? 'bg-white text-[#003477] shadow-xs'
+                : 'text-[#434752] hover:text-[#191c1e]'
+            }`}
+          >
+            Sign In
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setMode('signup');
+              setErrorMsg('');
+              setSuccessMsg('');
+            }}
+            className={`flex-1 py-2 text-[13px] font-bold rounded-lg transition-all cursor-pointer ${
+              mode === 'signup'
+                ? 'bg-white text-[#003477] shadow-xs'
+                : 'text-[#434752] hover:text-[#191c1e]'
+            }`}
+          >
+            Sign Up
+          </button>
+        </div>
+      )}
 
       {/* Error & Success Messages */}
       {errorMsg && (
@@ -231,7 +275,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
         </div>
       )}
 
-      {/* LOGIN FORM: JUST EMAIL AND PASSWORD */}
+      {/* LOGIN FORM: EMAIL AND PASSWORD */}
       {mode === 'login' && (
         <form onSubmit={handleLogin} className="space-y-4">
           <div>
@@ -258,9 +302,12 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
               </label>
               <button
                 type="button"
-                onClick={() =>
-                  alert('For password assistance, please contact APSIWA Secretariat at support@apsiwa.org')
-                }
+                onClick={() => {
+                  setResetEmail(loginEmail);
+                  setMode('reset');
+                  setErrorMsg('');
+                  setSuccessMsg('');
+                }}
                 className="text-[11px] text-[#003477] font-semibold hover:underline cursor-pointer"
               >
                 Forgot Password?
@@ -408,7 +455,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-3 rounded-xl bg-[#006e2e] hover:bg-[#005423] text-white text-[14px] font-bold shadow-md transition-all cursor-pointer flex items-center justify-center gap-2 active:scale-98 disabled:opacity-75"
+            className="w-full py-3 rounded-xl bg-[#006e2e] hover:bg-[#005322] text-white text-[14px] font-bold shadow-md transition-all cursor-pointer flex items-center justify-center gap-2 active:scale-98 disabled:opacity-75"
           >
             {loading ? (
               <>
@@ -416,39 +463,92 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
                 <span>Creating Account...</span>
               </>
             ) : (
-              <span>Create Account</span>
+              <span>Create APSIWA Account</span>
             )}
           </button>
 
-          <p className="text-[11px] text-[#737783] text-center pt-2">
-            Already have an account?{' '}
+          <div className="pt-2 border-t border-[#e0e3e6] text-center">
+            <p className="text-[11px] text-[#737783]">
+              Already have an account?{' '}
+              <button
+                type="button"
+                onClick={() => {
+                  setMode('login');
+                  setErrorMsg('');
+                }}
+                className="text-[#003477] font-bold hover:underline cursor-pointer"
+              >
+                Sign In
+              </button>
+            </p>
+          </div>
+        </form>
+      )}
+
+      {/* PASSWORD RESET FORM */}
+      {mode === 'reset' && (
+        <form onSubmit={handleResetPassword} className="space-y-4">
+          <div className="p-3 rounded-xl bg-[#f2f4f7] border border-[#e0e3e6] text-[12px] text-[#434752] leading-relaxed">
+            Enter your email address to receive a secure password reset link directly from Supabase.
+          </div>
+
+          <div>
+            <label className="block text-[12px] font-semibold text-[#191c1e] mb-1.5">
+              Registered Email Address *
+            </label>
+            <div className="relative">
+              <Mail className="absolute left-3.5 top-3 text-[#737783]" size={18} />
+              <input
+                type="email"
+                required
+                value={resetEmail}
+                onChange={(e) => setResetEmail(e.target.value)}
+                placeholder="name@company.com"
+                className="w-full pl-11 pr-4 py-2.5 rounded-xl bg-[#f2f4f7] border border-[#e0e3e6] text-[#191c1e] text-[13px] focus:bg-white focus:border-[#003477] focus:outline-none transition-all"
+              />
+            </div>
+          </div>
+
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full py-3 rounded-xl bg-[#003477] hover:bg-[#024aa3] text-white text-[14px] font-bold shadow-md transition-all cursor-pointer flex items-center justify-center gap-2 active:scale-98 disabled:opacity-75"
+          >
+            {loading ? (
+              <>
+                <span className="material-symbols-outlined text-[18px] animate-spin">refresh</span>
+                <span>Sending Link...</span>
+              </>
+            ) : (
+              <>
+                <KeyRound size={16} />
+                <span>Send Reset Link</span>
+              </>
+            )}
+          </button>
+
+          <div className="pt-2 border-t border-[#e0e3e6] text-center">
             <button
               type="button"
               onClick={() => {
                 setMode('login');
                 setErrorMsg('');
+                setSuccessMsg('');
               }}
-              className="text-[#003477] font-bold hover:underline cursor-pointer"
+              className="text-[12px] text-[#003477] font-bold hover:underline cursor-pointer"
             >
-              Sign In here
+              Back to Sign In
             </button>
-          </p>
+          </div>
         </form>
       )}
 
-      {/* Skip Now Button (Prominent & Clear) */}
-      {onSkip && (
-        <div className="pt-3 border-t border-[#eceef1] text-center">
-          <button
-            type="button"
-            onClick={onSkip}
-            className="w-full py-2.5 px-4 rounded-xl bg-[#f2f4f7] hover:bg-[#e0e3e6] text-[#003477] text-[13px] font-bold transition-all cursor-pointer flex items-center justify-center gap-2 border border-[#e0e3e6]"
-          >
-            <span>Skip Now &amp; Explore Portal</span>
-            <span className="material-symbols-outlined text-[16px]">arrow_forward</span>
-          </button>
-        </div>
-      )}
+      {/* Security & Terms */}
+      <div className="pt-1 text-center">
+        <p className="text-[10.5px] text-[#737783] leading-normal">
+          By continuing, you agree to the APSIWA Code of Conduct and Institutional Portal Terms.
+        </p>
+      </div>
     </div>
   );
 
@@ -461,37 +561,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
   }
 
   return (
-    <div className="w-full min-h-screen bg-radial from-[#ffffff] via-[#f7f9fc] to-[#edf1f7] py-10 px-4 flex flex-col items-center justify-center relative">
-      {/* Top action bar when viewed full screen */}
-      <div className="w-full max-w-md flex items-center justify-between mb-4">
-        {onNavigate ? (
-          <button
-            onClick={() => onNavigate('home')}
-            className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-[#003477] hover:underline cursor-pointer"
-          >
-            <ArrowLeft size={16} />
-            <span>Portal Home</span>
-          </button>
-        ) : (
-          <div className="flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-[#006e2e]"></span>
-            <span className="text-[11px] font-bold text-[#003477] uppercase tracking-wider">
-              APSIWA Andhra Pradesh
-            </span>
-          </div>
-        )}
-
-        {onSkip && (
-          <button
-            onClick={onSkip}
-            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-white hover:bg-[#eceef1] text-[#003477] text-[13px] font-bold border border-[#e0e3e6] shadow-2xs transition-all cursor-pointer active:scale-95"
-          >
-            <span>Skip Now</span>
-            <span className="material-symbols-outlined text-[16px]">arrow_forward</span>
-          </button>
-        )}
-      </div>
-
+    <div className="min-h-screen bg-[#f7f9fc] flex items-center justify-center p-4">
       {containerContent}
     </div>
   );

@@ -125,11 +125,26 @@ export async function signUpWithEmail(
       return { user: null, error: 'Registration failed. Please try again.' };
     }
 
-    // Check if email confirmation is required
-    const needsEmailConfirmation = !data.session;
-    const profile = mapSupabaseUserToProfile(data.user);
+    let profile = mapSupabaseUserToProfile(data.user);
 
-    return { user: profile, error: null, needsEmailConfirmation };
+    // If session is already created (email confirmation is OFF in Supabase)
+    if (data.session) {
+      return { user: profile, error: null, needsEmailConfirmation: false };
+    }
+
+    // If no session yet, attempt instant sign in with credentials
+    try {
+      const signInResult = await supabase.auth.signInWithPassword({
+        email: email.trim(),
+        password,
+      });
+      if (signInResult.data?.user) {
+        profile = mapSupabaseUserToProfile(signInResult.data.user);
+        return { user: profile, error: null, needsEmailConfirmation: false };
+      }
+    } catch {}
+
+    return { user: profile, error: null, needsEmailConfirmation: false };
   } catch (err: any) {
     return { user: null, error: err.message || 'An unexpected error occurred during registration.' };
   }

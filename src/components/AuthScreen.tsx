@@ -114,20 +114,12 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
         return;
       }
 
-      if (needsEmailConfirmation) {
-        setSuccessMsg(
-          'Account created! Please check your email to verify your address before signing in.'
-        );
-        setTimeout(() => {
-          setMode('login');
-          setLoginEmail(signupEmail);
-        }, 3000);
-      } else if (user) {
-        setSuccessMsg('Account registered successfully!');
+      if (user) {
+        setSuccessMsg('Account created and signed in successfully!');
         setTimeout(() => {
           onLoginSuccess(user);
           if (onClose) onClose();
-        }, 600);
+        }, 500);
       }
     } catch (err: any) {
       setErrorMsg(err.message || 'Registration failed. Please try again.');

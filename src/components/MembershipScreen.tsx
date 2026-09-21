@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { MembershipApplication, UserProfile } from '../types';
+import { MembershipApplication, UserProfile, WebsiteSettings } from '../types';
 import {
   User,
   Building2,
@@ -17,9 +17,11 @@ import {
   Tag,
   Flame
 } from 'lucide-react';
+import { DEFAULT_WEBSITE_SETTINGS } from '../lib/supabase';
 
 interface MembershipScreenProps {
   currentUser: UserProfile | null;
+  websiteSettings?: WebsiteSettings;
   onProceedToPayment: (data: Partial<MembershipApplication>) => void;
   onNavigateHome?: () => void;
 }
@@ -81,8 +83,14 @@ const BLOOD_GROUPS = ['A +ve', 'A -ve', 'B +ve', 'B -ve', 'O +ve', 'O -ve', 'AB 
 
 export const MembershipScreen: React.FC<MembershipScreenProps> = ({
   currentUser,
+  websiteSettings = DEFAULT_WEBSITE_SETTINGS,
   onProceedToPayment
 }) => {
+  const activeFee = websiteSettings.isExpoActive ? websiteSettings.expoFee : websiteSettings.regularFee;
+  const regularFee = websiteSettings.regularFee;
+  const discountPct = websiteSettings.expoDiscountPercentage;
+  const savings = regularFee - activeFee;
+
   // Representative Details State (Realtime - Initialized from real logged-in user or empty)
   const [fullName, setFullName] = useState(currentUser?.name || '');
   const [designation, setDesignation] = useState(currentUser?.designation || '');
@@ -99,14 +107,16 @@ export const MembershipScreen: React.FC<MembershipScreenProps> = ({
   const [companyName, setCompanyName] = useState(currentUser?.companyName || '');
   const [businessType, setBusinessType] = useState(currentUser?.businessType || 'Private Limited Company');
   const [gstNumber, setGstNumber] = useState(currentUser?.gstNumber || '');
-  const [district, setDistrict] = useState(currentUser?.district || 'NTR (Vijayawada)');
-  const [experience, setExperience] = useState('1 - 3 Years');
-  const [officeAddress, setOfficeAddress] = useState(currentUser?.address || '');
-  const [pincode, setPincode] = useState('');
+  const [experience, setExperience] = useState(currentUser?.experience || '1 - 3 Years');
+  const [district, setDistrict] = useState(currentUser?.district || 'Visakhapatnam');
+  const [officeAddress, setOfficeAddress] = useState(currentUser?.officeAddress || '');
+  const [pincode, setPincode] = useState(currentUser?.pincode || '');
   const [selectedScopes, setSelectedScopes] = useState<string[]>([
-    'Residential Rooftop (PM Surya Ghar)'
+    'Residential Rooftop (PM Surya Ghar)',
+    'Commercial & Industrial (C&I)'
   ]);
 
+  // Form Verification & Payment Flow
   const [declarationAccepted, setDeclarationAccepted] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
 
@@ -169,7 +179,8 @@ export const MembershipScreen: React.FC<MembershipScreenProps> = ({
       district: district,
       officeAddress: officeAddress.trim(),
       pincode: pincode.trim(),
-      photoUrl: memberPhotoUrl || undefined
+      photoUrl: memberPhotoUrl || undefined,
+      amountPaid: `₹ ${activeFee.toLocaleString('en-IN')}.00`
     };
 
     onProceedToPayment(applicationPayload);
@@ -177,48 +188,50 @@ export const MembershipScreen: React.FC<MembershipScreenProps> = ({
 
   return (
     <div className="min-h-[calc(100vh-140px)] flex items-center justify-center py-10 px-4 sm:px-6">
-      <div className="w-full max-w-4xl mx-auto space-y-8 animate-in fade-in duration-300">
-        {/* Top Centered Header & Special Expo Offer Callout */}
+      <div className="w-full max-w-4xl mx-auto space-y-6 animate-in fade-in zoom-in-98 duration-200">
+        {/* Top Centered Header & Stepper */}
         <div className="text-center space-y-3">
           <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-[#003477]/10 text-[#003477] text-xs font-bold uppercase tracking-wider">
             <ShieldCheck size={14} />
-            <span>State Solar Integrators Welfare Association (APSIWA)</span>
+            <span>APSIWA Official State Registry</span>
           </div>
 
           <h1 className="text-2xl sm:text-3xl font-extrabold text-[#191c1e] tracking-tight">
             Institutional Membership Enrolment
           </h1>
 
-          <p className="text-xs sm:text-sm text-[#434752] max-w-2xl mx-auto leading-relaxed">
-            Register your solar EPC enterprise or installer firm into the official Andhra Pradesh state registry.
+          <p className="text-xs sm:text-sm text-[#434752] max-w-xl mx-auto">
+            Fill in your Representative and Business Enterprise details below to register and proceed to secure fee verification.
           </p>
 
-          {/* SPECIAL EXPO OFFER BANNER (60% DISCOUNT) */}
-          <div className="max-w-2xl mx-auto mt-2 bg-gradient-to-r from-[#ffbe3b]/20 via-[#ffbe3b]/30 to-[#8ef9a0]/30 border-2 border-[#ffbe3b] rounded-2xl p-3.5 sm:p-4 text-[#00285e] shadow-sm flex flex-col sm:flex-row items-center justify-between gap-3">
-            <div className="flex items-center gap-2.5 text-left">
-              <div className="w-10 h-10 rounded-xl bg-[#003477] text-[#ffbe3b] flex items-center justify-center font-bold shrink-0 shadow-xs animate-bounce">
-                <Flame size={22} />
-              </div>
-              <div>
-                <div className="flex items-center gap-2 flex-wrap">
-                  <span className="text-xs font-black uppercase tracking-wider text-[#003477]">
-                    Special Solar Expo Inaugural Offer
-                  </span>
-                  <span className="px-2 py-0.5 rounded-full bg-[#006e2e] text-white text-[10.5px] font-black uppercase tracking-wide">
-                    60% OFF
-                  </span>
+          {/* Special Solar Expo Offer Banner with Discount % */}
+          {websiteSettings.isExpoActive && (
+            <div className="max-w-2xl mx-auto p-4 rounded-2xl bg-gradient-to-r from-[#fff3d4] via-[#ffe8a3] to-[#fff3d4] border border-[#ffbe3b] shadow-xs flex flex-col sm:flex-row items-center justify-between gap-3 text-left">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-[#ffbe3b] text-[#00285e] flex items-center justify-center font-black shrink-0 shadow-xs animate-bounce">
+                  <Flame size={22} />
                 </div>
-                <p className="text-[11.5px] text-[#434752] font-semibold">
-                  Regular Membership Fee <span className="line-through text-[#ba1a1a]">₹5,000</span> • Special Expo Fee <span className="font-extrabold text-[#006e2e] text-[13px]">₹2,000 / Year</span>
-                </p>
+                <div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-xs font-black uppercase tracking-wider text-[#003477]">
+                      {websiteSettings.expoOfferTitle}
+                    </span>
+                    <span className="px-2 py-0.5 rounded-full bg-[#006e2e] text-white text-[10.5px] font-black uppercase tracking-wide">
+                      {discountPct}% OFF
+                    </span>
+                  </div>
+                  <p className="text-[11.5px] text-[#434752] font-semibold">
+                    Regular Membership Fee <span className="line-through text-[#ba1a1a]">₹{regularFee.toLocaleString('en-IN')}</span> • Special Expo Fee <span className="font-extrabold text-[#006e2e] text-[13px]">₹{activeFee.toLocaleString('en-IN')} / Year</span>
+                  </p>
+                </div>
+              </div>
+
+              <div className="bg-white/80 rounded-xl px-3 py-1.5 border border-[#ffbe3b]/60 text-right shrink-0">
+                <span className="text-[10px] text-[#737783] block uppercase font-bold">You Save</span>
+                <span className="text-sm font-black text-[#006e2e]">₹{savings.toLocaleString('en-IN')} ({discountPct}% Discount)</span>
               </div>
             </div>
-
-            <div className="bg-white/80 rounded-xl px-3 py-1.5 border border-[#ffbe3b]/60 text-right shrink-0">
-              <span className="text-[10px] text-[#737783] block uppercase font-bold">You Save</span>
-              <span className="text-sm font-black text-[#006e2e]">₹3,000 (60% Discount)</span>
-            </div>
-          </div>
+          )}
 
           {/* Stepper (Centered) */}
           <div className="flex items-center justify-center gap-3 pt-2">
@@ -229,7 +242,7 @@ export const MembershipScreen: React.FC<MembershipScreenProps> = ({
             <span className="text-[#ccd0d5]">→</span>
             <div className="flex items-center gap-1.5 text-xs font-semibold text-[#737783]">
               <CreditCard size={14} />
-              <span>2. Payment (₹2,000 Expo Offer)</span>
+              <span>2. Payment (₹{activeFee.toLocaleString('en-IN')})</span>
             </div>
           </div>
         </div>
@@ -248,8 +261,15 @@ export const MembershipScreen: React.FC<MembershipScreenProps> = ({
               </div>
             </div>
             <div className="text-right">
-              <span className="text-[10px] text-[#8ef9a0] uppercase font-bold block">Expo Special Offer</span>
-              <span className="text-sm font-black text-[#ffbe3b]">₹2,000 <span className="line-through text-xs text-white/60 font-normal">₹5,000</span></span>
+              <span className="text-[10px] text-[#8ef9a0] uppercase font-bold block">
+                {websiteSettings.isExpoActive ? 'Expo Special Offer' : 'Annual Fee'}
+              </span>
+              <span className="text-sm font-black text-[#ffbe3b]">
+                ₹{activeFee.toLocaleString('en-IN')}{' '}
+                {websiteSettings.isExpoActive && (
+                  <span className="line-through text-xs text-white/60 font-normal">₹{regularFee.toLocaleString('en-IN')}</span>
+                )}
+              </span>
             </div>
           </div>
 

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { NavTab, GalleryItem, MembershipApplication, UserProfile } from './types';
+import { NavTab, GalleryItem, MembershipApplication, UserProfile, WebsiteSettings } from './types';
 import { GALLERY_ITEMS } from './data/mockData';
 import { Header } from './components/Header';
 import { Footer } from './components/Footer';
@@ -13,12 +13,17 @@ import { GalleryLightbox } from './components/GalleryLightbox';
 import { StatusTrackerModal } from './components/StatusTrackerModal';
 import { ProfileScreen } from './components/ProfileScreen';
 import { PaymentScreen } from './components/PaymentScreen';
+import { AdminDashboard } from './components/AdminDashboard';
 import {
   supabase,
   mapSupabaseUserToProfile,
   signOut,
   isSupabaseConfigured,
-  fetchUserApplications
+  fetchUserApplications,
+  fetchWebsiteSettings,
+  saveWebsiteSettings,
+  DEFAULT_WEBSITE_SETTINGS,
+  ADMIN_EMAILS
 } from './lib/supabase';
 
 export function App() {
@@ -32,6 +37,9 @@ export function App() {
   const [currentTab, setCurrentTab] = useState<NavTab>('home');
   const [selectedGalleryItem, setSelectedGalleryItem] = useState<GalleryItem | null>(null);
   const [isTrackerOpen, setIsTrackerOpen] = useState(false);
+
+  // Dynamic Website Settings (Fees, QR code, bank info, secretariat contacts)
+  const [websiteSettings, setWebsiteSettings] = useState<WebsiteSettings>(DEFAULT_WEBSITE_SETTINGS);
 
   // User Authentication State
   const [currentUser, setCurrentUser] = useState<UserProfile | null>(() => {
@@ -58,6 +66,21 @@ export function App() {
     }
   });
 
+  // Load website settings & applications on start
+  useEffect(() => {
+    fetchWebsiteSettings().then((settings) => {
+      if (settings) setWebsiteSettings(settings);
+    });
+  }, []);
+
+  // Reload applications helper
+  const handleRefreshApplications = async () => {
+    const apps = await fetchUserApplications(currentUser?.email);
+    if (apps && apps.length > 0) {
+      setApplications(apps);
+    }
+  };
+
   // Handle Auth open
   const handleOpenAuth = (mode: 'login' | 'signup' = 'login') => {
     setAuthModalMode(mode);
@@ -76,6 +99,30 @@ export function App() {
     setShowPostSplashAuth(false);
     // Redirect directly into membership page
     setCurrentTab('membership');
+  };
+
+  // Handle Switching to Admin User for demo / governance testing
+  const handleSwitchToAdminUser = (adminEmail: string) => {
+    const adminUser: UserProfile = {
+      id: `admin-${adminEmail.replace(/[^a-zA-Z0-9]/g, '')}`,
+      email: adminEmail,
+      name: adminEmail.startsWith('kumar') ? 'Kumar Swamy Naidu (Admin)' : 'APSIWA Secretariat Admin',
+      phoneNumber: '+91 94401 23456',
+      membershipId: 'APSIWA-ADMIN-01',
+      membershipStatus: 'Active',
+      role: 'admin',
+      district: 'Amaravati'
+    };
+    setCurrentUser(adminUser);
+    try {
+      localStorage.setItem('apsiwa_current_user', JSON.stringify(adminUser));
+    } catch {}
+    handleRefreshApplications();
+  };
+
+  // Update website settings in realtime
+  const handleUpdateWebsiteSettings = (newSettings: WebsiteSettings) => {
+    setWebsiteSettings(newSettings);
   };
 
   // Check active Supabase session on startup & listen to auth changes
@@ -193,7 +240,7 @@ export function App() {
           />
 
           {/* Main Content View Container (pt-28 for 2-line header offset) */}
-          {/* Flow: Home -> Gallery -> Membership -> Payment -> Profile -> About */}
+          {/* Flow: Home -> Gallery -> Membership -> Payment -> Profile -> About -> Admin */}
           <main className="flex-1 pt-28 sm:pt-32">
             {currentTab === 'home' && (
               <HomeScreen
@@ -213,6 +260,7 @@ export function App() {
             {currentTab === 'membership' && (
               <MembershipScreen
                 currentUser={currentUser}
+                websiteSettings={websiteSettings}
                 onProceedToPayment={handleProceedToPayment}
                 onNavigateHome={() => setCurrentTab('home')}
               />
@@ -222,6 +270,7 @@ export function App() {
               <PaymentScreen
                 applicationData={pendingApplicationData}
                 currentUser={currentUser}
+                websiteSettings={websiteSettings}
                 onPaymentSuccess={handlePaymentSuccess}
                 onBackToMembership={() => setCurrentTab('membership')}
                 onNavigateProfile={() => setCurrentTab('profile')}
@@ -235,6 +284,18 @@ export function App() {
                 applications={applications}
                 onNavigateMembership={() => setCurrentTab('membership')}
                 onOpenAuth={() => handleOpenAuth('login')}
+              />
+            )}
+
+            {currentTab === 'admin' && (
+              <AdminDashboard
+                currentUser={currentUser}
+                applications={applications}
+                onRefreshApplications={handleRefreshApplications}
+                websiteSettings={websiteSettings}
+                onUpdateWebsiteSettings={handleUpdateWebsiteSettings}
+                onNavigateHome={() => setCurrentTab('home')}
+                onSwitchToAdminUser={handleSwitchToAdminUser}
               />
             )}
 

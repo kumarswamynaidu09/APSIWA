@@ -1,5 +1,15 @@
 import { createClient, SupabaseClient, User } from '@supabase/supabase-js';
-import { UserProfile, MembershipApplication } from '../types';
+import { UserProfile, MembershipApplication, WebsiteSettings } from '../types';
+
+export const ADMIN_EMAILS = [
+  'kumarswamynaidu0906@gmail.com',
+  'apsiwa2018@gmail.com'
+];
+
+export const isAdminUser = (email?: string | null): boolean => {
+  if (!email) return false;
+  return ADMIN_EMAILS.some((adminEmail) => adminEmail.toLowerCase() === email.trim().toLowerCase());
+};
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
@@ -280,32 +290,56 @@ export async function saveMembershipApplication(
       });
 
       // Insert into membership_applications table
-      const { error } = await supabase.from('membership_applications').upsert({
+      const { error: appError } = await supabase.from('membership_applications').upsert({
         id: app.id,
         user_id: userId || undefined,
         full_name: app.fullName,
         mobile_number: app.mobileNumber,
         email_address: app.emailAddress,
-        dob: app.dob,
+        dob: app.dob || null,
         company_name: app.companyName,
-        gst_number: app.gstNumber,
+        gst_number: app.gstNumber || null,
         business_type: app.businessType,
         experience: app.experience,
         district: app.district,
         office_address: app.officeAddress,
         pincode: app.pincode,
-        photo_url: app.photoUrl,
+        photo_url: app.photoUrl || null,
         utr_number: app.utrNumber,
         payment_date: app.paymentDate,
         amount_paid: app.amountPaid,
-        payment_screenshot_url: app.paymentScreenshotUrl,
+        payment_screenshot_url: app.paymentScreenshotUrl || null,
         submission_date: app.submissionDate,
         status: app.status,
       });
 
-      if (error) {
-        console.warn('Supabase DB table upsert note (table may need creation):', error.message);
+      if (appError) {
+        console.warn('membership_applications upsert notice:', appError.message);
       }
+
+      // Also record payment in dedicated payments table
+      const { error: payError } = await supabase.from('payments').upsert(
+        {
+          application_id: app.id,
+          user_id: userId || undefined,
+          utr_number: app.utrNumber,
+          amount: 2000.0,
+          currency: 'INR',
+          original_fee: 5000.0,
+          discount_percentage: 60.0,
+          offer_title: 'Solar Expo Inaugural Offer (60% OFF)',
+          payment_mode: 'UPI / Direct Bank Transfer',
+          payment_date: app.paymentDate,
+          screenshot_url: app.paymentScreenshotUrl || null,
+          verification_status: app.status === 'Approved' ? 'Verified' : 'Pending',
+        },
+        { onConflict: 'application_id' }
+      );
+
+      if (payError) {
+        console.warn('payments table upsert notice:', payError.message);
+      }
+
       return { success: true, error: null };
     } catch (err: any) {
       console.warn('Supabase save error:', err.message);
@@ -361,4 +395,123 @@ export async function fetchUserApplications(userEmail?: string): Promise<Members
   } catch {
     return localApps;
   }
+}
+
+/**
+ * Update any field of an application (Admin action)
+ */
+export async function updateApplicationDetails(app: MembershipApplication): Promise<{ success: boolean; error: string | null }> {
+  try {
+    const existingRaw = localStorage.getItem('apsiwa_membership_applications');
+    const existing: MembershipApplication[] = existingRaw ? JSON.parse(existingRaw) : [];
+    const index = existing.findIndex((a) => a.id === app.id);
+    if (index >= 0) {
+      existing[index] = app;
+    } else {
+      existing.unshift(app);
+    }
+    localStorage.setItem('apsiwa_membership_applications', JSON.stringify(existing));
+  } catch {}
+
+  if (isSupabaseConfigured()) {
+    try {
+      const { error } = await supabase.from('membership_applications').upsert({
+        id: app.id,
+        full_name: app.fullName,
+        mobile_number: app.mobileNumber,
+        email_address: app.emailAddress,
+        dob: app.dob || null,
+        company_name: app.companyName,
+        gst_number: app.gstNumber || null,
+        business_type: app.businessType,
+        experience: app.experience,
+        district: app.district,
+        office_address: app.officeAddress,
+        pincode: app.pincode,
+        photo_url: app.photoUrl || null,
+        utr_number: app.utrNumber,
+        payment_date: app.paymentDate,
+        amount_paid: app.amountPaid,
+        status: app.status,
+      });
+      return { success: !error, error: error ? error.message : null };
+    } catch (err: any) {
+      return { success: false, error: err.message };
+    }
+  }
+
+  return { success: true, error: null };
+}
+
+/**
+ * Delete an application (Admin action)
+ */
+export async function deleteApplication(id: string): Promise<{ success: boolean }> {
+  try {
+    const existingRaw = localStorage.getItem('apsiwa_membership_applications');
+    const existing: MembershipApplication[] = existingRaw ? JSON.parse(existingRaw) : [];
+    const filtered = existing.filter((a) => a.id !== id);
+    localStorage.setItem('apsiwa_membership_applications', JSON.stringify(filtered));
+  } catch {}
+
+  if (isSupabaseConfigured()) {
+    try {
+      await supabase.from('membership_applications').delete().eq('id', id);
+    } catch {}
+  }
+
+  return { success: true };
+}
+
+// Default Website Settings
+export const DEFAULT_WEBSITE_SETTINGS: WebsiteSettings = {
+  regularFee: 5000,
+  expoFee: 2000,
+  expoDiscountPercentage: 60,
+  expoOfferTitle: 'Special Solar Expo Inaugural Offer (60% OFF)',
+  isExpoActive: true,
+  upiId: 'apsiwa.welfare@sbi',
+  accountNumber: '394801002934',
+  ifscCode: 'SBIN0012849',
+  bankName: 'State Bank of India',
+  bankBranch: 'Amaravati Secretariat Branch',
+  qrCodeUrl: 'https://lh3.googleusercontent.com/aida-public/AB6AXuDKQoPqerF6MxsFeWOQEuqjZRMOpmIHXD4ubJsjC-HLBkb6H8aH9E9q4bIuwFwOaQ9HK3Sl8Oi7yGFQsqhG4gzs4IAJR6F5Q4YqVeAWJmOkjit-g7lwqdHivjTfhp8-bLHcRqeadCaE1t74t3t6gYv7azrvqiE2k6DlgVUwMN8KJCsNkOaLr8bg1e3HlnPyaCfMTDN4U0wMK5fgZI_vn5mcEVrdfVRypfOrTx3_NkRqVrmFLkSMKtwx4A',
+  secretariatAddress: 'APSIWA Bhavan, Near NREDCAP Road, Amaravati Capital Region, AP - 520010',
+  secretariatPhone: '+91 866 248 9000',
+  secretariatEmail: 'contact@apsiwa.org',
+  announcementText: 'Official institutional registrations are now open with exclusive 60% Solar Expo inaugural fee.',
+};
+
+/**
+ * Fetch Website Settings (Realtime)
+ */
+export function fetchWebsiteSettings(): WebsiteSettings {
+  try {
+    const raw = localStorage.getItem('apsiwa_website_settings');
+    if (raw) {
+      return { ...DEFAULT_WEBSITE_SETTINGS, ...JSON.parse(raw) };
+    }
+  } catch {}
+  return DEFAULT_WEBSITE_SETTINGS;
+}
+
+/**
+ * Save Website Settings (Realtime)
+ */
+export async function saveWebsiteSettings(settings: WebsiteSettings): Promise<{ success: boolean }> {
+  try {
+    localStorage.setItem('apsiwa_website_settings', JSON.stringify(settings));
+  } catch {}
+
+  if (isSupabaseConfigured()) {
+    try {
+      await supabase.from('website_settings').upsert({
+        id: 'global_config',
+        settings_json: settings,
+        updated_at: new Date().toISOString(),
+      });
+    } catch {}
+  }
+
+  return { success: true };
 }

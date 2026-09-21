@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { MembershipApplication, UserProfile } from '../types';
+import { MembershipApplication, UserProfile, WebsiteSettings } from '../types';
 import {
   CreditCard,
   QrCode,
@@ -17,11 +17,12 @@ import {
   ExternalLink,
   Lock
 } from 'lucide-react';
-import { saveMembershipApplication } from '../lib/supabase';
+import { saveMembershipApplication, DEFAULT_WEBSITE_SETTINGS } from '../lib/supabase';
 
 interface PaymentScreenProps {
   applicationData: Partial<MembershipApplication> | null;
   currentUser: UserProfile | null;
+  websiteSettings?: WebsiteSettings;
   onPaymentSuccess: (newApp: MembershipApplication) => void;
   onBackToMembership: () => void;
   onNavigateProfile: () => void;
@@ -30,10 +31,22 @@ interface PaymentScreenProps {
 export const PaymentScreen: React.FC<PaymentScreenProps> = ({
   applicationData,
   currentUser,
+  websiteSettings = DEFAULT_WEBSITE_SETTINGS,
   onPaymentSuccess,
   onBackToMembership,
   onNavigateProfile
 }) => {
+  // Dynamic settings from Admin
+  const activeFee = websiteSettings.isExpoActive ? websiteSettings.expoFee : websiteSettings.regularFee;
+  const regularFee = websiteSettings.regularFee;
+  const discountPct = websiteSettings.expoDiscountPercentage;
+  const upiId = websiteSettings.upiId || 'apsiwa.welfare@sbi';
+  const accountNumber = websiteSettings.accountNumber || '394801002934';
+  const ifscCode = websiteSettings.ifscCode || 'SBIN0012849';
+  const qrCodeUrl = websiteSettings.qrCodeUrl || 'https://lh3.googleusercontent.com/aida-public/AB6AXuDKQoPqerF6MxsFeWOQEuqjZRMOpmIHXD4ubJsjC-HLBkb6H8aH9E9q4bIuwFwOaQ9HK3Sl8Oi7yGFQsqhG4gzs4IAJR6F5Q4YqVeAWJmOkjit-g7lwqdHivjTfhp8-bLHcRqeadCaE1t74t3t6gYv7azrvqiE2k6DlgVUwMN8KJCsNkOaLr8bg1e3HlnPyaCfMTDN4U0wMK5fgZI_vn5mcEVrdfVRypfOrTx3_NkRqVrmFLkSMKtwx4A';
+  const bankName = websiteSettings.bankName || 'State Bank of India';
+  const bankBranch = websiteSettings.bankBranch || 'Amaravati Secretariat';
+
   // Realtime state - clean and empty for user's actual UTR & date
   const [utrNumber, setUtrNumber] = useState(applicationData?.utrNumber || '');
   const [paymentDate, setPaymentDate] = useState(
@@ -57,10 +70,6 @@ export const PaymentScreen: React.FC<PaymentScreenProps> = ({
   const repPhone = applicationData?.mobileNumber || currentUser?.phoneNumber || '';
   const repCompany = applicationData?.companyName || currentUser?.companyName || 'Solar EPC Enterprise';
   const repDistrict = applicationData?.district || currentUser?.district || 'Andhra Pradesh';
-
-  const upiId = 'apsiwa.welfare@sbi';
-  const accountNumber = '394801002934';
-  const ifscCode = 'SBIN0012849';
 
   const handleCopy = (text: string, fieldName: string) => {
     navigator.clipboard.writeText(text);
@@ -109,7 +118,7 @@ export const PaymentScreen: React.FC<PaymentScreenProps> = ({
       photoUrl: applicationData?.photoUrl || currentUser?.avatarUrl,
       utrNumber: utrNumber.trim(),
       paymentDate: paymentDate,
-      amountPaid: '₹ 2,000.00',
+      amountPaid: `₹ ${activeFee.toLocaleString('en-IN')}.00`,
       paymentScreenshotUrl: screenshotUrl || undefined,
       submissionDate: new Date().toLocaleDateString('en-IN', {
         month: 'short',
@@ -196,16 +205,18 @@ export const PaymentScreen: React.FC<PaymentScreenProps> = ({
 
         {/* Main Centered Container */}
         <div className="bg-white rounded-3xl border border-[#e0e3e6] shadow-xl overflow-hidden">
-          {/* Summary Banner with 60% Expo Discount */}
+          {/* Summary Banner with Expo Discount */}
           <div className="bg-gradient-to-r from-[#003477] via-[#024aa3] to-[#00285e] text-white p-6 sm:p-7 flex flex-col md:flex-row md:items-center justify-between gap-6 border-b border-[#00285e]">
             <div className="space-y-1">
               <div className="flex items-center gap-2">
                 <span className="text-[10.5px] uppercase font-bold text-[#8ef9a0] tracking-widest block">
                   Enrolment Summary
                 </span>
-                <span className="px-2 py-0.5 rounded-full bg-[#ffbe3b] text-[#00285e] text-[10px] font-black uppercase">
-                  🎉 Expo Offer (60% OFF)
-                </span>
+                {websiteSettings.isExpoActive && (
+                  <span className="px-2 py-0.5 rounded-full bg-[#ffbe3b] text-[#00285e] text-[10px] font-black uppercase">
+                    🎉 Expo Offer ({discountPct}% OFF)
+                  </span>
+                )}
               </div>
               <h3 className="text-lg sm:text-xl font-black">{repName}</h3>
               <p className="text-xs text-white/80 font-medium">
@@ -214,14 +225,18 @@ export const PaymentScreen: React.FC<PaymentScreenProps> = ({
             </div>
 
             <div className="bg-white/10 backdrop-blur-md rounded-2xl p-4 border border-white/20 text-right shrink-0">
-              <div className="flex items-center justify-end gap-2">
-                <span className="text-xs text-white/60 line-through">₹ 5,000.00</span>
-                <span className="px-1.5 py-0.5 rounded bg-[#006e2e] text-white text-[9.5px] font-extrabold uppercase">
-                  Save 60%
-                </span>
-              </div>
-              <div className="text-2xl sm:text-3xl font-black text-[#8ef9a0]">₹ 2,000.00</div>
-              <span className="text-[10px] text-white/70 block">Special Solar Expo Fee (Annual)</span>
+              {websiteSettings.isExpoActive && (
+                <div className="flex items-center justify-end gap-2">
+                  <span className="text-xs text-white/60 line-through">₹ {regularFee.toLocaleString('en-IN')}.00</span>
+                  <span className="px-1.5 py-0.5 rounded bg-[#006e2e] text-white text-[9.5px] font-extrabold uppercase">
+                    Save {discountPct}%
+                  </span>
+                </div>
+              )}
+              <div className="text-2xl sm:text-3xl font-black text-[#8ef9a0]">₹ {activeFee.toLocaleString('en-IN')}.00</div>
+              <span className="text-[10px] text-white/70 block">
+                {websiteSettings.isExpoActive ? websiteSettings.expoOfferTitle : 'APSIWA State Membership Fee'}
+              </span>
             </div>
           </div>
 
@@ -232,7 +247,7 @@ export const PaymentScreen: React.FC<PaymentScreenProps> = ({
                 <div className="flex items-center justify-between">
                   <h4 className="text-xs font-extrabold uppercase text-[#003477] tracking-wider flex items-center gap-1.5">
                     <QrCode size={16} />
-                    <span>Scan &amp; Pay ₹2,000</span>
+                    <span>Scan &amp; Pay ₹{activeFee.toLocaleString('en-IN')}</span>
                   </h4>
                   <span className="px-2 py-0.5 rounded-full bg-[#8ef9a0]/20 text-[#006e2e] text-[10px] font-bold">
                     Direct Bank Transfer
@@ -242,7 +257,7 @@ export const PaymentScreen: React.FC<PaymentScreenProps> = ({
                 {/* QR Code Container */}
                 <div className="flex flex-col items-center justify-center p-4 bg-white rounded-xl border border-[#e0e3e6] shadow-xs">
                   <img
-                    src="https://lh3.googleusercontent.com/aida-public/AB6AXuDKQoPqerF6MxsFeWOQEuqjZRMOpmIHXD4ubJsjC-HLBkb6H8aH9E9q4bIuwFwOaQ9HK3Sl8Oi7yGFQsqhG4gzs4IAJR6F5Q4YqVeAWJmOkjit-g7lwqdHivjTfhp8-bLHcRqeadCaE1t74t3t6gYv7azrvqiE2k6DlgVUwMN8KJCsNkOaLr8bg1e3HlnPyaCfMTDN4U0wMK5fgZI_vn5mcEVrdfVRypfOrTx3_NkRqVrmFLkSMKtwx4A"
+                    src={qrCodeUrl}
                     alt="APSIWA Official UPI QR Code"
                     className="w-44 h-44 object-contain rounded-lg border border-[#e0e3e6]"
                   />
@@ -301,8 +316,8 @@ export const PaymentScreen: React.FC<PaymentScreenProps> = ({
                       </div>
                     </div>
                     <div className="flex justify-between text-[11px] text-[#737783] pt-1 border-t border-[#e0e3e6]">
-                      <span>Bank: State Bank of India</span>
-                      <span>Branch: Amaravati Secretariat</span>
+                      <span>Bank: {bankName}</span>
+                      <span>Branch: {bankBranch}</span>
                     </div>
                   </div>
                 </div>
@@ -316,7 +331,7 @@ export const PaymentScreen: React.FC<PaymentScreenProps> = ({
                   Submit Payment Verification Proof
                 </h4>
                 <p className="text-xs text-[#434752] mt-0.5">
-                  Enter your 12-digit UTR transaction number from your banking or UPI app after transferring ₹2,000.
+                  Enter your 12-digit UTR transaction number from your banking or UPI app after transferring ₹{activeFee.toLocaleString('en-IN')}.
                 </p>
               </div>
 
@@ -357,7 +372,7 @@ export const PaymentScreen: React.FC<PaymentScreenProps> = ({
                   <input
                     type="text"
                     disabled
-                    value="₹ 2,000.00 (Special Expo Offer - 60% Discount)"
+                    value={`₹ ${activeFee.toLocaleString('en-IN')}.00 (${websiteSettings.isExpoActive ? `Special Expo Offer - ${discountPct}% Discount` : 'Annual Membership Fee'})`}
                     className="w-full px-3.5 py-2.5 rounded-xl bg-[#f2f4f7] border border-[#e0e3e6] text-xs font-bold text-[#006e2e] outline-none"
                   />
                 </div>
@@ -489,8 +504,10 @@ export const PaymentScreen: React.FC<PaymentScreenProps> = ({
                   <span className="font-bold text-[#191c1e]">{submittedApp.companyName}</span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-[#737783]">Expo Fee Paid:</span>
-                  <span className="font-bold text-[#006e2e]">₹ 2,000.00 (60% Discount)</span>
+                  <span className="text-[#737783]">Membership Fee Paid:</span>
+                  <span className="font-bold text-[#006e2e]">
+                    ₹ {activeFee.toLocaleString('en-IN')}.00 {websiteSettings.isExpoActive ? `(${discountPct}% Discount)` : ''}
+                  </span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-[#737783]">Bank UTR:</span>

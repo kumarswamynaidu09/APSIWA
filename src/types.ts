@@ -1,4 +1,22 @@
-export type NavTab = 'home' | 'gallery' | 'membership' | 'payment' | 'about' | 'contact' | 'auth' | 'profile';
+export type NavTab = 'home' | 'gallery' | 'membership' | 'payment' | 'about' | 'contact' | 'auth' | 'profile' | 'admin';
+
+export interface WebsiteSettings {
+  regularFee: number;
+  expoFee: number;
+  expoDiscountPercentage: number;
+  expoOfferTitle: string;
+  isExpoActive: boolean;
+  upiId: string;
+  accountNumber: string;
+  ifscCode: string;
+  bankName: string;
+  bankBranch: string;
+  qrCodeUrl: string;
+  secretariatAddress: string;
+  secretariatPhone: string;
+  secretariatEmail: string;
+  announcementText: string;
+}
 
 export interface UserProfile {
   id: string;
@@ -18,6 +36,7 @@ export interface UserProfile {
   validUntil?: string;
   membershipTier?: string;
   membershipStatus?: 'Active' | 'Pending Verification' | 'In Review' | 'Expired';
+  role?: 'admin' | 'member';
 }
 
 export interface GalleryItem {

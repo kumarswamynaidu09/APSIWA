@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { NavTab, UserProfile } from '../types';
-import { Menu, X, User, LogOut, ChevronDown, CheckCircle2 } from 'lucide-react';
+import { Menu, X, User, LogOut, ChevronDown, CheckCircle2, ShieldCheck, ShieldAlert } from 'lucide-react';
+import { isAdminUser } from '../lib/supabase';
 
 interface HeaderProps {
   currentTab: NavTab;
@@ -44,6 +45,8 @@ export const Header: React.FC<HeaderProps> = ({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  const isAdmin = isAdminUser(currentUser?.email);
+
   return (
     <header className="fixed top-0 left-0 right-0 w-full z-50 bg-[#ffffff] border-b border-[#e0e3e6] shadow-xs">
       {/* ========================================================= */}
@@ -78,6 +81,25 @@ export const Header: React.FC<HeaderProps> = ({
 
           {/* Right: Become Member CTA & Profile Section */}
           <div className="flex items-center justify-end gap-2.5 sm:gap-3.5 shrink-0">
+            {/* Admin Dashboard Quick Button for Admins or direct access */}
+            <button
+              onClick={() => {
+                onNavigate('admin');
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+              }}
+              className={`inline-flex items-center gap-1.5 px-3 py-1.5 sm:py-2 text-[12px] font-bold rounded-xl border transition-all cursor-pointer whitespace-nowrap shadow-2xs ${
+                currentTab === 'admin'
+                  ? 'bg-[#003477] text-white border-[#003477]'
+                  : isAdmin
+                  ? 'bg-[#ffbe3b]/20 text-[#00285e] border-[#ffbe3b] hover:bg-[#ffbe3b]/30'
+                  : 'bg-[#f2f4f7] text-[#003477] border-[#e0e3e6] hover:bg-[#e0e3e6]'
+              }`}
+              title="APSIWA Secretariat Admin Portal"
+            >
+              <ShieldAlert size={15} className={isAdmin ? 'text-[#b25e00]' : 'text-[#003477]'} />
+              <span className="hidden sm:inline">Admin Portal</span>
+            </button>
+
             {/* Become a Member Button with Blinking Pulse Effect & 60% Expo Discount Badge */}
             <button
               onClick={() => {
@@ -110,7 +132,7 @@ export const Header: React.FC<HeaderProps> = ({
                     </span>
                     <span className="text-[10px] text-[#006e2e] font-semibold flex items-center gap-0.5">
                       <CheckCircle2 size={10} />
-                      Member
+                      {isAdmin ? 'Admin' : 'Member'}
                     </span>
                   </div>
                   <ChevronDown
@@ -142,11 +164,28 @@ export const Header: React.FC<HeaderProps> = ({
                       <p className="text-[11px] text-[#434752]">{currentUser.phoneNumber}</p>
                     )}
                     <span className="inline-block mt-1 px-2 py-0.5 rounded bg-[#8bf69d]/20 text-[#006e2e] text-[10px] font-bold">
-                      {currentUser.membershipId || 'APSIWA Verified'}
+                      {currentUser.membershipId || (isAdmin ? 'APSIWA Admin' : 'APSIWA Verified')}
                     </span>
                   </div>
 
                   <div className="py-1">
+                    {/* Admin Dashboard Link in Dropdown */}
+                    <button
+                      onClick={() => {
+                        setProfileDropdownOpen(false);
+                        onNavigate('admin');
+                      }}
+                      className="w-full text-left px-4 py-2 text-[13px] text-[#b25e00] font-bold hover:bg-[#fff8e6] flex items-center justify-between cursor-pointer"
+                    >
+                      <span className="flex items-center gap-2">
+                        <ShieldAlert size={16} />
+                        <span>Admin Dashboard</span>
+                      </span>
+                      <span className="px-1.5 py-0.5 bg-[#ffbe3b] text-[#00285e] text-[10px] font-black rounded-full">
+                        Admin
+                      </span>
+                    </button>
+
                     <button
                       onClick={() => {
                         setProfileDropdownOpen(false);
@@ -304,6 +343,18 @@ export const Header: React.FC<HeaderProps> = ({
           ))}
 
           <div className="pt-3 border-t border-[#e0e3e6] flex flex-col gap-2">
+            <button
+              onClick={() => {
+                onNavigate('admin');
+                setMobileMenuOpen(false);
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+              }}
+              className="w-full py-2.5 px-4 bg-[#fff8e6] text-[#b25e00] border border-[#ffbe3b]/50 rounded-xl text-center font-bold text-[13px] flex items-center justify-center gap-2"
+            >
+              <ShieldAlert size={16} />
+              <span>Admin Secretariat Dashboard</span>
+            </button>
+
             {!currentUser ? (
               <button
                 onClick={() => {

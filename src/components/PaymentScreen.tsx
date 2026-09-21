@@ -11,7 +11,11 @@ import {
   ShieldCheck,
   Check,
   Flame,
-  Tag
+  Clock,
+  UserCheck,
+  AlertCircle,
+  ExternalLink,
+  Lock
 } from 'lucide-react';
 import { saveMembershipApplication } from '../lib/supabase';
 
@@ -40,7 +44,11 @@ export const PaymentScreen: React.FC<PaymentScreenProps> = ({
 
   const [copiedField, setCopiedField] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  
+  // Modal states: 'pending_approval' -> 'approved'
   const [submittedApp, setSubmittedApp] = useState<MembershipApplication | null>(null);
+  const [adminApproving, setAdminApproving] = useState(false);
+  const [isApproved, setIsApproved] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
 
   // Representative & Firm summary details from actual user / form
@@ -72,6 +80,7 @@ export const PaymentScreen: React.FC<PaymentScreenProps> = ({
     }
   };
 
+  // Submit payment for Admin review
   const handleSubmitPayment = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg('');
@@ -84,7 +93,7 @@ export const PaymentScreen: React.FC<PaymentScreenProps> = ({
     setSubmitting(true);
 
     const newApplicationId = `APSIWA-${new Date().getFullYear()}-${Math.floor(10000 + Math.random() * 90000)}`;
-    const fullApp: MembershipApplication = {
+    const pendingApp: MembershipApplication = {
       id: newApplicationId,
       fullName: repName,
       mobileNumber: repPhone,
@@ -107,21 +116,49 @@ export const PaymentScreen: React.FC<PaymentScreenProps> = ({
         day: '2-digit',
         year: 'numeric'
       }),
+      status: 'Pending Verification'
+    };
+
+    try {
+      // Save realtime to Supabase as Pending Verification
+      await saveMembershipApplication(pendingApp, currentUser?.id);
+
+      setSubmitting(false);
+      setSubmittedApp(pendingApp);
+      setIsApproved(false);
+    } catch (err: any) {
+      console.error('Error saving application:', err);
+      setSubmitting(false);
+      setSubmittedApp(pendingApp);
+      setIsApproved(false);
+    }
+  };
+
+  // Admin Approval Action Handler
+  const handleAdminApprove = async () => {
+    if (!submittedApp) return;
+    setAdminApproving(true);
+
+    const approvedApp: MembershipApplication = {
+      ...submittedApp,
       status: 'Approved'
     };
 
     try {
-      // Save realtime to Supabase
-      await saveMembershipApplication(fullApp, currentUser?.id);
-
-      setSubmitting(false);
-      setSubmittedApp(fullApp);
-      onPaymentSuccess(fullApp);
-    } catch (err: any) {
-      console.error('Error saving application:', err);
-      setSubmitting(false);
-      setSubmittedApp(fullApp);
-      onPaymentSuccess(fullApp);
+      // Save status change in realtime to Supabase
+      await saveMembershipApplication(approvedApp, currentUser?.id);
+      
+      setTimeout(() => {
+        setAdminApproving(false);
+        setSubmittedApp(approvedApp);
+        setIsApproved(true);
+        onPaymentSuccess(approvedApp);
+      }, 700);
+    } catch (err) {
+      setAdminApproving(false);
+      setSubmittedApp(approvedApp);
+      setIsApproved(true);
+      onPaymentSuccess(approvedApp);
     }
   };
 
@@ -389,12 +426,12 @@ export const PaymentScreen: React.FC<PaymentScreenProps> = ({
                     {submitting ? (
                       <>
                         <span className="material-symbols-outlined text-base animate-spin">refresh</span>
-                        <span>Verifying &amp; Saving in Realtime...</span>
+                        <span>Verifying &amp; Submitting...</span>
                       </>
                     ) : (
                       <>
                         <ShieldCheck size={16} />
-                        <span>Submit Payment Proof &amp; Complete Registration</span>
+                        <span>Submit Payment for Admin Approval</span>
                       </>
                     )}
                   </button>
@@ -405,57 +442,126 @@ export const PaymentScreen: React.FC<PaymentScreenProps> = ({
         </div>
       </div>
 
-      {/* SUCCESS MODAL ON PAYMENT SUBMISSION */}
+      {/* POPUP MODAL: PAYMENT SUBMITTED & ADMIN APPROVAL ACTION */}
       {submittedApp && (
-        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-200">
-          <div className="bg-white rounded-3xl max-w-lg w-full overflow-hidden shadow-2xl border border-[#e0e3e6] space-y-6 animate-in zoom-in-95 duration-200">
-            {/* Header */}
-            <div className="bg-[#003477] text-white p-6 text-center space-y-2">
-              <div className="w-14 h-14 rounded-full bg-[#8ef9a0]/20 text-[#8ef9a0] flex items-center justify-center mx-auto border border-[#8ef9a0]/40">
-                <CheckCircle2 size={32} />
+        <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-200">
+          <div className="bg-white rounded-3xl max-w-lg w-full overflow-hidden shadow-2xl border border-[#e0e3e6] space-y-5 animate-in zoom-in-95 duration-200">
+            {/* Header: Pending vs Approved */}
+            {!isApproved ? (
+              <div className="bg-gradient-to-r from-[#00285e] via-[#003477] to-[#024aa3] text-white p-6 text-center space-y-2 border-b-2 border-[#ffbe3b]">
+                <div className="w-14 h-14 rounded-full bg-[#ffbe3b]/20 text-[#ffbe3b] flex items-center justify-center mx-auto border border-[#ffbe3b]/40 animate-pulse">
+                  <Clock size={30} />
+                </div>
+                <h2 className="text-xl font-black tracking-tight">
+                  Payment Submitted • Awaiting Admin Approval
+                </h2>
+                <p className="text-xs text-white/80 max-w-sm mx-auto">
+                  Your UTR reference <span className="font-mono font-bold text-[#ffbe3b]">{submittedApp.utrNumber}</span> has been received by the Secretariat Council for verification.
+                </p>
               </div>
-              <h2 className="text-xl font-extrabold">APSIWA Membership Activated!</h2>
-              <p className="text-xs text-white/80">
-                Your application and payment of ₹2,000 have been saved in realtime to the state registry.
-              </p>
-            </div>
+            ) : (
+              <div className="bg-gradient-to-r from-[#005322] via-[#006e2e] to-[#008738] text-white p-6 text-center space-y-2 border-b-2 border-[#8ef9a0]">
+                <div className="w-14 h-14 rounded-full bg-white/20 text-[#8ef9a0] flex items-center justify-center mx-auto border border-white/40">
+                  <CheckCircle2 size={32} />
+                </div>
+                <h2 className="text-xl font-black tracking-tight">
+                  🎉 Membership Approved &amp; Certified!
+                </h2>
+                <p className="text-xs text-white/90 max-w-sm mx-auto">
+                  APSIWA Secretariat Admin has approved your application. Your official Smart ID Card and Certificate are now activated.
+                </p>
+              </div>
+            )}
 
-            {/* Application Data */}
+            {/* Application Summary Card */}
             <div className="px-6 space-y-3 text-xs">
               <div className="p-4 rounded-2xl bg-[#f7f9fc] border border-[#e0e3e6] space-y-2">
-                <div className="flex justify-between">
+                <div className="flex justify-between items-center">
                   <span className="text-[#737783]">Membership ID:</span>
                   <span className="font-mono font-bold text-[#003477]">{submittedApp.id}</span>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-[#737783]">Member Name:</span>
+                <div className="flex justify-between items-center">
+                  <span className="text-[#737783]">Representative:</span>
                   <span className="font-bold text-[#191c1e]">{submittedApp.fullName}</span>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-[#737783]">Firm:</span>
+                <div className="flex justify-between items-center">
+                  <span className="text-[#737783]">Firm / Company:</span>
                   <span className="font-bold text-[#191c1e]">{submittedApp.companyName}</span>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-[#737783]">Fee Paid:</span>
-                  <span className="font-bold text-[#006e2e]">₹ 2,000.00 (60% Expo Offer)</span>
+                <div className="flex justify-between items-center">
+                  <span className="text-[#737783]">Expo Fee Paid:</span>
+                  <span className="font-bold text-[#006e2e]">₹ 2,000.00 (60% Discount)</span>
                 </div>
-                <div className="flex justify-between">
+                <div className="flex justify-between items-center">
                   <span className="text-[#737783]">Bank UTR:</span>
                   <span className="font-mono font-bold text-[#003477]">{submittedApp.utrNumber}</span>
                 </div>
+                <div className="flex justify-between items-center pt-1 border-t border-[#e0e3e6]">
+                  <span className="text-[#737783]">Current Status:</span>
+                  <span
+                    className={`font-bold px-2 py-0.5 rounded-full text-[10.5px] ${
+                      isApproved
+                        ? 'bg-[#8ef9a0]/25 text-[#006e2e] border border-[#006e2e]/30'
+                        : 'bg-[#ffbe3b]/25 text-[#00285e] border border-[#ffbe3b]/40'
+                    }`}
+                  >
+                    {isApproved ? '✓ Approved & Active' : '⏳ Pending Admin Verification'}
+                  </span>
+                </div>
               </div>
+
+              {/* ADMIN APPROVAL ACTION BOX (Popup Approval Trigger) */}
+              {!isApproved && (
+                <div className="p-4 rounded-2xl bg-[#fff8e6] border border-[#ffe08a] space-y-3">
+                  <div className="flex items-center gap-2 text-[#b25e00] font-bold">
+                    <UserCheck size={16} />
+                    <span>Secretariat / Admin Approval Portal</span>
+                  </div>
+                  <p className="text-[11.5px] text-[#6b4700] leading-relaxed">
+                    As an authorized APSIWA administrator, you can verify the UTR and immediately grant active member certification:
+                  </p>
+                  <button
+                    type="button"
+                    onClick={handleAdminApprove}
+                    disabled={adminApproving}
+                    className="w-full py-3 rounded-xl bg-gradient-to-r from-[#006e2e] to-[#008738] hover:from-[#005322] hover:to-[#006e2e] text-white text-xs sm:text-sm font-extrabold shadow-md transition-all cursor-pointer flex items-center justify-center gap-2 active:scale-98 disabled:opacity-75"
+                  >
+                    {adminApproving ? (
+                      <>
+                        <span className="material-symbols-outlined text-base animate-spin">refresh</span>
+                        <span>Authorizing &amp; Issuing ID Card...</span>
+                      </>
+                    ) : (
+                      <>
+                        <CheckCircle2 size={16} />
+                        <span>✓ Admin Action: Approve Membership Now</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              )}
             </div>
 
-            {/* Action Buttons */}
-            <div className="p-6 pt-0 flex gap-3">
-              <button
-                type="button"
-                onClick={onNavigateProfile}
-                className="flex-1 py-3 rounded-xl bg-[#003477] hover:bg-[#024aa3] text-white text-xs font-bold text-center shadow-md transition-all cursor-pointer flex items-center justify-center gap-2"
-              >
-                <span>View Member Profile &amp; Download ID Card</span>
-                <span className="material-symbols-outlined text-base">badge</span>
-              </button>
+            {/* Bottom Actions */}
+            <div className="p-6 pt-0 flex flex-col sm:flex-row gap-2.5">
+              {isApproved ? (
+                <button
+                  type="button"
+                  onClick={onNavigateProfile}
+                  className="w-full py-3.5 rounded-xl bg-[#003477] hover:bg-[#024aa3] text-white text-xs sm:text-sm font-black text-center shadow-md transition-all cursor-pointer flex items-center justify-center gap-2"
+                >
+                  <span>Go to Profile &amp; Download Smart ID Card</span>
+                  <span className="material-symbols-outlined text-base">badge</span>
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={onNavigateProfile}
+                  className="w-full py-2.5 rounded-xl bg-[#f2f4f7] hover:bg-[#e0e3e6] text-[#003477] text-xs font-bold text-center transition-colors cursor-pointer"
+                >
+                  View Profile &amp; Application Status
+                </button>
+              )}
             </div>
           </div>
         </div>

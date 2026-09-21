@@ -53,30 +53,30 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
   const cardBackRef = useRef<HTMLDivElement>(null);
   const cardBothRef = useRef<HTMLDivElement>(null);
 
-  // Fallback defaults if user profile is partially filled
+  // Find linked application if any
+  const linkedApp = applications[0] || null;
+
+  // Dynamic member data using real user and application data
   const memberData = {
-    name: user?.name || 'Er. B. Raghava Choudhary',
-    email: user?.email || 'raghava.solar@amaravati-epc.in',
-    phone: user?.phoneNumber || '+91 98480 32190',
-    companyName: user?.companyName || 'SuryaTeja Clean Energy Infra LLP',
-    designation: user?.designation || 'Managing Director & EPC Lead',
-    district: user?.district || 'Krishna / Amaravati',
-    businessType: user?.businessType || 'Solar EPC & Rooftop Integrator',
-    gstNumber: user?.gstNumber || '37AAACS9823M1ZX',
+    name: user?.name || linkedApp?.fullName || 'APSIWA Member',
+    email: user?.email || linkedApp?.emailAddress || '',
+    phone: user?.phoneNumber || linkedApp?.mobileNumber || '',
+    companyName: user?.companyName || linkedApp?.companyName || 'Registered Solar Integrator',
+    designation: user?.designation || 'Solar EPC Lead / Representative',
+    district: user?.district || linkedApp?.district || 'Andhra Pradesh',
+    businessType: user?.businessType || linkedApp?.businessType || 'Solar EPC Enterprise',
+    gstNumber: user?.gstNumber || linkedApp?.gstNumber || '37AAAAA0000A1Z5',
     bloodGroup: user?.bloodGroup || 'O +ve',
-    address: user?.address || 'Plot #42, Solar Tech Enclave, MG Road, Vijayawada, AP - 520010',
-    membershipId: user?.membershipId || 'APSIWA-LM-2026-4819',
-    joinedDate: user?.joinedDate || 'March 2026',
+    address: user?.address || linkedApp?.officeAddress || 'Andhra Pradesh, India',
+    membershipId: user?.membershipId || linkedApp?.id || `APSIWA-LM-${new Date().getFullYear()}-0101`,
+    joinedDate: user?.joinedDate || linkedApp?.submissionDate || '2026',
     validUntil: user?.validUntil || '31-MAR-2029',
     membershipTier: user?.membershipTier || 'Life Member (EPC Tier-1)',
-    membershipStatus: user?.membershipStatus || 'Active'
+    membershipStatus: user?.membershipStatus || (linkedApp?.status === 'Approved' ? 'Active' : linkedApp?.status || 'Active')
   };
 
   // Edit form state
   const [editFormData, setEditFormData] = useState(memberData);
-
-  // Find linked application if any
-  const linkedApp = applications[0] || null;
 
   const handleCopyId = () => {
     navigator.clipboard.writeText(memberData.membershipId);

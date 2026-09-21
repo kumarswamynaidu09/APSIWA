@@ -11,6 +11,7 @@ import { AuthScreen } from './components/AuthScreen';
 import { SplashScreen } from './components/SplashScreen';
 import { GalleryLightbox } from './components/GalleryLightbox';
 import { StatusTrackerModal } from './components/StatusTrackerModal';
+import { ProfileScreen } from './components/ProfileScreen';
 import { supabase, mapSupabaseUserToProfile, signOut, isSupabaseConfigured } from './lib/supabase';
 
 export function App() {
@@ -127,6 +128,14 @@ export function App() {
     }
   };
 
+  // Handle user profile update
+  const handleUpdateUser = (updated: UserProfile) => {
+    setCurrentUser(updated);
+    try {
+      localStorage.setItem('apsiwa_current_user', JSON.stringify(updated));
+    } catch {}
+  };
+
   // Handle new membership application submission
   const handleSubmitApplication = (newApp: MembershipApplication) => {
     setApplications((prev) => [...prev, newApp]);
@@ -163,7 +172,7 @@ export function App() {
           />
 
           {/* Main Content View Container (pt-28 for 2-line header offset) */}
-          {/* Requested Flow: Home -> Gallery -> Membership -> About */}
+          {/* Flow: Home -> Gallery -> Membership -> Profile -> About */}
           <main className="flex-1 pt-28 sm:pt-32">
             {currentTab === 'home' && (
               <HomeScreen
@@ -185,6 +194,16 @@ export function App() {
                 onSubmitApplication={handleSubmitApplication}
                 onNavigateHome={() => setCurrentTab('home')}
                 onOpenTracker={() => setIsTrackerOpen(true)}
+              />
+            )}
+
+            {currentTab === 'profile' && (
+              <ProfileScreen
+                user={currentUser}
+                onUpdateUser={handleUpdateUser}
+                applications={applications}
+                onNavigateMembership={() => setCurrentTab('membership')}
+                onOpenAuth={() => handleOpenAuth('login')}
               />
             )}
 

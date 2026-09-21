@@ -1,4 +1,4 @@
-export type NavTab = 'home' | 'gallery' | 'membership' | 'about' | 'contact' | 'auth';
+export type NavTab = 'home' | 'gallery' | 'membership' | 'about' | 'contact' | 'auth' | 'profile';
 
 export interface UserProfile {
   id: string;
@@ -8,6 +8,16 @@ export interface UserProfile {
   avatarUrl?: string;
   membershipId?: string;
   joinedDate?: string;
+  companyName?: string;
+  designation?: string;
+  district?: string;
+  gstNumber?: string;
+  businessType?: string;
+  bloodGroup?: string;
+  address?: string;
+  validUntil?: string;
+  membershipTier?: string;
+  membershipStatus?: 'Active' | 'Pending Verification' | 'In Review' | 'Expired';
 }
 
 export interface GalleryItem {

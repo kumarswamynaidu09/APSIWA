@@ -29,6 +29,7 @@ export const Header: React.FC<HeaderProps> = ({
     { id: 'home', label: 'Home', icon: 'home' },
     { id: 'gallery', label: 'Activities Gallery', icon: 'photo_library' },
     { id: 'membership', label: 'Membership', icon: 'card_membership' },
+    { id: 'profile', label: 'Member Profile & Card', icon: 'badge' },
     { id: 'about', label: 'About APSIWA', icon: 'info' }
   ];
 
@@ -146,7 +147,25 @@ export const Header: React.FC<HeaderProps> = ({
                     <button
                       onClick={() => {
                         setProfileDropdownOpen(false);
-                        onOpenStatusTracker();
+                        onNavigate('profile');
+                      }}
+                      className="w-full text-left px-4 py-2 text-[13px] text-[#003477] font-semibold hover:bg-[#f2f4f7] flex items-center justify-between cursor-pointer"
+                    >
+                      <span className="flex items-center gap-2">
+                        <span className="material-symbols-outlined text-[18px]">
+                          account_circle
+                        </span>
+                        <span>My Profile &amp; ID Card</span>
+                      </span>
+                      <span className="px-1.5 py-0.5 bg-[#006e2e] text-white text-[10px] font-bold rounded-full">
+                        Active
+                      </span>
+                    </button>
+
+                    <button
+                      onClick={() => {
+                        setProfileDropdownOpen(false);
+                        onNavigate('profile');
                       }}
                       className="w-full text-left px-4 py-2 text-[13px] text-[#191c1e] hover:bg-[#f2f4f7] flex items-center justify-between cursor-pointer"
                     >
@@ -154,7 +173,7 @@ export const Header: React.FC<HeaderProps> = ({
                         <span className="material-symbols-outlined text-[18px] text-[#003477]">
                           verified_user
                         </span>
-                        <span>Application Status</span>
+                        <span>Enrolment Status</span>
                       </span>
                       {applicationCount > 0 && (
                         <span className="px-1.5 py-0.5 bg-[#006e2e] text-white text-[10px] font-bold rounded-full">
@@ -166,14 +185,14 @@ export const Header: React.FC<HeaderProps> = ({
                     <button
                       onClick={() => {
                         setProfileDropdownOpen(false);
-                        onNavigate('membership');
+                        onNavigate('profile');
                       }}
                       className="w-full text-left px-4 py-2 text-[13px] text-[#191c1e] hover:bg-[#f2f4f7] flex items-center gap-2 cursor-pointer"
                     >
                       <span className="material-symbols-outlined text-[18px] text-[#003477]">
                         badge
                       </span>
-                      <span>Membership Card</span>
+                      <span>Download ID Card</span>
                     </button>
                   </div>
 

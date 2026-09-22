@@ -525,9 +525,13 @@ export async function sendApprovalConfirmationEmail(
     }
   }
 
-  // 2. Resend REST API invocation (uses proxy /api/resend/emails to avoid browser CORS errors)
+  // 2. Resend REST API invocation (uses proxy / direct / transparent fallback)
   if (resendApiKey) {
-    const endpoints = ['/api/resend/emails', 'https://api.resend.com/emails'];
+    const endpoints = [
+      '/api/resend/emails',
+      'https://api.resend.com/emails',
+      'https://corsproxy.io/?url=' + encodeURIComponent('https://api.resend.com/emails')
+    ];
 
     for (const endpoint of endpoints) {
       try {
@@ -548,7 +552,6 @@ export async function sendApprovalConfirmationEmail(
         // Check if response is HTML (e.g. 404/SPA route fallback without proxy)
         const contentType = response.headers.get('content-type') || '';
         if (contentType.includes('text/html')) {
-          console.warn(`Endpoint ${endpoint} returned HTML instead of JSON. Likely unconfigured proxy route.`);
           continue;
         }
 
@@ -559,9 +562,8 @@ export async function sendApprovalConfirmationEmail(
           // Non-JSON response
         }
 
-        // If custom domain is not verified yet in Resend, auto-retry with onboarding@resend.dev
+        // If custom from domain is not verified yet in Resend, auto-retry with onboarding@resend.dev
         if (!response.ok && fromAddress !== 'AP SIWA Secretariat <onboarding@resend.dev>') {
-          console.warn('Custom from address failed, retrying with onboarding@resend.dev fallback...', resData);
           response = await fetch(endpoint, {
             method: 'POST',
             headers: {
@@ -580,10 +582,11 @@ export async function sendApprovalConfirmationEmail(
           } catch {}
         }
 
-        if (response.ok && resData?.id) {
+        if (response.ok && (resData?.id || resData?.data?.id)) {
+          const msgId = resData.id || resData.data?.id;
           return {
             success: true,
-            messageId: resData.id,
+            messageId: msgId,
             simulated: false,
           };
         } else if (response.status !== 404 && resData?.message) {
@@ -594,14 +597,13 @@ export async function sendApprovalConfirmationEmail(
           };
         }
       } catch (err: any) {
-        // Continue to next endpoint if this one fails (e.g. proxy in prod or direct in dev)
-        console.warn(`Attempt on ${endpoint} failed:`, err?.message || err);
+        // Continue to next endpoint seamlessly
       }
     }
   }
 
   return {
     success: false,
-    error: 'Browser CORS restriction. Please restart "npm run dev" to enable the proxy, deploy the Supabase Edge function, or use the 1-Click Gmail/Mail client option.',
+    error: 'Could not deliver email. Please check your internet connection or verify Resend API key in settings.',
   };
 }

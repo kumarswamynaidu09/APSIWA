@@ -2919,21 +2919,40 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               </div>
             </div>
 
-            {/* Quick Copy Plain Text Link */}
+            {/* Quick Copy Plain Text Link & Document Actions */}
             <div className="pt-2 flex items-center justify-between flex-wrap gap-2 text-xs border-t border-[#e0e3e6]">
-              <button
-                type="button"
-                onClick={() => {
-                  const plainText = generateApprovalEmailPlainText(emailDispatcherApp, websiteSettings);
-                  navigator.clipboard.writeText(plainText);
-                  setDispatcherSuccessMsg('Plaintext message copied to clipboard!');
-                  setTimeout(() => setDispatcherSuccessMsg(''), 4000);
-                }}
-                className="inline-flex items-center gap-1.5 text-[#003477] hover:underline font-bold cursor-pointer"
-              >
-                <Copy size={13} />
-                <span>Copy Plain Text Message Only</span>
-              </button>
+              <div className="flex items-center gap-3 flex-wrap">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const html = generateApprovalEmailHtml(emailDispatcherApp, websiteSettings);
+                    const win = window.open('', '_blank');
+                    if (win) {
+                      win.document.write(html);
+                      win.document.close();
+                    }
+                  }}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#e0edff] hover:bg-[#c5dcfa] text-[#003477] font-bold cursor-pointer"
+                  title="Open full A4 certificate in new browser tab for viewing or printing"
+                >
+                  <Printer size={13} />
+                  <span>Open &amp; Print A4 Certificate</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    const plainText = generateApprovalEmailPlainText(emailDispatcherApp, websiteSettings);
+                    navigator.clipboard.writeText(plainText);
+                    setDispatcherSuccessMsg('Plaintext message copied to clipboard!');
+                    setTimeout(() => setDispatcherSuccessMsg(''), 4000);
+                  }}
+                  className="inline-flex items-center gap-1.5 text-[#003477] hover:underline font-bold cursor-pointer"
+                >
+                  <Copy size={13} />
+                  <span>Copy Plain Text</span>
+                </button>
+              </div>
 
               <button
                 type="button"

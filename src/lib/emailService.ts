@@ -72,21 +72,25 @@ export function generateApprovalEmailHtml(
               <!-- Letterhead Header -->
               <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="border-bottom: 2.5px solid #003477; padding-bottom: 14px; margin-bottom: 16px;">
                 <tr>
-                  <td valign="middle" style="width: 70px;">
-                    <div style="background-color: #003477; color: #ffffff; width: 56px; height: 56px; border-radius: 10px; text-align: center; line-height: 56px; font-size: 18px; font-weight: 900; border: 2px solid #ffbe3b;">
-                      SIWA
-                    </div>
+                  <td valign="middle" style="width: 65px;">
+                    <img src="https://www.apsiwa.in/logo.png" alt="APSIWA" width="58" height="52" style="display: block; object-fit: contain; border-radius: 6px; border: 1px solid #cbd5e1; padding: 2px; background-color: #ffffff;" />
                   </td>
                   <td valign="middle" style="padding-left: 10px;">
-                    <span style="display: inline-block; background-color: #ffbe3b; color: #00285e; font-size: 9px; font-weight: 900; letter-spacing: 1px; text-transform: uppercase; padding: 2px 8px; border-radius: 4px; margin-bottom: 3px;">
+                    <span style="display: inline-block; background-color: #ffbe3b; color: #00285e; font-size: 8.5px; font-weight: 900; letter-spacing: 1px; text-transform: uppercase; padding: 2px 8px; border-radius: 4px; margin-bottom: 3px;">
                       GOVT. RECOGNIZED STATE SOLAR WELFARE BODY
                     </span>
-                    <h1 style="color: #003477; font-size: 18px; font-weight: 900; margin: 0 0 2px 0; text-transform: uppercase; letter-spacing: -0.2px;">
+                    <h1 style="color: #003477; font-size: 17px; font-weight: 900; margin: 0 0 2px 0; text-transform: uppercase; letter-spacing: -0.2px; line-height: 1.2;">
                       Andhra Pradesh Solar Integrators Welfare Association
                     </h1>
-                    <p style="color: #475569; font-size: 10.5px; font-weight: 600; margin: 0;">
+                    <p style="color: #475569; font-size: 10px; font-weight: 600; margin: 0;">
                       State Secretariat: Visakhapatnam &bull; CPDCL / EPDCL Regulatory Liaison Body &bull; www.apsiwa.in
                     </p>
+                  </td>
+                  <td valign="middle" align="right" style="width: 105px;">
+                    <div style="border: 2px solid #006e2e; background-color: #f0fdf4; border-radius: 8px; padding: 4px 8px; text-align: center;">
+                      <span style="color: #006e2e; font-size: 7.5px; font-weight: 900; text-transform: uppercase; display: block;">ACCREDITATION</span>
+                      <span style="color: #003477; font-size: 10.5px; font-weight: 900;">LIFE MEMBER</span>
+                    </div>
                   </td>
                 </tr>
               </table>
@@ -95,28 +99,28 @@ export function generateApprovalEmailHtml(
               <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px 14px; margin-bottom: 16px;">
                 <tr>
                   <td>
-                    <span style="color: #64748b; font-size: 9.5px; text-transform: uppercase; font-weight: 700; display: block;">MEMBERSHIP NUMBER</span>
+                    <span style="color: #64748b; font-size: 9px; text-transform: uppercase; font-weight: 700; display: block;">MEMBERSHIP NUMBER</span>
                     <span style="color: #003477; font-size: 14px; font-family: monospace; font-weight: 900;">${membershipId}</span>
                   </td>
                   <td align="center">
-                    <span style="color: #64748b; font-size: 9.5px; text-transform: uppercase; font-weight: 700; display: block;">ADMISSION STATUS</span>
-                    <span style="color: #006e2e; font-size: 11.5px; font-weight: 800; background-color: #dcfce7; padding: 2px 8px; border-radius: 12px; border: 1px solid #86efac; display: inline-block;">
+                    <span style="color: #64748b; font-size: 9px; text-transform: uppercase; font-weight: 700; display: block;">ADMISSION STATUS</span>
+                    <span style="color: #006e2e; font-size: 11px; font-weight: 800; background-color: #dcfce7; padding: 2px 8px; border-radius: 12px; border: 1px solid #86efac; display: inline-block;">
                       &bull; APPROVED &amp; ACTIVE
                     </span>
                   </td>
                   <td align="right">
-                    <span style="color: #64748b; font-size: 9.5px; text-transform: uppercase; font-weight: 700; display: block;">VALIDITY PERIOD</span>
+                    <span style="color: #64748b; font-size: 9px; text-transform: uppercase; font-weight: 700; display: block;">VALIDITY PERIOD</span>
                     <span style="color: #006e2e; font-size: 12px; font-weight: 800; font-family: monospace;">${validUntil}</span>
                   </td>
                 </tr>
               </table>
 
               <!-- Formal Greeting -->
-              <p style="font-size: 13.5px; margin: 0 0 10px 0; color: #1e293b;">
+              <p style="font-size: 13px; margin: 0 0 8px 0; color: #1e293b;">
                 Dear <strong>${memberName}</strong>,
               </p>
-              <p style="font-size: 12px; margin: 0 0 14px 0; color: #334155; line-height: 1.5;">
-                We are pleased to confirm that your institutional membership accreditation with the <strong>Andhra Pradesh Solar Integrators Welfare Association (APSIWA)</strong> has been verified and registered. Below is your official membership accreditation dossier and your detachable Smart ID Card.
+              <p style="font-size: 11.5px; margin: 0 0 14px 0; color: #334155; line-height: 1.5;">
+                This official certificate confirms that the applicant enterprise and authorized representative detailed below are verified and accredited as an active institutional member of the <strong>Andhra Pradesh Solar Integrators Welfare Association (APSIWA)</strong>.
               </p>
 
               <!-- Two-Column Details Box: 1. Representative & 2. Enterprise Profile -->
@@ -124,12 +128,21 @@ export function generateApprovalEmailHtml(
                 <tr>
                   <!-- Column 1: Personal Profile -->
                   <td width="48%" valign="top" style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px 14px;">
-                    <h3 style="margin: 0 0 8px 0; font-size: 11.5px; font-weight: 900; color: #003477; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid #e2e8f0; padding-bottom: 4px;">
-                      1. Representative Profile
-                    </h3>
+                    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="border-bottom: 1px solid #e2e8f0; padding-bottom: 4px; margin-bottom: 6px;">
+                      <tr>
+                        <td>
+                          <h3 style="margin: 0; font-size: 11px; font-weight: 900; color: #003477; text-transform: uppercase; letter-spacing: 0.5px;">
+                            1. Representative Profile
+                          </h3>
+                        </td>
+                        <td align="right">
+                          <span style="color: #006e2e; font-size: 8.5px; font-weight: 900;">VERIFIED</span>
+                        </td>
+                      </tr>
+                    </table>
                     <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="font-size: 11px;">
                       <tr>
-                        <td style="padding: 2.5px 0; color: #64748b; width: 90px;">Full Name:</td>
+                        <td style="padding: 2.5px 0; color: #64748b; width: 85px;">Full Name:</td>
                         <td style="padding: 2.5px 0; color: #0f172a; font-weight: 800;">${memberName}</td>
                       </tr>
                       <tr>
@@ -141,11 +154,11 @@ export function generateApprovalEmailHtml(
                         <td style="padding: 2.5px 0; color: #0f172a; font-weight: 700; font-family: monospace;">${dob}</td>
                       </tr>
                       <tr>
-                        <td style="padding: 2.5px 0; color: #64748b;">Mobile:</td>
+                        <td style="padding: 2.5px 0; color: #64748b;">Mobile No:</td>
                         <td style="padding: 2.5px 0; color: #0f172a; font-weight: 700;">${mobileNumber}</td>
                       </tr>
                       <tr>
-                        <td style="padding: 2.5px 0; color: #64748b;">Email:</td>
+                        <td style="padding: 2.5px 0; color: #64748b;">Email ID:</td>
                         <td style="padding: 2.5px 0; color: #003477; font-weight: 700;">${emailAddress}</td>
                       </tr>
                     </table>
@@ -155,12 +168,21 @@ export function generateApprovalEmailHtml(
 
                   <!-- Column 2: Enterprise Credentials -->
                   <td width="48%" valign="top" style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px 14px;">
-                    <h3 style="margin: 0 0 8px 0; font-size: 11.5px; font-weight: 900; color: #003477; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid #e2e8f0; padding-bottom: 4px;">
-                      2. Business Credentials
-                    </h3>
+                    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="border-bottom: 1px solid #e2e8f0; padding-bottom: 4px; margin-bottom: 6px;">
+                      <tr>
+                        <td>
+                          <h3 style="margin: 0; font-size: 11px; font-weight: 900; color: #003477; text-transform: uppercase; letter-spacing: 0.5px;">
+                            2. Enterprise Credentials
+                          </h3>
+                        </td>
+                        <td align="right">
+                          <span style="color: #003477; font-size: 8.5px; font-weight: 900;">STATE TIER-1</span>
+                        </td>
+                      </tr>
+                    </table>
                     <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="font-size: 11px;">
                       <tr>
-                        <td style="padding: 2.5px 0; color: #64748b; width: 90px;">Firm Name:</td>
+                        <td style="padding: 2.5px 0; color: #64748b; width: 85px;">Firm Name:</td>
                         <td style="padding: 2.5px 0; color: #003477; font-weight: 800;">${companyName}</td>
                       </tr>
                       <tr>
@@ -168,7 +190,7 @@ export function generateApprovalEmailHtml(
                         <td style="padding: 2.5px 0; color: #0f172a; font-weight: 700;">${businessType}</td>
                       </tr>
                       <tr>
-                        <td style="padding: 2.5px 0; color: #64748b;">District:</td>
+                        <td style="padding: 2.5px 0; color: #64748b;">District / State:</td>
                         <td style="padding: 2.5px 0; color: #0f172a; font-weight: 700;">${district}, AP</td>
                       </tr>
                       <tr>
@@ -189,14 +211,13 @@ export function generateApprovalEmailHtml(
                 <tr>
                   <td valign="middle">
                     <p style="font-size: 10px; color: #64748b; margin: 0; line-height: 1.4;">
-                      &bull; State Association Tier: <strong>Life Member (Tier-1 EPC)</strong><br />
-                      &bull; Secretariat Record: <strong>Verified &amp; Sealed at Visakhapatnam</strong><br />
-                      &bull; Admission Date: <strong>${paymentDate}</strong>
+                      Issued by: <strong>APSIWA Secretariat, Visakhapatnam</strong><br />
+                      Admission Date: <strong>${paymentDate}</strong> | ID: <strong style="font-family: monospace; color: #003477;">${membershipId}</strong>
                     </p>
                   </td>
                   <td align="right" valign="middle">
                     <div style="display: inline-block; text-align: center; border: 1.5px solid #003477; padding: 4px 12px; border-radius: 6px; background-color: #f0fdf4;">
-                      <span style="color: #006e2e; font-size: 9px; font-weight: 900; text-transform: uppercase; display: block;">OFFICIAL SEAL</span>
+                      <span style="color: #006e2e; font-size: 8.5px; font-weight: 900; text-transform: uppercase; display: block;">OFFICIAL SEAL</span>
                       <span style="color: #003477; font-size: 11px; font-weight: 900;">APSIWA 2026</span>
                     </div>
                   </td>
@@ -206,7 +227,7 @@ export function generateApprovalEmailHtml(
               <!-- Download Button Link -->
               <div style="text-align: center; margin-top: 10px; margin-bottom: 6px;">
                 <a href="${origin}" target="_blank" rel="noopener noreferrer" style="display: inline-block; background-color: #003477; color: #ffffff; text-decoration: none; font-size: 12.5px; font-weight: 800; padding: 10px 24px; border-radius: 6px; border: 1px solid #00285e;">
-                  [ Download Official Membership Card &amp; Certificate ]
+                  [ Download Official Membership Card &amp; Certificate from www.apsiwa.in ]
                 </a>
               </div>
 
@@ -238,11 +259,14 @@ export function generateApprovalEmailHtml(
                   <td style="background-color: #002255; padding: 10px 14px; border-bottom: 2px solid #ffbe3b;">
                     <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
                       <tr>
-                        <td valign="middle">
-                          <span style="font-size: 13px; font-weight: 900; color: #ffffff; letter-spacing: 0.3px;">
+                        <td valign="middle" style="width: 32px;">
+                          <img src="https://www.apsiwa.in/logo.png" alt="APSIWA" width="28" height="24" style="display: block; object-fit: contain; background-color: #ffffff; border-radius: 3px; padding: 1px;" />
+                        </td>
+                        <td valign="middle" style="padding-left: 8px;">
+                          <span style="font-size: 13px; font-weight: 900; color: #ffffff; letter-spacing: 0.3px; display: block; line-height: 1;">
                             APSIWA
                           </span>
-                          <span style="font-size: 8px; color: #8ef9a0; font-weight: 800; display: block; text-transform: uppercase; letter-spacing: 0.5px;">
+                          <span style="font-size: 7.5px; color: #8ef9a0; font-weight: 800; display: block; text-transform: uppercase; letter-spacing: 0.5px; line-height: 1.2; margin-top: 2px;">
                             Andhra Pradesh Solar Integrators Welfare Association
                           </span>
                         </td>
@@ -275,10 +299,10 @@ export function generateApprovalEmailHtml(
 
                         <!-- Card Credentials Details (NO QR CODE) -->
                         <td style="padding-left: 14px;" valign="middle">
-                          <h3 style="font-size: 14px; font-weight: 900; color: #ffffff; margin: 0 0 1px 0; text-transform: uppercase;">
+                          <h3 style="font-size: 13.5px; font-weight: 900; color: #ffffff; margin: 0 0 1px 0; text-transform: uppercase;">
                             ${memberName}
                           </h3>
-                          <p style="font-size: 10.5px; color: #ffbe3b; font-weight: 800; margin: 0 0 4px 0;">
+                          <p style="font-size: 10px; color: #ffbe3b; font-weight: 800; margin: 0 0 4px 0;">
                             ${designation} &bull; ${companyName}
                           </p>
 

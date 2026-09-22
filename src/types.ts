@@ -16,6 +16,8 @@ export interface WebsiteSettings {
   secretariatPhone: string;
   secretariatEmail: string;
   announcementText: string;
+  resendApiKey?: string;
+  resendFromEmail?: string;
 }
 
 export interface UserProfile {
@@ -24,6 +26,7 @@ export interface UserProfile {
   email: string;
   phoneNumber?: string;
   avatarUrl?: string;
+  dateOfBirth?: string;
   membershipId?: string;
   joinedDate?: string;
   companyName?: string;
@@ -31,7 +34,6 @@ export interface UserProfile {
   district?: string;
   gstNumber?: string;
   businessType?: string;
-  bloodGroup?: string;
   address?: string;
   experience?: string;
   officeAddress?: string;
@@ -57,23 +59,26 @@ export interface GalleryItem {
 export interface MembershipApplication {
   id: string;
   fullName: string;
+  dateOfBirth: string; // Compulsory: YYYY-MM-DD
   mobileNumber: string;
   emailAddress: string;
-  dob?: string;
   companyName?: string;
+  designation?: string;
   gstNumber?: string;
   businessType?: string;
   experience?: string;
   district?: string;
   officeAddress?: string;
   pincode?: string;
-  photoUrl?: string;
+  photoUrl: string; // Compulsory: Portrait Photograph for Smart ID Card
   utrNumber: string;
   paymentDate: string;
   amountPaid: string;
   paymentScreenshotUrl?: string;
   submissionDate: string;
-  status: 'Pending Verification' | 'Approved' | 'In Review';
+  validUntil?: string; // Valid for 1 year from payment day (DD-MMM-YYYY)
+  applicationType?: 'New Member' | 'Existing Member' | 'Renewal';
+  status: 'Pending Verification' | 'Approved' | 'In Review' | 'Rejected';
 }
 
 export interface DirectoryMember {

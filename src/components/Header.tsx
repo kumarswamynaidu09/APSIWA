@@ -1,6 +1,17 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { NavTab, UserProfile } from '../types';
-import { Menu, X, User, LogOut, ChevronDown, CheckCircle2, ShieldCheck, ShieldAlert } from 'lucide-react';
+import {
+  Menu,
+  X,
+  Home,
+  Images,
+  Award,
+  Contact,
+  Info,
+  UserPlus,
+  ShieldAlert,
+  BadgeCheck
+} from 'lucide-react';
 import { isAdminUser } from '../lib/supabase';
 
 interface HeaderProps {
@@ -21,27 +32,14 @@ export const Header: React.FC<HeaderProps> = ({
   onLogout
 }) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
-  const dropdownRef = useRef<HTMLDivElement>(null);
 
-  const navItems: { id: NavTab; label: string; icon: string }[] = [
-    { id: 'home', label: 'Home', icon: 'home' },
-    { id: 'gallery', label: 'Activities Gallery', icon: 'photo_library' },
-    { id: 'membership', label: 'Membership', icon: 'card_membership' },
-    { id: 'profile', label: 'Member Profile & Card', icon: 'badge' },
-    { id: 'about', label: 'About APSIWA', icon: 'info' }
+  const navItems: { id: NavTab; label: string; Icon: React.ElementType }[] = [
+    { id: 'home', label: 'Home', Icon: Home },
+    { id: 'gallery', label: 'Activities Gallery', Icon: Images },
+    { id: 'membership', label: 'Membership', Icon: Award },
+    { id: 'profile', label: 'Member Profile & Card', Icon: Contact },
+    { id: 'about', label: 'About APSIWA', Icon: Info }
   ];
-
-  // Close profile dropdown when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setProfileDropdownOpen(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
 
   const isAdmin = isAdminUser(currentUser?.email);
 
@@ -79,73 +77,7 @@ export const Header: React.FC<HeaderProps> = ({
 
           {/* Right: Become Member CTA & Profile Section */}
           <div className="flex items-center justify-end gap-2.5 sm:gap-3.5 shrink-0">
-            {/* Admin Dashboard Quick Button for Admins or direct access */}
-            {isAdmin ? (
-              <div className="relative" ref={dropdownRef}>
-                <button
-                  onClick={() => setProfileDropdownOpen(!profileDropdownOpen)}
-                  className="flex items-center gap-2 py-1.5 px-3 rounded-xl bg-[#ffbe3b]/20 hover:bg-[#ffbe3b]/30 border border-[#ffbe3b] text-[#00285e] transition-colors cursor-pointer whitespace-nowrap"
-                >
-                  <ShieldAlert size={15} className="text-[#b25e00]" />
-                  <span className="text-[12px] font-bold hidden sm:inline">Admin: {currentUser?.email?.split('@')[0]}</span>
-                  <ChevronDown
-                    size={14}
-                    className={`text-[#737783] transition-transform ${
-                      profileDropdownOpen ? 'rotate-180' : ''
-                    }`}
-                  />
-                </button>
-
-                {profileDropdownOpen && (
-                  <div className="absolute right-0 top-full mt-2 w-56 bg-white rounded-2xl shadow-xl border border-[#e0e3e6] py-2 z-50 animate-in fade-in zoom-in-95 duration-150">
-                    <div className="px-4 py-2.5 border-b border-[#e0e3e6]">
-                      <p className="text-[10px] text-[#737783] uppercase font-bold">Secretariat Council</p>
-                      <p className="text-[12px] font-bold text-[#191c1e] truncate">{currentUser?.email}</p>
-                    </div>
-                    <div className="py-1">
-                      <button
-                        onClick={() => {
-                          setProfileDropdownOpen(false);
-                          onNavigate('admin');
-                        }}
-                        className="w-full text-left px-4 py-2 text-[13px] text-[#003477] font-bold hover:bg-[#f2f4f7] flex items-center gap-2 cursor-pointer"
-                      >
-                        <ShieldAlert size={15} />
-                        <span>Admin Dashboard</span>
-                      </button>
-                      <button
-                        onClick={() => {
-                          setProfileDropdownOpen(false);
-                          onLogout();
-                        }}
-                        className="w-full text-left px-4 py-2 text-[13px] text-[#ba1a1a] font-semibold hover:bg-[#ffdad6]/40 flex items-center gap-2 cursor-pointer"
-                      >
-                        <LogOut size={15} />
-                        <span>Sign Out Admin</span>
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </div>
-            ) : (
-              <button
-                onClick={() => {
-                  onNavigate('admin');
-                  window.scrollTo({ top: 0, behavior: 'smooth' });
-                }}
-                className={`inline-flex items-center gap-1.5 px-3 py-1.5 sm:py-2 text-[12px] font-bold rounded-xl border transition-all cursor-pointer whitespace-nowrap shadow-2xs ${
-                  currentTab === 'admin'
-                    ? 'bg-[#003477] text-white border-[#003477]'
-                    : 'bg-[#f2f4f7] text-[#003477] border-[#e0e3e6] hover:bg-[#e0e3e6]'
-                }`}
-                title="APSIWA Secretariat Admin Portal"
-              >
-                <ShieldAlert size={15} className="text-[#003477]" />
-                <span>Admin Portal</span>
-              </button>
-            )}
-
-            {/* Become a Member Button with Blinking Pulse Effect & 60% Expo Discount Badge */}
+            {/* Become a Member Button with 60% Expo Discount Badge */}
             <button
               onClick={() => {
                 onNavigate('membership');
@@ -156,22 +88,8 @@ export const Header: React.FC<HeaderProps> = ({
               <span className="absolute -top-2.5 -right-1 px-1.5 py-0.5 rounded-full bg-[#ffbe3b] text-[#00285e] text-[9px] font-black uppercase tracking-wider shadow-sm animate-bounce">
                 60% OFF
               </span>
-              <span className="material-symbols-outlined text-[17px] sm:text-[19px]">how_to_reg</span>
+              <UserPlus size={18} className="shrink-0" />
               <span>Become a Member</span>
-            </button>
-
-            {/* Quick Status Tracker Icon with Application Badge */}
-            <button
-              onClick={onOpenStatusTracker}
-              title="Track Application Status & Registry"
-              className="relative w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-[#f2f4f7] hover:bg-[#eceef1] border border-[#e0e3e6] flex items-center justify-center text-[#003477] transition-colors cursor-pointer"
-            >
-              <span className="material-symbols-outlined text-[20px]">inventory</span>
-              {applicationCount > 0 && (
-                <span className="absolute -top-1 -right-1 w-4 h-4 bg-[#006e2e] text-white rounded-full text-[10px] font-bold flex items-center justify-center ring-2 ring-white">
-                  {applicationCount}
-                </span>
-              )}
             </button>
 
             {/* Mobile Menu Toggle */}
@@ -187,14 +105,14 @@ export const Header: React.FC<HeaderProps> = ({
       </div>
 
       {/* ========================================================= */}
-      {/* SECOND LINE: Navigation Bar in the Next Line (Centered)   */}
+      {/* SECOND LINE: Navigation Bar Centered                      */}
       {/* ========================================================= */}
       <div className="bg-[#f7f9fc] border-t border-[#eceef1] shadow-2xs">
         <div className="max-w-7xl mx-auto px-margin flex items-center justify-center">
-          {/* Main Flow Navigation (Home -> Gallery -> Membership -> About) Centered */}
-          <nav className="hidden md:flex items-center justify-center gap-2 sm:gap-2.5 h-12 overflow-x-auto py-1">
+          <nav className="hidden md:flex items-center justify-center gap-2 sm:gap-2.5 h-12 py-1">
             {navItems.map((item) => {
               const isActive = currentTab === item.id;
+              const ItemIcon = item.Icon;
               return (
                 <button
                   key={item.id}
@@ -208,13 +126,12 @@ export const Header: React.FC<HeaderProps> = ({
                       : 'text-[#434752] hover:text-[#003477] hover:bg-white/70'
                   }`}
                 >
-                  <span
-                    className={`material-symbols-outlined text-[18px] transition-colors shrink-0 ${
-                      isActive ? 'text-[#003477]' : 'text-[#737783] group-hover:text-[#003477]'
+                  <ItemIcon
+                    size={16}
+                    className={`transition-colors shrink-0 ${
+                      isActive ? 'text-[#003477]' : 'text-[#737783]'
                     }`}
-                  >
-                    {item.icon}
-                  </span>
+                  />
                   <span>{item.label}</span>
                   {isActive && (
                     <span className="w-1.5 h-1.5 rounded-full bg-[#003477] ml-0.5"></span>
@@ -229,24 +146,27 @@ export const Header: React.FC<HeaderProps> = ({
       {/* Mobile Drawer */}
       {mobileMenuOpen && (
         <div className="md:hidden border-t border-[#e0e3e6] bg-[#ffffff] px-6 py-4 space-y-2 shadow-lg animate-in slide-in-from-top-2 duration-150">
-          {navItems.map((item) => (
-            <button
-              key={item.id}
-              onClick={() => {
-                onNavigate(item.id);
-                setMobileMenuOpen(false);
-                window.scrollTo({ top: 0, behavior: 'smooth' });
-              }}
-              className={`w-full text-left py-2.5 px-3 rounded-xl text-[14px] font-medium transition-colors flex items-center gap-2.5 ${
-                currentTab === item.id
-                  ? 'bg-[#d8e2ff] text-[#001a42] font-semibold'
-                  : 'text-[#434752] hover:bg-[#f2f4f7]'
-              }`}
-            >
-              <span className="material-symbols-outlined text-[18px]">{item.icon}</span>
-              <span>{item.label}</span>
-            </button>
-          ))}
+          {navItems.map((item) => {
+            const ItemIcon = item.Icon;
+            return (
+              <button
+                key={item.id}
+                onClick={() => {
+                  onNavigate(item.id);
+                  setMobileMenuOpen(false);
+                  window.scrollTo({ top: 0, behavior: 'smooth' });
+                }}
+                className={`w-full text-left py-2.5 px-3 rounded-xl text-[14px] font-medium transition-colors flex items-center gap-2.5 ${
+                  currentTab === item.id
+                    ? 'bg-[#d8e2ff] text-[#001a42] font-semibold'
+                    : 'text-[#434752] hover:bg-[#f2f4f7]'
+                }`}
+              >
+                <ItemIcon size={18} className="shrink-0" />
+                <span>{item.label}</span>
+              </button>
+            );
+          })}
 
           <div className="pt-3 border-t border-[#e0e3e6] flex flex-col gap-2">
             <button
@@ -285,10 +205,10 @@ export const Header: React.FC<HeaderProps> = ({
                 setMobileMenuOpen(false);
                 window.scrollTo({ top: 0, behavior: 'smooth' });
               }}
-              className="w-full py-2.5 px-4 bg-gradient-to-r from-[#006e2e] via-[#008738] to-[#006e2e] text-white rounded-xl text-center font-extrabold text-[13px] flex items-center justify-center gap-2 animate-pulse shadow-md"
+              className="w-full py-2.5 px-4 bg-gradient-to-r from-[#006e2e] via-[#008738] to-[#006e2e] text-white rounded-xl text-center font-extrabold text-[13px] flex items-center justify-center gap-2 shadow-md"
             >
-              <span className="material-symbols-outlined text-[18px]">how_to_reg</span>
-              <span>Become a Member (₹2,000 • 60% Expo OFF)</span>
+              <UserPlus size={18} />
+              <span>Become a Member (60% Expo OFF)</span>
             </button>
 
             <button
@@ -298,7 +218,7 @@ export const Header: React.FC<HeaderProps> = ({
               }}
               className="w-full py-2.5 px-4 bg-[#f2f4f7] text-[#003477] rounded-xl text-center font-medium text-[13px] flex items-center justify-center gap-2"
             >
-              <span className="material-symbols-outlined text-[18px]">verified</span>
+              <BadgeCheck size={18} />
               <span>Track Application Status</span>
             </button>
           </div>

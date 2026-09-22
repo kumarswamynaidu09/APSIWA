@@ -15,9 +15,13 @@ import {
   UserCheck,
   AlertCircle,
   ExternalLink,
-  Lock
+  Lock,
+  Download,
+  FileText,
+  Printer
 } from 'lucide-react';
-import { saveMembershipApplication, DEFAULT_WEBSITE_SETTINGS } from '../lib/supabase';
+import { saveMembershipApplication, DEFAULT_WEBSITE_SETTINGS, calculateValidityDate } from '../lib/supabase';
+import { compressImage, validateImageFile } from '../lib/imageUtils';
 
 interface PaymentScreenProps {
   applicationData: Partial<MembershipApplication> | null;
@@ -66,6 +70,8 @@ export const PaymentScreen: React.FC<PaymentScreenProps> = ({
 
   // Representative & Firm summary details from actual user / form
   const repName = applicationData?.fullName || currentUser?.name || 'Applicant';
+  const repDob = applicationData?.dateOfBirth || currentUser?.dateOfBirth || '1990-01-01';
+  const repPhoto = applicationData?.photoUrl || currentUser?.avatarUrl || '';
   const repEmail = applicationData?.emailAddress || currentUser?.email || '';
   const repPhone = applicationData?.mobileNumber || currentUser?.phoneNumber || '';
   const repCompany = applicationData?.companyName || currentUser?.companyName || 'Solar EPC Enterprise';
@@ -77,15 +83,25 @@ export const PaymentScreen: React.FC<PaymentScreenProps> = ({
     setTimeout(() => setCopiedField(null), 2000);
   };
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      setScreenshotFileName(file.name);
-      const reader = new FileReader();
-      reader.onload = () => {
-        setScreenshotUrl(reader.result as string);
-      };
-      reader.readAsDataURL(file);
+      const validation = validateImageFile(file, 10);
+      if (!validation.valid) {
+        setErrorMsg(validation.error || 'Invalid file');
+        return;
+      }
+      try {
+        setScreenshotFileName(file.name);
+        const { dataUrl } = await compressImage(file, {
+          maxWidth: 900,
+          maxHeight: 900,
+          quality: 0.7
+        });
+        setScreenshotUrl(dataUrl);
+      } catch {
+        setErrorMsg('Could not process screenshot image. Please try another.');
+      }
     }
   };
 
@@ -105,17 +121,18 @@ export const PaymentScreen: React.FC<PaymentScreenProps> = ({
     const pendingApp: MembershipApplication = {
       id: newApplicationId,
       fullName: repName,
+      dateOfBirth: repDob,
       mobileNumber: repPhone,
       emailAddress: repEmail,
       companyName: repCompany,
+      designation: applicationData?.designation || currentUser?.designation || 'Solar Representative',
       district: repDistrict,
-      dob: applicationData?.dob || '',
       gstNumber: applicationData?.gstNumber || '',
       businessType: applicationData?.businessType || 'Private Limited Company',
       experience: applicationData?.experience || '1 - 3 Years',
       officeAddress: applicationData?.officeAddress || '',
       pincode: applicationData?.pincode || '',
-      photoUrl: applicationData?.photoUrl || currentUser?.avatarUrl,
+      photoUrl: repPhoto,
       utrNumber: utrNumber.trim(),
       paymentDate: paymentDate,
       amountPaid: `₹ ${activeFee.toLocaleString('en-IN')}.00`,
@@ -125,6 +142,7 @@ export const PaymentScreen: React.FC<PaymentScreenProps> = ({
         day: '2-digit',
         year: 'numeric'
       }),
+      validUntil: calculateValidityDate(paymentDate),
       status: 'Pending Verification'
     };
 
@@ -207,21 +225,34 @@ export const PaymentScreen: React.FC<PaymentScreenProps> = ({
         <div className="bg-white rounded-3xl border border-[#e0e3e6] shadow-xl overflow-hidden">
           {/* Summary Banner with Expo Discount */}
           <div className="bg-gradient-to-r from-[#003477] via-[#024aa3] to-[#00285e] text-white p-6 sm:p-7 flex flex-col md:flex-row md:items-center justify-between gap-6 border-b border-[#00285e]">
-            <div className="space-y-1">
-              <div className="flex items-center gap-2">
-                <span className="text-[10.5px] uppercase font-bold text-[#8ef9a0] tracking-widest block">
-                  Enrolment Summary
-                </span>
-                {websiteSettings.isExpoActive && (
-                  <span className="px-2 py-0.5 rounded-full bg-[#ffbe3b] text-[#00285e] text-[10px] font-black uppercase">
-                    🎉 Expo Offer ({discountPct}% OFF)
-                  </span>
+            <div className="flex items-center gap-4">
+              <div className="w-14 h-16 rounded-xl bg-white/15 border-2 border-white/40 overflow-hidden flex items-center justify-center shrink-0 shadow-sm">
+                {repPhoto ? (
+                  <img src={repPhoto} alt={repName} className="w-full h-full object-cover" />
+                ) : (
+                  <span className="font-extrabold text-lg text-white">{repName.charAt(0)}</span>
                 )}
               </div>
-              <h3 className="text-lg sm:text-xl font-black">{repName}</h3>
-              <p className="text-xs text-white/80 font-medium">
-                {repCompany} • <span className="text-[#ffbe3b] font-semibold">{repDistrict}</span>
-              </p>
+              <div className="space-y-1">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-[10.5px] uppercase font-bold text-[#8ef9a0] tracking-widest block">
+                    Enrolment Summary
+                  </span>
+                  {websiteSettings.isExpoActive && (
+                    <span className="px-2 py-0.5 rounded-full bg-[#ffbe3b] text-[#00285e] text-[10px] font-black uppercase">
+                      🎉 Expo Offer ({discountPct}% OFF)
+                    </span>
+                  )}
+                </div>
+                <h3 className="text-lg sm:text-xl font-black">{repName}</h3>
+                <p className="text-xs text-white/80 font-medium flex items-center gap-2 flex-wrap">
+                  <span>{repCompany}</span>
+                  <span className="text-white/40">•</span>
+                  <span>DOB: <strong className="text-white">{repDob}</strong></span>
+                  <span className="text-white/40">•</span>
+                  <span className="text-[#ffbe3b] font-semibold">{repDistrict}</span>
+                </p>
+              </div>
             </div>
 
             <div className="bg-white/10 backdrop-blur-md rounded-2xl p-4 border border-white/20 text-right shrink-0">
@@ -527,36 +558,130 @@ export const PaymentScreen: React.FC<PaymentScreenProps> = ({
                 </div>
               </div>
 
-              {/* ADMIN APPROVAL ACTION BOX (Popup Approval Trigger) */}
-              {!isApproved && (
-                <div className="p-4 rounded-2xl bg-[#fff8e6] border border-[#ffe08a] space-y-3">
-                  <div className="flex items-center gap-2 text-[#b25e00] font-bold">
-                    <UserCheck size={16} />
-                    <span>Secretariat / Admin Approval Portal</span>
-                  </div>
-                  <p className="text-[11.5px] text-[#6b4700] leading-relaxed">
-                    As an authorized APSIWA administrator, you can verify the UTR and immediately grant active member certification:
-                  </p>
-                  <button
-                    type="button"
-                    onClick={handleAdminApprove}
-                    disabled={adminApproving}
-                    className="w-full py-3 rounded-xl bg-gradient-to-r from-[#006e2e] to-[#008738] hover:from-[#005322] hover:to-[#006e2e] text-white text-xs sm:text-sm font-extrabold shadow-md transition-all cursor-pointer flex items-center justify-center gap-2 active:scale-98 disabled:opacity-75"
-                  >
-                    {adminApproving ? (
-                      <>
-                        <span className="material-symbols-outlined text-base animate-spin">refresh</span>
-                        <span>Authorizing &amp; Issuing ID Card...</span>
-                      </>
-                    ) : (
-                      <>
-                        <CheckCircle2 size={16} />
-                        <span>✓ Admin Action: Approve Membership Now</span>
-                      </>
-                    )}
-                  </button>
+              {/* Payment Receipt Download & Instructions Box */}
+              <div className="p-4 rounded-2xl bg-[#f0f7ff] border border-[#bcd7ff] space-y-3">
+                <div className="flex items-center gap-2 text-[#003477] font-bold">
+                  <FileText size={16} />
+                  <span>Official Remittance Acknowledgement</span>
                 </div>
-              )}
+                <p className="text-[11.5px] text-[#334155] leading-relaxed">
+                  Your remittance details and UTR reference have been recorded. You can download or print your official payment receipt below for your records:
+                </p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const receiptNo = `REC-${submittedApp.id}`;
+                    const feeFormatted = submittedApp.amountPaid || `₹ ${activeFee.toLocaleString('en-IN')}.00`;
+                    const dateFormatted = new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+                    const printWindow = window.open('', '_blank');
+                    if (!printWindow) {
+                      alert('Please allow pop-ups to download and print your official receipt.');
+                      return;
+                    }
+
+                    printWindow.document.write(`
+                      <!DOCTYPE html>
+                      <html>
+                      <head>
+                        <title>APSIWA Payment Receipt - ${receiptNo}</title>
+                        <style>
+                          body { font-family: 'Segoe UI', Arial, sans-serif; color: #1e293b; margin: 0; padding: 30px; background: #f8fafc; -webkit-print-color-adjust: exact; }
+                          .receipt-box { max-width: 680px; margin: 0 auto; background: #fff; padding: 36px; border-radius: 12px; border: 1px solid #cbd5e1; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
+                          .header { text-align: center; border-bottom: 2px solid #003477; padding-bottom: 16px; margin-bottom: 24px; }
+                          .title { font-size: 20px; font-weight: 900; color: #003477; margin: 0 0 4px 0; }
+                          .sub { font-size: 11px; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 700; margin: 0; }
+                          .receipt-badge { display: inline-block; background: #ffbe3b; color: #00285e; padding: 4px 14px; border-radius: 20px; font-size: 11px; font-weight: 800; margin-top: 10px; }
+                          .grid { display: flex; justify-content: space-between; margin-bottom: 20px; font-size: 13px; }
+                          .table { width: 100%; border-collapse: collapse; margin: 20px 0; font-size: 13px; }
+                          .table th { background: #f1f5f9; padding: 10px 12px; text-align: left; color: #475569; font-weight: 800; border-bottom: 2px solid #cbd5e1; }
+                          .table td { padding: 10px 12px; border-bottom: 1px solid #e2e8f0; }
+                          .status { color: #b25e00; font-weight: 700; background: #fff8e6; padding: 4px 10px; border-radius: 6px; display: inline-block; border: 1px solid #ffe08a; font-size: 11.5px; }
+                          .footer { text-align: center; margin-top: 32px; padding-top: 16px; border-top: 1px dashed #cbd5e1; font-size: 11px; color: #64748b; }
+                          @media print { body { background: #fff; padding: 0; } .receipt-box { box-shadow: none; border: none; } }
+                        </style>
+                      </head>
+                      <body>
+                        <div class="receipt-box">
+                          <div class="header">
+                            <h1 class="title">ANDHRA PRADESH SOLAR INTEGRATORS WELFARE ASSOCIATION</h1>
+                            <p class="sub">APSIWA Secretariat • Visakhapatnam, Andhra Pradesh</p>
+                            <div class="receipt-badge">OFFICIAL PAYMENT ACKNOWLEDGEMENT RECEIPT</div>
+                          </div>
+                          
+                          <div class="grid">
+                            <div>
+                              <p style="margin:0 0 4px 0;"><strong>Receipt No:</strong> <span style="font-family:monospace; color:#003477;">${receiptNo}</span></p>
+                              <p style="margin:0 0 4px 0;"><strong>Application ID:</strong> <span style="font-family:monospace;">${submittedApp.id}</span></p>
+                              <p style="margin:0;"><strong>Payment Date:</strong> ${submittedApp.paymentDate || dateFormatted}</p>
+                            </div>
+                            <div style="text-align: right;">
+                              <p style="margin:0 0 4px 0;"><strong>Status:</strong></p>
+                              <span class="status">Payment Submitted • Awaiting Secretariat Verification</span>
+                            </div>
+                          </div>
+
+                          <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 14px 18px; margin-bottom: 20px; font-size: 13px;">
+                            <p style="margin: 0 0 4px 0;"><strong>Payer Name:</strong> ${submittedApp.fullName}</p>
+                            <p style="margin: 0 0 4px 0;"><strong>Firm / Enterprise:</strong> ${submittedApp.companyName || 'Solar Integrator'}</p>
+                            <p style="margin: 0 0 4px 0;"><strong>Mobile:</strong> +91 ${submittedApp.mobileNumber}</p>
+                            <p style="margin: 0;"><strong>District:</strong> ${submittedApp.district || 'Andhra Pradesh'}</p>
+                          </div>
+
+                          <table class="table">
+                            <thead>
+                              <tr>
+                                <th>Particulars</th>
+                                <th>Mode &amp; Reference</th>
+                                <th style="text-align: right;">Amount</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              <tr>
+                                <td>
+                                  <strong>State Solar Institutional Membership Fee</strong><br />
+                                  <span style="font-size: 11px; color: #64748b;">Includes 1-Year Life Accreditation &amp; Smart ID Card</span>
+                                </td>
+                                <td>
+                                  UPI / Bank Remittance<br />
+                                  <span style="font-family: monospace; font-size: 11.5px; color: #006e2e; font-weight: bold;">UTR: ${submittedApp.utrNumber}</span>
+                                </td>
+                                <td style="text-align: right; font-weight: 800; color: #006e2e; font-size: 14px;">
+                                  ${feeFormatted}
+                                </td>
+                              </tr>
+                            </tbody>
+                          </table>
+
+                          <div class="grid" style="margin-top: 24px; align-items: flex-end;">
+                            <div style="font-size: 11.5px; color: #64748b; max-width: 320px;">
+                              <p style="margin: 0 0 4px 0;"><strong>Note:</strong></p>
+                              <p style="margin: 0; line-height: 1.4;">Once approved by the Secretariat, your digital Smart ID Card will be immediately downloadable on the portal using your phone number.</p>
+                            </div>
+                            <div style="text-align: right;">
+                              <p style="margin: 0 0 30px 0; font-size: 11px; color: #64748b;">Authorized Signatory</p>
+                              <p style="margin: 0; font-size: 13px; font-weight: 800; color: #003477;">APSIWA Secretariat</p>
+                            </div>
+                          </div>
+
+                          <div class="footer">
+                            <p style="margin: 0 0 4px 0;">APSIWA Secretariat • Email: apsiwa2018@gmail.com • Registered under AP Societies Act</p>
+                            <p style="margin: 0;">This is an official system-generated electronic receipt.</p>
+                          </div>
+                        </div>
+                        <script>
+                          window.onload = function() { window.print(); }
+                        </script>
+                      </body>
+                      </html>
+                    `);
+                    printWindow.document.close();
+                  }}
+                  className="w-full py-3 rounded-xl bg-[#003477] hover:bg-[#024aa3] text-white text-xs sm:text-sm font-extrabold shadow-md transition-all cursor-pointer flex items-center justify-center gap-2 active:scale-98"
+                >
+                  <Download size={16} />
+                  <span>Download / Print Payment Receipt</span>
+                </button>
+              </div>
             </div>
 
             {/* Bottom Actions */}
@@ -565,10 +690,10 @@ export const PaymentScreen: React.FC<PaymentScreenProps> = ({
                 <button
                   type="button"
                   onClick={onNavigateProfile}
-                  className="w-full py-3.5 rounded-xl bg-[#003477] hover:bg-[#024aa3] text-white text-xs sm:text-sm font-black text-center shadow-md transition-all cursor-pointer flex items-center justify-center gap-2"
+                  className="w-full py-3.5 rounded-xl bg-[#006e2e] hover:bg-[#005322] text-white text-xs sm:text-sm font-black text-center shadow-md transition-all cursor-pointer flex items-center justify-center gap-2"
                 >
+                  <ShieldCheck size={18} />
                   <span>Go to Profile &amp; Download Smart ID Card</span>
-                  <span className="material-symbols-outlined text-base">badge</span>
                 </button>
               ) : (
                 <button

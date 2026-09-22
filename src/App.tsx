@@ -22,7 +22,8 @@ import {
   fetchWebsiteSettings,
   saveWebsiteSettings,
   DEFAULT_WEBSITE_SETTINGS,
-  ADMIN_EMAILS
+  ADMIN_EMAILS,
+  calculateValidityDate
 } from './lib/supabase';
 
 export function App() {
@@ -165,15 +166,46 @@ export function App() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
+  // Handle Existing Member Instant Web Onboarding (No payment required)
+  const handleExistingMemberRegistered = (newApp: MembershipApplication) => {
+    setApplications((prev) => [newApp, ...prev.filter((a) => a.id !== newApp.id)]);
+    const calculatedValidUntil = newApp.validUntil || calculateValidityDate(newApp.paymentDate);
+    const updatedUser: UserProfile = {
+      id: currentUser?.id || `usr_${Date.now()}`,
+      name: newApp.fullName,
+      email: newApp.emailAddress,
+      phoneNumber: newApp.mobileNumber,
+      dateOfBirth: newApp.dateOfBirth,
+      avatarUrl: newApp.photoUrl,
+      membershipId: newApp.id,
+      companyName: newApp.companyName,
+      designation: newApp.designation,
+      district: newApp.district,
+      gstNumber: newApp.gstNumber,
+      businessType: newApp.businessType,
+      address: newApp.officeAddress,
+      pincode: newApp.pincode,
+      validUntil: calculatedValidUntil,
+      membershipTier: 'Life Member (EPC Tier-1)',
+      membershipStatus: 'Active',
+      joinedDate: '2026'
+    };
+    handleUpdateUser(updatedUser);
+    setCurrentTab('profile');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
   // Handle Payment Complete
   const handlePaymentSuccess = (newApp: MembershipApplication) => {
     setApplications((prev) => [newApp, ...prev]);
     if (currentUser) {
+      const calculatedValidUntil = newApp.validUntil || calculateValidityDate(newApp.paymentDate);
       const updatedUser: UserProfile = {
         ...currentUser,
         membershipId: newApp.id,
         companyName: newApp.companyName,
         district: newApp.district,
+        validUntil: calculatedValidUntil,
         membershipStatus: 'Active'
       };
       handleUpdateUser(updatedUser);
@@ -226,6 +258,8 @@ export function App() {
                 currentUser={currentUser}
                 websiteSettings={websiteSettings}
                 onProceedToPayment={handleProceedToPayment}
+                onExistingMemberRegistered={handleExistingMemberRegistered}
+                onNavigateProfile={() => setCurrentTab('profile')}
                 onNavigateHome={() => setCurrentTab('home')}
               />
             )}

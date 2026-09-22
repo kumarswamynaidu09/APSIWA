@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { MembershipApplication } from '../types';
+import { ShieldCheck, X, CheckCircle2, Clock, Circle, SearchX } from 'lucide-react';
 
 interface StatusTrackerModalProps {
   isOpen: boolean;
@@ -37,7 +38,7 @@ export const StatusTrackerModal: React.FC<StatusTrackerModalProps> = ({
         {/* Header */}
         <div className="bg-[#003477] text-white p-5 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
-            <span className="material-symbols-outlined text-[24px]">verified_user</span>
+            <ShieldCheck size={24} className="text-[#8ef9a0]" />
             <div>
               <h2 className="text-[16px] font-bold">APSIWA Application Tracker</h2>
               <p className="text-[11px] text-[#8ef9a0] font-semibold uppercase">
@@ -49,7 +50,7 @@ export const StatusTrackerModal: React.FC<StatusTrackerModalProps> = ({
             onClick={onClose}
             className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white cursor-pointer"
           >
-            <span className="material-symbols-outlined text-[18px]">close</span>
+            <X size={18} />
           </button>
         </div>
 
@@ -83,14 +84,30 @@ export const StatusTrackerModal: React.FC<StatusTrackerModalProps> = ({
                   <span className="font-mono font-bold text-[#003477]">{matchedApp.id}</span>
                 </div>
 
-                <div className="grid grid-cols-2 gap-2 text-[12px]">
-                  <div>
-                    <span className="text-[#737783] block text-[10px] uppercase">Applicant</span>
-                    <span className="font-semibold text-[#191c1e]">{matchedApp.fullName}</span>
+                <div className="flex items-center gap-3 pb-2 border-b border-[#e0e3e6]">
+                  <div className="w-10 h-12 rounded-lg bg-[#003477] text-white flex items-center justify-center font-bold text-xs shrink-0 overflow-hidden shadow-2xs border border-[#003477]/20">
+                    {matchedApp.photoUrl ? (
+                      <img src={matchedApp.photoUrl} alt={matchedApp.fullName} className="w-full h-full object-cover" />
+                    ) : (
+                      matchedApp.fullName.charAt(0)
+                    )}
                   </div>
                   <div>
-                    <span className="text-[#737783] block text-[10px] uppercase">Contact</span>
+                    <span className="text-[13px] font-extrabold text-[#191c1e] block">{matchedApp.fullName}</span>
+                    <span className="text-[11px] text-[#003477] font-semibold block">
+                      DOB: {matchedApp.dateOfBirth || 'N/A'} • {matchedApp.district || 'AP'}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2 text-[12px]">
+                  <div>
+                    <span className="text-[#737783] block text-[10px] uppercase">Mobile No</span>
                     <span className="font-semibold text-[#191c1e]">+91 {matchedApp.mobileNumber}</span>
+                  </div>
+                  <div>
+                    <span className="text-[#737783] block text-[10px] uppercase">Company</span>
+                    <span className="font-semibold text-[#191c1e] truncate block">{matchedApp.companyName || 'Solar Integrator'}</span>
                   </div>
                   <div>
                     <span className="text-[#737783] block text-[10px] uppercase">Email</span>
@@ -118,19 +135,19 @@ export const StatusTrackerModal: React.FC<StatusTrackerModalProps> = ({
                 </p>
                 <div className="space-y-2 text-[12px]">
                   <div className="flex items-center gap-2.5 text-[#006e2e]">
-                    <span className="material-symbols-outlined text-[18px]">check_circle</span>
+                    <CheckCircle2 size={16} />
                     <span className="font-medium">1. Application &amp; UPI Remittance Filed</span>
                   </div>
                   <div className="flex items-center gap-2.5 text-[#003477]">
-                    <span className="material-symbols-outlined text-[18px]">pending</span>
+                    <Clock size={16} />
                     <span className="font-medium">2. Secretariat Audit &amp; UTR Reconciliation (In Progress)</span>
                   </div>
                   <div className="flex items-center gap-2.5 text-[#737783]">
-                    <span className="material-symbols-outlined text-[18px]">radio_button_unchecked</span>
+                    <Circle size={16} />
                     <span>3. Executive Council Board Approval</span>
                   </div>
                   <div className="flex items-center gap-2.5 text-[#737783]">
-                    <span className="material-symbols-outlined text-[18px]">radio_button_unchecked</span>
+                    <Circle size={16} />
                     <span>4. Digital Certificate &amp; Physical ID Card Dispatch</span>
                   </div>
                 </div>
@@ -138,7 +155,7 @@ export const StatusTrackerModal: React.FC<StatusTrackerModalProps> = ({
             </div>
           ) : (
             <div className="text-center py-6 text-[13px] text-[#434752] space-y-2">
-              <span className="material-symbols-outlined text-[36px] text-[#737783]">search_off</span>
+              <SearchX size={36} className="text-[#737783] mx-auto" />
               <p>No application found matching your criteria.</p>
               <p className="text-[11px] text-[#737783]">
                 Try searching with the exact Application ID (e.g. APSIWA-2026-XXXXX) or registered mobile number.

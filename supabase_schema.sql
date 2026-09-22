@@ -16,17 +16,17 @@ CREATE TABLE IF NOT EXISTS public.profiles (
   email TEXT UNIQUE,
   phone_number TEXT,
   avatar_url TEXT,
+  date_of_birth DATE,
   company_name TEXT,
   designation TEXT,
   district TEXT,
   gst_number TEXT,
   business_type TEXT,
-  blood_group TEXT,
   office_address TEXT,
   membership_id TEXT UNIQUE,
   membership_tier TEXT DEFAULT 'Life Member (EPC Tier-1)',
   membership_status TEXT DEFAULT 'Pending Verification',
-  valid_until DATE DEFAULT (CURRENT_DATE + INTERVAL '3 years'),
+  valid_until DATE DEFAULT (CURRENT_DATE + INTERVAL '1 year'),
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -39,9 +39,9 @@ CREATE TABLE IF NOT EXISTS public.membership_applications (
   id TEXT PRIMARY KEY, -- e.g. APSIWA-2026-48192
   user_id UUID REFERENCES auth.users(id) ON DELETE SET NULL,
   full_name TEXT NOT NULL,
+  date_of_birth DATE NOT NULL, -- Compulsory: Representative Date of Birth
   mobile_number TEXT NOT NULL,
   email_address TEXT NOT NULL,
-  dob DATE,
   company_name TEXT NOT NULL,
   designation TEXT,
   gst_number TEXT,
@@ -51,12 +51,14 @@ CREATE TABLE IF NOT EXISTS public.membership_applications (
   office_address TEXT NOT NULL,
   pincode TEXT NOT NULL,
   solar_scopes TEXT[],
-  photo_url TEXT,
+  photo_url TEXT NOT NULL, -- Compulsory: Portrait Photograph for Smart ID Card
   utr_number TEXT NOT NULL,
   payment_date DATE NOT NULL DEFAULT CURRENT_DATE,
+  valid_until DATE DEFAULT (CURRENT_DATE + INTERVAL '1 year'),
   amount_paid TEXT NOT NULL DEFAULT '₹ 2,000.00',
   payment_screenshot_url TEXT,
   submission_date TEXT NOT NULL DEFAULT TO_CHAR(NOW(), 'Mon DD, YYYY'),
+  application_type TEXT DEFAULT 'New Member' CHECK (application_type IN ('New Member', 'Existing Member', 'Renewal')),
   status TEXT NOT NULL DEFAULT 'Pending Verification' CHECK (status IN ('Pending Verification', 'In Review', 'Approved', 'Rejected')),
   approved_by UUID REFERENCES auth.users(id) ON DELETE SET NULL,
   approved_at TIMESTAMPTZ,
@@ -203,3 +205,39 @@ USING (bucket_id = 'apsiwa_assets');
 CREATE POLICY "Allow upload to apsiwa_assets" 
 ON storage.objects FOR INSERT 
 WITH CHECK (bucket_id = 'apsiwa_assets');
+
+-- ==============================================================================
+-- 7. SUPABASE EDGE FUNCTION & RESEND EMAIL INTEGRATION GUIDE
+-- ==============================================================================
+-- To enable Supabase Edge Functions with Resend, deploy the following function:
+-- Name: send-approval-email
+--
+-- File: supabase/functions/send-approval-email/index.ts
+-- ```typescript
+-- import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
+--
+-- const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY');
+--
+-- serve(async (req) => {
+--   const { to, subject, html } = await req.json();
+--   const res = await fetch('https://api.resend.com/emails', {
+--     method: 'POST',
+--     headers: {
+--       'Content-Type': 'application/json',
+--       Authorization: `Bearer ${RESEND_API_KEY}`,
+--     },
+--     body: JSON.stringify({
+--       from: 'APSIWA Secretariat <onboarding@resend.dev>',
+--       to: [to],
+--       subject,
+--       html,
+--     }),
+--   });
+--   const data = await res.json();
+--   return new Response(JSON.stringify(data), {
+--     headers: { 'Content-Type': 'application/json' },
+--     status: res.status,
+--   });
+-- });
+-- ```
+

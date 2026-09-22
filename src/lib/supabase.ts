@@ -36,6 +36,29 @@ export const supabase: SupabaseClient = createClient(
   }
 );
 
+/**
+ * Calculate membership validity date (Valid for exactly 1 year from payment day)
+ * Output formatted as DD-MMM-YYYY (e.g. 22-SEP-2027)
+ */
+export function calculateValidityDate(paymentDateStr?: string): string {
+  let date: Date;
+  if (paymentDateStr) {
+    const parsed = new Date(paymentDateStr);
+    date = isNaN(parsed.getTime()) ? new Date() : parsed;
+  } else {
+    date = new Date();
+  }
+
+  const validUntil = new Date(date);
+  validUntil.setFullYear(validUntil.getFullYear() + 1);
+
+  const day = String(validUntil.getDate()).padStart(2, '0');
+  const month = validUntil.toLocaleString('en-US', { month: 'short' }).toUpperCase();
+  const year = validUntil.getFullYear();
+
+  return `${day}-${month}-${year}`;
+}
+
 // Helper to convert Supabase User to APSIWA UserProfile
 export const mapSupabaseUserToProfile = (user: User): UserProfile => {
   const meta = user.user_metadata || {};
@@ -53,11 +76,15 @@ export const mapSupabaseUserToProfile = (user: User): UserProfile => {
       })
     : '2026';
 
+  const validUntil = meta.valid_until || calculateValidityDate(meta.payment_date || user.created_at);
+
   return {
     id: user.id,
     name,
     email: user.email || '',
     phoneNumber,
+    avatarUrl: meta.avatar_url || meta.avatarUrl || meta.photo_url || meta.photoUrl || undefined,
+    dateOfBirth: meta.date_of_birth || meta.dateOfBirth || meta.dob || undefined,
     membershipId: meta.membership_id || `APSIWA-${user.id.slice(0, 6).toUpperCase()}`,
     joinedDate: joinedYear,
     companyName: meta.company_name || meta.companyName,
@@ -65,9 +92,8 @@ export const mapSupabaseUserToProfile = (user: User): UserProfile => {
     district: meta.district,
     gstNumber: meta.gst_number || meta.gstNumber,
     businessType: meta.business_type || meta.businessType,
-    bloodGroup: meta.blood_group || meta.bloodGroup,
     address: meta.office_address || meta.address,
-    validUntil: meta.valid_until || '31-MAR-2029',
+    validUntil,
     membershipTier: meta.membership_tier || 'Life Member (EPC Tier-1)',
     membershipStatus: meta.membership_status || 'Active',
   };
@@ -276,6 +302,8 @@ export async function saveMembershipApplication(
   // Update Supabase Auth user metadata with membership info
   if (isSupabaseConfigured()) {
     try {
+      const calculatedValidUntil = app.validUntil || calculateValidityDate(app.paymentDate);
+
       await supabase.auth.updateUser({
         data: {
           company_name: app.companyName,
@@ -284,6 +312,10 @@ export async function saveMembershipApplication(
           gst_number: app.gstNumber,
           business_type: app.businessType,
           office_address: app.officeAddress,
+          avatar_url: app.photoUrl,
+          photo_url: app.photoUrl,
+          date_of_birth: app.dateOfBirth,
+          valid_until: calculatedValidUntil,
           membership_tier: 'Life Member (EPC Tier-1)',
           membership_status: 'Active',
         },
@@ -294,22 +326,25 @@ export async function saveMembershipApplication(
         id: app.id,
         user_id: userId || undefined,
         full_name: app.fullName,
+        date_of_birth: app.dateOfBirth,
         mobile_number: app.mobileNumber,
         email_address: app.emailAddress,
-        dob: app.dob || null,
         company_name: app.companyName,
+        designation: app.designation || null,
         gst_number: app.gstNumber || null,
         business_type: app.businessType,
         experience: app.experience,
         district: app.district,
         office_address: app.officeAddress,
         pincode: app.pincode,
-        photo_url: app.photoUrl || null,
+        photo_url: app.photoUrl,
         utr_number: app.utrNumber,
         payment_date: app.paymentDate,
+        valid_until: calculatedValidUntil,
         amount_paid: app.amountPaid,
         payment_screenshot_url: app.paymentScreenshotUrl || null,
         submission_date: app.submissionDate,
+        application_type: app.applicationType || 'New Member',
         status: app.status,
       });
 
@@ -317,27 +352,29 @@ export async function saveMembershipApplication(
         console.warn('membership_applications upsert notice:', appError.message);
       }
 
-      // Also record payment in dedicated payments table
-      const { error: payError } = await supabase.from('payments').upsert(
-        {
-          application_id: app.id,
-          user_id: userId || undefined,
-          utr_number: app.utrNumber,
-          amount: 2000.0,
-          currency: 'INR',
-          original_fee: 5000.0,
-          discount_percentage: 60.0,
-          offer_title: 'Solar Expo Inaugural Offer (60% OFF)',
-          payment_mode: 'UPI / Direct Bank Transfer',
-          payment_date: app.paymentDate,
-          screenshot_url: app.paymentScreenshotUrl || null,
-          verification_status: app.status === 'Approved' ? 'Verified' : 'Pending',
-        },
-        { onConflict: 'application_id' }
-      );
+      // Also record payment in dedicated payments table if new application
+      if (app.applicationType !== 'Existing Member') {
+        const { error: payError } = await supabase.from('payments').upsert(
+          {
+            application_id: app.id,
+            user_id: userId || undefined,
+            utr_number: app.utrNumber,
+            amount: 2000.0,
+            currency: 'INR',
+            original_fee: 5000.0,
+            discount_percentage: 60.0,
+            offer_title: 'Solar Expo Inaugural Offer (60% OFF)',
+            payment_mode: 'UPI / Direct Bank Transfer',
+            payment_date: app.paymentDate,
+            screenshot_url: app.paymentScreenshotUrl || null,
+            verification_status: app.status === 'Approved' ? 'Verified' : 'Pending',
+          },
+          { onConflict: 'application_id' }
+        );
 
-      if (payError) {
-        console.warn('payments table upsert notice:', payError.message);
+        if (payError) {
+          console.warn('payments table upsert notice:', payError.message);
+        }
       }
 
       return { success: true, error: null };
@@ -374,22 +411,24 @@ export async function fetchUserApplications(userEmail?: string): Promise<Members
     return data.map((item: any) => ({
       id: item.id,
       fullName: item.full_name || item.fullName,
+      dateOfBirth: item.date_of_birth || item.dateOfBirth || item.dob || '1990-01-01',
       mobileNumber: item.mobile_number || item.mobileNumber,
       emailAddress: item.email_address || item.emailAddress,
-      dob: item.dob,
       companyName: item.company_name || item.companyName,
+      designation: item.designation,
       gstNumber: item.gst_number || item.gstNumber,
       businessType: item.business_type || item.businessType,
       experience: item.experience,
       district: item.district,
       officeAddress: item.office_address || item.officeAddress,
       pincode: item.pincode,
-      photoUrl: item.photo_url || item.photoUrl,
+      photoUrl: item.photo_url || item.photoUrl || '',
       utrNumber: item.utr_number || item.utrNumber,
       paymentDate: item.payment_date || item.paymentDate,
       amountPaid: item.amount_paid || item.amountPaid || '₹ 2,000.00',
       paymentScreenshotUrl: item.payment_screenshot_url || item.paymentScreenshotUrl,
       submissionDate: item.submission_date || item.submissionDate,
+      applicationType: item.application_type || item.applicationType || 'New Member',
       status: item.status || 'Approved',
     }));
   } catch {
@@ -418,20 +457,22 @@ export async function updateApplicationDetails(app: MembershipApplication): Prom
       const { error } = await supabase.from('membership_applications').upsert({
         id: app.id,
         full_name: app.fullName,
+        date_of_birth: app.dateOfBirth,
         mobile_number: app.mobileNumber,
         email_address: app.emailAddress,
-        dob: app.dob || null,
         company_name: app.companyName,
+        designation: app.designation || null,
         gst_number: app.gstNumber || null,
         business_type: app.businessType,
         experience: app.experience,
         district: app.district,
         office_address: app.officeAddress,
         pincode: app.pincode,
-        photo_url: app.photoUrl || null,
+        photo_url: app.photoUrl,
         utr_number: app.utrNumber,
         payment_date: app.paymentDate,
         amount_paid: app.amountPaid,
+        application_type: app.applicationType || 'New Member',
         status: app.status,
       });
       return { success: !error, error: error ? error.message : null };
@@ -474,12 +515,14 @@ export const DEFAULT_WEBSITE_SETTINGS: WebsiteSettings = {
   accountNumber: '394801002934',
   ifscCode: 'SBIN0012849',
   bankName: 'State Bank of India',
-  bankBranch: 'Amaravati Secretariat Branch',
+  bankBranch: 'Visakhapatnam Main Branch',
   qrCodeUrl: 'https://lh3.googleusercontent.com/aida-public/AB6AXuDKQoPqerF6MxsFeWOQEuqjZRMOpmIHXD4ubJsjC-HLBkb6H8aH9E9q4bIuwFwOaQ9HK3Sl8Oi7yGFQsqhG4gzs4IAJR6F5Q4YqVeAWJmOkjit-g7lwqdHivjTfhp8-bLHcRqeadCaE1t74t3t6gYv7azrvqiE2k6DlgVUwMN8KJCsNkOaLr8bg1e3HlnPyaCfMTDN4U0wMK5fgZI_vn5mcEVrdfVRypfOrTx3_NkRqVrmFLkSMKtwx4A',
-  secretariatAddress: 'APSIWA Bhavan, Near NREDCAP Road, Amaravati Capital Region, AP - 520010',
+  secretariatAddress: 'Association Secretariat, Visakhapatnam, Andhra Pradesh, India',
   secretariatPhone: '+91 866 248 9000',
-  secretariatEmail: 'contact@apsiwa.org',
+  secretariatEmail: 'apsiwa2018@gmail.com',
   announcementText: 'Official institutional registrations are now open with exclusive 60% Solar Expo inaugural fee.',
+  resendApiKey: '',
+  resendFromEmail: 'APSIWA Secretariat <onboarding@resend.dev>',
 };
 
 /**

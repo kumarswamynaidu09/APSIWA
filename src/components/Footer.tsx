@@ -1,5 +1,18 @@
 import React from 'react';
 import { NavTab } from '../types';
+import {
+  ShieldCheck,
+  Home,
+  Images,
+  Award,
+  Contact,
+  Info,
+  Lock,
+  MapPin,
+  Mail,
+  Phone,
+  Clock
+} from 'lucide-react';
 
 interface FooterProps {
   onNavigate: (tab: NavTab) => void;
@@ -28,7 +41,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
             </p>
             <div className="flex items-center gap-2 pt-1">
               <span className="inline-flex items-center px-3 py-1 rounded-lg bg-[#f2f4f7] text-[11px] text-[#006e2e] font-semibold">
-                <span className="material-symbols-outlined text-[16px] mr-1.5">verified</span>
+                <ShieldCheck size={16} className="mr-1.5 text-[#006e2e]" />
                 Government Recognized Network
               </span>
             </div>
@@ -46,7 +59,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
                   }}
                   className="hover:text-[#003477] transition-colors cursor-pointer text-left flex items-center gap-1.5"
                 >
-                  <span className="material-symbols-outlined text-[15px] opacity-70">home</span>
+                  <Home size={15} className="opacity-70" />
                   <span>Home</span>
                 </button>
               </li>
@@ -58,7 +71,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
                   }}
                   className="hover:text-[#003477] transition-colors cursor-pointer text-left flex items-center gap-1.5"
                 >
-                  <span className="material-symbols-outlined text-[15px] opacity-70">photo_library</span>
+                  <Images size={15} className="opacity-70" />
                   <span>Activities Gallery</span>
                 </button>
               </li>
@@ -70,8 +83,20 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
                   }}
                   className="hover:text-[#003477] transition-colors cursor-pointer text-left flex items-center gap-1.5"
                 >
-                  <span className="material-symbols-outlined text-[15px] opacity-70">card_membership</span>
+                  <Award size={15} className="opacity-70" />
                   <span>Membership Application</span>
+                </button>
+              </li>
+              <li>
+                <button
+                  onClick={() => {
+                    onNavigate('profile');
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                  }}
+                  className="hover:text-[#003477] transition-colors cursor-pointer text-left flex items-center gap-1.5"
+                >
+                  <Contact size={15} className="opacity-70" />
+                  <span>ID Card &amp; Status</span>
                 </button>
               </li>
               <li>
@@ -82,8 +107,20 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
                   }}
                   className="hover:text-[#003477] transition-colors cursor-pointer text-left flex items-center gap-1.5"
                 >
-                  <span className="material-symbols-outlined text-[15px] opacity-70">info</span>
+                  <Info size={15} className="opacity-70" />
                   <span>About APSIWA &amp; Governance</span>
+                </button>
+              </li>
+              <li>
+                <button
+                  onClick={() => {
+                    onNavigate('admin');
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                  }}
+                  className="hover:text-[#003477] text-[#003477] font-medium transition-colors cursor-pointer text-left flex items-center gap-1.5 pt-1"
+                >
+                  <Lock size={15} />
+                  <span>Admin Portal</span>
                 </button>
               </li>
             </ul>
@@ -94,23 +131,23 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
             <p className="text-[14px] font-bold text-[#191c1e]">Contact Details</p>
             <div className="space-y-2.5 text-[13px] text-[#434752]">
               <div className="flex items-start gap-2.5">
-                <span className="material-symbols-outlined text-[#003477] text-[20px] shrink-0 mt-0.5">location_on</span>
-                <span>Association Secretariat, Vijayawada &amp; Amaravati, Andhra Pradesh</span>
+                <MapPin size={18} className="text-[#003477] shrink-0 mt-0.5" />
+                <span>Association Secretariat, Visakhapatnam, Andhra Pradesh, India</span>
               </div>
               <div className="flex items-center gap-2.5">
-                <span className="material-symbols-outlined text-[#003477] text-[20px] shrink-0">mail</span>
-                <a className="hover:text-[#003477] transition-colors underline" href="mailto:contact@apsiwa.org">
-                  contact@apsiwa.org
+                <Mail size={18} className="text-[#003477] shrink-0" />
+                <a className="hover:text-[#003477] transition-colors underline" href="mailto:apsiwa2018@gmail.com">
+                  apsiwa2018@gmail.com
                 </a>
               </div>
               <div className="flex items-center gap-2.5">
-                <span className="material-symbols-outlined text-[#003477] text-[20px] shrink-0">call</span>
+                <Phone size={18} className="text-[#003477] shrink-0" />
                 <a className="hover:text-[#003477] transition-colors" href="tel:+918662450000">
                   +91 866 245 XXXX
                 </a>
               </div>
               <div className="flex items-center gap-2.5">
-                <span className="material-symbols-outlined text-[#003477] text-[20px] shrink-0">schedule</span>
+                <Clock size={18} className="text-[#003477] shrink-0" />
                 <span>Mon - Fri: 09:30 AM - 05:30 PM IST</span>
               </div>
             </div>
@@ -124,6 +161,17 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
             <span>Institutional Welfare Platform</span>
             <span className="w-1 h-1 rounded-full bg-[#c3c6d4]"></span>
             <span>Government Liaison</span>
+            <span className="w-1 h-1 rounded-full bg-[#c3c6d4]"></span>
+            <button
+              onClick={() => {
+                onNavigate('admin');
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+              }}
+              className="hover:text-[#003477] font-semibold text-[#003477] transition-colors cursor-pointer inline-flex items-center gap-1"
+            >
+              <Lock size={13} />
+              <span>Admin Portal</span>
+            </button>
           </div>
         </div>
       </div>

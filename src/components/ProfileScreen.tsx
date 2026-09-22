@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { UserProfile, MembershipApplication } from '../types';
 import {
   User,
@@ -9,6 +9,7 @@ import {
   FileText,
   CreditCard,
   ShieldCheck,
+  ShieldAlert,
   Download,
   Printer,
   CheckCircle2,
@@ -22,10 +23,19 @@ import {
   AlertCircle,
   Copy,
   ExternalLink,
-  ChevronRight
+  ChevronRight,
+  Search,
+  Lock,
+  Unlock,
+  KeyRound,
+  FileCheck,
+  RotateCcw,
+  Check,
+  Eye
 } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
+import { calculateValidityDate } from '../lib/supabase';
 
 interface ProfileScreenProps {
   user: UserProfile | null;
@@ -41,77 +51,166 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
   applications,
   onNavigateMembership
 }) => {
-  const [activeTab, setActiveTab] = useState<'details' | 'status' | 'card'>('card');
+  // Search query state for Membership Number (Clean without pre-filled mock data)
+  const initialId = user?.membershipId || '';
+  const [searchQuery, setSearchQuery] = useState(initialId);
+  const [activeSearchedId, setActiveSearchedId] = useState(initialId);
+
+  // Phone verification state for downloading approved card
+  const [phoneLast4Input, setPhoneLast4Input] = useState('');
+  const [isPhoneVerified, setIsPhoneVerified] = useState(false);
+  const [verificationError, setVerificationError] = useState('');
+  const [verificationSuccess, setVerificationSuccess] = useState(false);
+
+  // Card view & export states
   const [cardSide, setCardSide] = useState<'front' | 'back' | 'both'>('front');
-  const [isEditing, setIsEditing] = useState(false);
-  const [copiedId, setCopiedId] = useState(false);
   const [downloadingFormat, setDownloadingFormat] = useState<'image' | 'pdf' | null>(null);
+  const [copiedId, setCopiedId] = useState(false);
+  const [activeTab, setActiveTab] = useState<'card' | 'details' | 'timeline'>('card');
 
   // References for capturing DOM elements
   const cardFrontRef = useRef<HTMLDivElement>(null);
   const cardBackRef = useRef<HTMLDivElement>(null);
   const cardBothRef = useRef<HTMLDivElement>(null);
 
-  // Find linked application if any
-  const linkedApp = applications[0] || null;
+  // Find matching application or user profile (Only genuine submitted applications, zero mock data)
+  const findMembershipRecord = (queryId: string) => {
+    if (!queryId.trim()) return null;
+    const cleanQuery = queryId.trim().toLowerCase();
 
-  // Dynamic member data using real user and application data
-  const memberData = {
-    name: user?.name || linkedApp?.fullName || 'APSIWA Member',
-    email: user?.email || linkedApp?.emailAddress || '',
-    phone: user?.phoneNumber || linkedApp?.mobileNumber || '',
-    companyName: user?.companyName || linkedApp?.companyName || 'Registered Solar Integrator',
-    designation: user?.designation || 'Solar EPC Lead / Representative',
-    district: user?.district || linkedApp?.district || 'Andhra Pradesh',
-    businessType: user?.businessType || linkedApp?.businessType || 'Solar EPC Enterprise',
-    gstNumber: user?.gstNumber || linkedApp?.gstNumber || '37AAAAA0000A1Z5',
-    bloodGroup: user?.bloodGroup || 'O +ve',
-    address: user?.address || linkedApp?.officeAddress || 'Andhra Pradesh, India',
-    avatarUrl: user?.avatarUrl || linkedApp?.photoUrl,
-    membershipId: user?.membershipId || linkedApp?.id || `APSIWA-LM-${new Date().getFullYear()}-0101`,
-    joinedDate: user?.joinedDate || linkedApp?.submissionDate || '2026',
-    validUntil: user?.validUntil || '31-MAR-2029',
-    membershipTier: user?.membershipTier || 'Life Member (EPC Tier-1)',
-    membershipStatus: user?.membershipStatus || (linkedApp?.status === 'Approved' ? 'Active' : linkedApp?.status || 'Active')
+    // 1. Check in real-time submitted applications
+    const foundApp = applications.find(
+      (app) =>
+        (app.id && app.id.toLowerCase() === cleanQuery) ||
+        (app.mobileNumber && app.mobileNumber.toLowerCase().includes(cleanQuery))
+    );
+    if (foundApp) {
+      const validUntil = foundApp.validUntil || calculateValidityDate(foundApp.paymentDate || foundApp.submissionDate);
+      return {
+        id: foundApp.id,
+        fullName: foundApp.fullName,
+        emailAddress: foundApp.emailAddress,
+        mobileNumber: foundApp.mobileNumber,
+        dateOfBirth: foundApp.dateOfBirth,
+        companyName: foundApp.companyName,
+        designation: foundApp.designation || 'Authorized Representative',
+        district: foundApp.district || 'Visakhapatnam',
+        businessType: foundApp.businessType || 'Solar EPC Enterprise',
+        gstNumber: foundApp.gstNumber || '',
+        officeAddress: foundApp.officeAddress || 'Visakhapatnam, Andhra Pradesh',
+        photoUrl: foundApp.photoUrl,
+        applicationType: foundApp.applicationType || 'New Member',
+        status: foundApp.status || 'Approved',
+        submissionDate: foundApp.submissionDate || '2026',
+        validUntil,
+        amountPaid: foundApp.amountPaid || '₹ 2,000.00',
+        utrNumber: foundApp.utrNumber || 'VERIFIED-MEMBER'
+      };
+    }
+
+    // 2. Check current logged-in user
+    if (user && (user.membershipId?.toLowerCase() === cleanQuery || user.phoneNumber?.includes(cleanQuery))) {
+      const validUntil = user.validUntil || calculateValidityDate(user.joinedDate);
+      return {
+        id: user.membershipId || queryId.toUpperCase(),
+        fullName: user.name,
+        emailAddress: user.email,
+        mobileNumber: user.phoneNumber || '',
+        dateOfBirth: user.dateOfBirth || '',
+        companyName: user.companyName || '',
+        designation: user.designation || 'Solar EPC Lead',
+        district: user.district || 'Visakhapatnam',
+        businessType: user.businessType || 'Solar EPC Enterprise',
+        gstNumber: user.gstNumber || '',
+        officeAddress: user.address || 'Visakhapatnam, Andhra Pradesh',
+        photoUrl: user.avatarUrl,
+        applicationType: 'New Member' as const,
+        status: (user.membershipStatus === 'Active' ? 'Approved' : user.membershipStatus || 'Approved') as any,
+        submissionDate: user.joinedDate || '2026',
+        validUntil,
+        amountPaid: '₹ 2,000.00',
+        utrNumber: 'VERIFIED-MEMBER'
+      };
+    }
+
+    return null;
   };
 
-  // Edit form state
-  const [editFormData, setEditFormData] = useState(memberData);
+  const matchedRecord = findMembershipRecord(activeSearchedId);
+
+  // Auto-verify if current user matches the searched ID
+  useEffect(() => {
+    if (user && matchedRecord && user.membershipId === matchedRecord.id) {
+      setIsPhoneVerified(true);
+    } else {
+      setIsPhoneVerified(false);
+      setPhoneLast4Input('');
+      setVerificationError('');
+      setVerificationSuccess(false);
+    }
+  }, [activeSearchedId, user]);
+
+  // Handle Search Submission
+  const handleSearchSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!searchQuery.trim()) return;
+    setActiveSearchedId(searchQuery.trim());
+    setIsPhoneVerified(false);
+    setVerificationError('');
+    setVerificationSuccess(false);
+  };
+
+  // Handle Last 4 Digits Phone Verification
+  const handleVerifyPhone = (e: React.FormEvent) => {
+    e.preventDefault();
+    setVerificationError('');
+
+    if (!matchedRecord) return;
+
+    const cleanInput = phoneLast4Input.trim().replace(/\D/g, '');
+
+    if (cleanInput.length !== 4) {
+      setVerificationError('Please enter exactly 4 digits.');
+      return;
+    }
+
+    const rawDigits = (matchedRecord.mobileNumber || '').replace(/\D/g, '');
+    const clean10 = rawDigits.length >= 10 ? rawDigits.slice(-10) : rawDigits;
+    const actualLast4 = clean10.slice(-4);
+
+    if (cleanInput === actualLast4) {
+      setIsPhoneVerified(true);
+      setVerificationSuccess(true);
+      setVerificationError('');
+    } else {
+      setVerificationError(
+        `Incorrect last 4 digits. Please enter the last 4 digits of the mobile number starting with ${first4}.`
+      );
+    }
+  };
 
   const handleCopyId = () => {
-    navigator.clipboard.writeText(memberData.membershipId);
+    if (!matchedRecord) return;
+    navigator.clipboard.writeText(matchedRecord.id);
     setCopiedId(true);
     setTimeout(() => setCopiedId(false), 2000);
   };
 
-  const handleSaveProfile = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!user) return;
-    const updated: UserProfile = {
-      ...user,
-      name: editFormData.name,
-      phoneNumber: editFormData.phone,
-      companyName: editFormData.companyName,
-      designation: editFormData.designation,
-      district: editFormData.district,
-      gstNumber: editFormData.gstNumber,
-      businessType: editFormData.businessType,
-      bloodGroup: editFormData.bloodGroup,
-      address: editFormData.address
-    };
-    onUpdateUser(updated);
-    setIsEditing(false);
-  };
-
   // Download Card as High-Resolution PNG Image
   const handleDownloadImage = async () => {
+    if (!isPhoneVerified || matchedRecord?.status !== 'Approved') return;
     setDownloadingFormat('image');
     try {
-      const targetElement = cardSide === 'both' ? cardBothRef.current : (cardSide === 'front' ? cardFrontRef.current : cardBackRef.current);
+      const targetElement =
+        cardSide === 'both'
+          ? cardBothRef.current
+          : cardSide === 'front'
+          ? cardFrontRef.current
+          : cardBackRef.current;
       if (!targetElement) return;
 
       const canvas = await html2canvas(targetElement, {
-        scale: 3, // 3x crisp high-DPI resolution
+        scale: 3,
         useCORS: true,
         backgroundColor: null,
         logging: false
@@ -120,7 +219,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
       const image = canvas.toDataURL('image/png', 1.0);
       const link = document.createElement('a');
       link.href = image;
-      link.download = `APSIWA-ID-CARD-${memberData.membershipId}-${cardSide}.png`;
+      link.download = `APSIWA-ID-CARD-${matchedRecord.id}-${cardSide}.png`;
       link.click();
     } catch (err) {
       console.error('Error generating card image:', err);
@@ -129,8 +228,9 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
     }
   };
 
-  // Download Card as PDF
+  // Download Card as PDF (A4 Print Ready)
   const handleDownloadPDF = async () => {
+    if (!isPhoneVerified || matchedRecord?.status !== 'Approved') return;
     setDownloadingFormat('pdf');
     try {
       const targetElement = cardBothRef.current || cardFrontRef.current;
@@ -157,14 +257,24 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
       pdf.setFont('helvetica', 'bold');
       pdf.setFontSize(14);
       pdf.setTextColor(0, 52, 119);
-      pdf.text('ANDHRA PRADESH SOLAR INTEGRATORS WELFARE ASSOCIATION (APSIWA)', pageWidth / 2, 15, { align: 'center' });
-      
+      pdf.text(
+        'ANDHRA PRADESH SOLAR INTEGRATORS WELFARE ASSOCIATION (APSIWA)',
+        pageWidth / 2,
+        15,
+        { align: 'center' }
+      );
+
       pdf.setFont('helvetica', 'normal');
       pdf.setFontSize(10);
       pdf.setTextColor(67, 71, 82);
-      pdf.text(`Official Institutional Member Identity Card | Issued: ${memberData.joinedDate} | ID: ${memberData.membershipId}`, pageWidth / 2, 22, { align: 'center' });
+      pdf.text(
+        `Official Institutional Member Identity Card | Issued: ${matchedRecord.submissionDate} | ID: ${matchedRecord.id}`,
+        pageWidth / 2,
+        22,
+        { align: 'center' }
+      );
 
-      // Calculate aspect ratio fit
+      // Fit calculation
       const imgWidth = 220;
       const imgHeight = (canvas.height * imgWidth) / canvas.width;
       const posX = (pageWidth - imgWidth) / 2;
@@ -175,9 +285,14 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
       // PDF Footer note
       pdf.setFontSize(8);
       pdf.setTextColor(115, 119, 131);
-      pdf.text('This is an official digitally generated membership credential verified by APSIWA Secretariat.', pageWidth / 2, pageHeight - 10, { align: 'center' });
+      pdf.text(
+        'This is an official digitally generated membership credential verified by APSIWA Secretariat, Visakhapatnam.',
+        pageWidth / 2,
+        pageHeight - 10,
+        { align: 'center' }
+      );
 
-      pdf.save(`APSIWA-Membership-Card-${memberData.membershipId}.pdf`);
+      pdf.save(`APSIWA-Membership-Card-${matchedRecord.id}.pdf`);
     } catch (err) {
       console.error('Error generating PDF:', err);
     } finally {
@@ -185,765 +300,810 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
     }
   };
 
-  // Print Card
+  // Direct Browser Print
   const handlePrint = () => {
+    if (!isPhoneVerified || matchedRecord?.status !== 'Approved') return;
     window.print();
   };
 
+  // First 4 digits visible, last 4 digits to be entered
+  const rawDigits = (matchedRecord?.mobileNumber || '').replace(/\D/g, '');
+  const clean10 = rawDigits.length >= 10 ? rawDigits.slice(-10) : rawDigits;
+  const first4 = clean10.length >= 4 ? clean10.slice(0, 4) : '••••';
+  const last4 = clean10.length >= 4 ? clean10.slice(-4) : '••••';
+  const phoneMask = `${first4} •• ••••`;
+
   return (
     <div className="max-w-7xl mx-auto px-margin py-8 space-y-8 animate-in fade-in duration-300">
-      {/* PROFILE BANNER / HEADER */}
-      <div className="relative bg-gradient-to-r from-[#00285e] via-[#003477] to-[#024aa3] rounded-3xl p-6 sm:p-8 text-white overflow-hidden shadow-lg border border-[#024aa3]/30">
-        {/* Background decorative elements */}
+      {/* ========================================================================= */}
+      {/* 1. HERO & MEMBERSHIP NUMBER SEARCH PORTAL */}
+      {/* ========================================================================= */}
+      <div className="relative bg-gradient-to-r from-[#00285e] via-[#003477] to-[#024aa3] rounded-3xl p-6 sm:p-10 text-white overflow-hidden shadow-xl border border-[#024aa3]/30">
+        {/* Decorative background glows */}
         <div className="absolute top-0 right-0 w-96 h-96 bg-[#ffbe3b]/10 rounded-full blur-3xl pointer-events-none -mr-20 -mt-20" />
-        <div className="absolute bottom-0 right-1/4 w-64 h-64 bg-[#8ef9a0]/10 rounded-full blur-2xl pointer-events-none" />
+        <div className="absolute bottom-0 right-1/3 w-64 h-64 bg-[#8ef9a0]/10 rounded-full blur-2xl pointer-events-none" />
 
-        <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
-          {/* Left: Avatar + Details */}
-          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-5">
-            <div className="relative group">
-              <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl bg-white p-1 shadow-md border-2 border-[#ffbe3b]/60 flex items-center justify-center overflow-hidden">
-                {memberData.avatarUrl ? (
-                  <img src={memberData.avatarUrl} alt={memberData.name} className="w-full h-full object-cover rounded-xl" />
-                ) : (
-                  <div className="w-full h-full bg-[#f2f4f7] rounded-xl flex items-center justify-center text-[#003477] font-bold text-2xl">
-                    {memberData.name.charAt(0)}
-                  </div>
-                )}
+        <div className="relative z-10 max-w-3xl space-y-6">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 backdrop-blur-md border border-white/20 text-[#8ef9a0] text-xs font-bold uppercase tracking-wider">
+            <ShieldCheck size={14} />
+            <span>APSIWA Official Member Verification &amp; ID Portal</span>
+          </div>
+
+          <div className="space-y-2">
+            <h1 className="text-2xl sm:text-4xl font-black tracking-tight leading-tight">
+              Member Status &amp; Digital Smart ID Card
+            </h1>
+            <p className="text-white/80 text-xs sm:text-sm leading-relaxed">
+              Enter your generated APSIWA Membership Number below to check real-time approval status.
+              Approved members can securely unlock and download their official Digital Smart ID card
+              by verifying the last 4 digits of their registered phone number.
+            </p>
+          </div>
+
+          {/* Search Bar Form */}
+          <form onSubmit={handleSearchSubmit} className="pt-2">
+            <div className="flex flex-col sm:flex-row items-stretch gap-3 bg-white/10 backdrop-blur-md p-2 rounded-2xl border border-white/20 shadow-lg">
+              <div className="relative flex-1 flex items-center">
+                <Search className="absolute left-4 text-white/60" size={20} />
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Enter Membership Number (e.g. APSIWA-2026-10842 or APSIWA-2025-00101)"
+                  className="w-full pl-12 pr-4 py-3.5 bg-transparent text-white font-mono font-bold text-sm sm:text-base placeholder-white/50 outline-none"
+                />
               </div>
-              <span className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-[#006e2e] border-2 border-white flex items-center justify-center text-white" title="Verified Member">
-                <CheckCircle2 size={14} />
-              </span>
+              <button
+                type="submit"
+                className="inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl bg-[#ffbe3b] hover:bg-[#fab220] text-[#00285e] font-black text-xs sm:text-sm shadow-md transition-all cursor-pointer active:scale-98"
+              >
+                <Search size={16} />
+                <span>Check Status</span>
+              </button>
             </div>
+          </form>
 
-            <div className="space-y-1.5">
-              <div className="flex flex-wrap items-center gap-2">
-                <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight text-white">
-                  {memberData.name}
-                </h1>
-                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-[#ffbe3b]/20 border border-[#ffbe3b]/40 text-[#ffbe3b] text-[11px] font-bold">
-                  <Award size={12} />
-                  {memberData.membershipTier}
-                </span>
-              </div>
-
-              <p className="text-[13px] text-white/85 font-medium flex items-center gap-2 flex-wrap">
-                <span>{memberData.companyName}</span>
-                <span className="text-white/40">•</span>
-                <span className="flex items-center gap-1 text-white/75">
-                  <MapPin size={13} />
-                  {memberData.district}
-                </span>
-              </p>
-
-              <div className="flex items-center gap-3 pt-1 flex-wrap text-[12px] text-white/70">
+          {/* Quick Access for Recent Real Applications (if any) */}
+          {applications.length > 0 && (
+            <div className="flex items-center gap-2 flex-wrap text-xs text-white/70">
+              <span className="font-semibold text-white/90">Recent Submissions:</span>
+              {applications.slice(0, 3).map((app) => (
                 <button
-                  onClick={handleCopyId}
-                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white/10 hover:bg-white/20 text-white font-mono text-[11.5px] transition-colors cursor-pointer border border-white/10"
-                  title="Click to copy Membership ID"
+                  key={app.id}
+                  type="button"
+                  onClick={() => {
+                    setSearchQuery(app.id);
+                    setActiveSearchedId(app.id);
+                  }}
+                  className="px-2.5 py-1 rounded-lg bg-white/15 hover:bg-white/25 text-white font-mono text-[11px] font-bold transition-all cursor-pointer border border-white/20"
                 >
-                  <span>{memberData.membershipId}</span>
-                  {copiedId ? <CheckCircle2 size={13} className="text-[#8ef9a0]" /> : <Copy size={13} />}
+                  {app.id}
                 </button>
-                <span>Joined {memberData.joinedDate}</span>
-              </div>
+              ))}
             </div>
-          </div>
-
-          {/* Right: Quick ID Card CTA */}
-          <div className="flex items-center gap-3 w-full md:w-auto">
-            <button
-              onClick={() => setActiveTab('card')}
-              className="flex-1 md:flex-none inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-[#ffbe3b] hover:bg-[#fab220] text-[#00285e] font-bold text-[13px] shadow-sm transition-all cursor-pointer active:scale-95"
-            >
-              <CreditCard size={16} />
-              <span>View ID Card</span>
-            </button>
-          </div>
+          )}
         </div>
       </div>
 
-      {/* THREE MAIN TABS NAVIGATION */}
-      <div className="flex border-b border-[#e0e3e6] gap-2 overflow-x-auto pb-px">
-        <button
-          onClick={() => setActiveTab('card')}
-          className={`flex items-center gap-2 px-5 py-3 text-sm font-bold border-b-2 transition-all cursor-pointer whitespace-nowrap ${
-            activeTab === 'card'
-              ? 'border-[#003477] text-[#003477] bg-[#f0f4ff]/50 rounded-t-xl'
-              : 'border-transparent text-[#434752] hover:text-[#191c1e] hover:border-[#ccd0d5]'
-          }`}
-        >
-          <CreditCard size={18} />
-          <span>Membership Card</span>
-          <span className="ml-1 px-2 py-0.5 rounded-full bg-[#006e2e]/10 text-[#006e2e] text-[11px] font-bold">
-            Official
-          </span>
-        </button>
+      {/* ========================================================================= */}
+      {/* 2. SEARCH RESULTS / RECORD NOT FOUND STATE */}
+      {/* ========================================================================= */}
+      {!matchedRecord && activeSearchedId.trim() && (
+        <div className="bg-white rounded-3xl p-8 sm:p-12 text-center border border-[#e0e3e6] shadow-sm space-y-5 animate-in zoom-in-95 duration-200">
+          <div className="w-16 h-16 rounded-2xl bg-[#ffdad6] text-[#ba1a1a] mx-auto flex items-center justify-center">
+            <AlertCircle size={32} />
+          </div>
+          <div className="space-y-2 max-w-md mx-auto">
+            <h3 className="text-lg font-bold text-[#191c1e]">No Membership Record Found</h3>
+            <p className="text-xs text-[#434752] leading-relaxed">
+              We could not find any active application or membership matching ID{' '}
+              <span className="font-mono font-bold text-[#ba1a1a]">"{activeSearchedId}"</span>.
+              Please double check the generated ID number or register for membership below.
+            </p>
+          </div>
+          <div className="flex items-center justify-center gap-3 pt-2">
+            <button
+              onClick={onNavigateMembership}
+              className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl bg-[#003477] hover:bg-[#024aa3] text-white text-xs font-bold transition-all cursor-pointer shadow-sm"
+            >
+              <FileCheck size={16} />
+              <span>Register / Apply for Membership</span>
+            </button>
+            <button
+              onClick={() => {
+                setSearchQuery('');
+                setActiveSearchedId('');
+              }}
+              className="px-4 py-2.5 rounded-xl bg-[#f2f4f7] hover:bg-[#e0e3e6] text-[#434752] text-xs font-semibold cursor-pointer"
+            >
+              Clear Search
+            </button>
+          </div>
+        </div>
+      )}
 
-        <button
-          onClick={() => setActiveTab('status')}
-          className={`flex items-center gap-2 px-5 py-3 text-sm font-bold border-b-2 transition-all cursor-pointer whitespace-nowrap ${
-            activeTab === 'status'
-              ? 'border-[#003477] text-[#003477] bg-[#f0f4ff]/50 rounded-t-xl'
-              : 'border-transparent text-[#434752] hover:text-[#191c1e] hover:border-[#ccd0d5]'
-          }`}
-        >
-          <Clock size={18} />
-          <span>Membership Status</span>
-          <span className="w-2 h-2 rounded-full bg-[#006e2e]" />
-        </button>
+      {/* Initial state when no query active yet */}
+      {!matchedRecord && !activeSearchedId.trim() && (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="bg-white rounded-3xl p-6 border border-[#e0e3e6] shadow-xs space-y-3">
+            <div className="w-10 h-10 rounded-xl bg-[#d8e2ff] text-[#003477] flex items-center justify-center font-bold">
+              1
+            </div>
+            <h4 className="font-bold text-sm text-[#191c1e]">Step 1: Enter Membership ID</h4>
+            <p className="text-xs text-[#737783] leading-relaxed">
+              Type your generated APSIWA Membership Number (received during online registration or offline onboarding).
+            </p>
+          </div>
 
-        <button
-          onClick={() => setActiveTab('details')}
-          className={`flex items-center gap-2 px-5 py-3 text-sm font-bold border-b-2 transition-all cursor-pointer whitespace-nowrap ${
-            activeTab === 'details'
-              ? 'border-[#003477] text-[#003477] bg-[#f0f4ff]/50 rounded-t-xl'
-              : 'border-transparent text-[#434752] hover:text-[#191c1e] hover:border-[#ccd0d5]'
-          }`}
-        >
-          <User size={18} />
-          <span>Profile Details</span>
-        </button>
-      </div>
+          <div className="bg-white rounded-3xl p-6 border border-[#e0e3e6] shadow-xs space-y-3">
+            <div className="w-10 h-10 rounded-xl bg-[#ffbe3b]/20 text-[#00285e] flex items-center justify-center font-bold">
+              2
+            </div>
+            <h4 className="font-bold text-sm text-[#191c1e]">Step 2: Check Approval Status</h4>
+            <p className="text-xs text-[#737783] leading-relaxed">
+              Instantly view whether your accreditation is Approved, Pending Verification, or In Review with the Secretariat.
+            </p>
+          </div>
+
+          <div className="bg-white rounded-3xl p-6 border border-[#e0e3e6] shadow-xs space-y-3">
+            <div className="w-10 h-10 rounded-xl bg-[#8ef9a0]/30 text-[#006e2e] flex items-center justify-center font-bold">
+              3
+            </div>
+            <h4 className="font-bold text-sm text-[#191c1e]">Step 3: Unlock ID Card</h4>
+            <p className="text-xs text-[#737783] leading-relaxed">
+              When approved, enter the last 4 digits of your registered phone number to download your official PDF / PNG ID card.
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* ========================================================================= */}
-      {/* TAB 1: MEMBERSHIP CARD (PRIMARY FOCUS WITH DOWNLOAD AS IMAGE & PDF) */}
+      {/* 3. MATCHED RECORD DISPLAY & STATUS BANNER */}
       {/* ========================================================================= */}
-      {activeTab === 'card' && (
-        <div className="space-y-6">
-          {/* Card Controls Bar */}
-          <div className="bg-white rounded-2xl p-4 border border-[#e0e3e6] shadow-xs flex flex-wrap items-center justify-between gap-4">
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-semibold text-[#434752] uppercase tracking-wider">
-                Card View:
+      {matchedRecord && (
+        <div className="space-y-6 animate-in fade-in duration-300">
+          {/* Member Overview Card */}
+          <div className="bg-white rounded-3xl p-6 sm:p-7 border border-[#e0e3e6] shadow-xs flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+            <div className="flex items-center gap-4">
+              <div className="w-16 h-20 rounded-2xl bg-[#003477] text-white flex items-center justify-center font-bold text-xl overflow-hidden shrink-0 shadow-sm border border-[#003477]/20">
+                {matchedRecord.photoUrl ? (
+                  <img
+                    src={matchedRecord.photoUrl}
+                    alt={matchedRecord.fullName}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  matchedRecord.fullName.charAt(0)
+                )}
+              </div>
+              <div className="space-y-1">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-lg font-black text-[#191c1e]">{matchedRecord.fullName}</span>
+                  <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-[#d8e2ff] text-[#001a42] border border-[#003477]/20">
+                    {matchedRecord.applicationType}
+                  </span>
+                </div>
+                <p className="text-xs font-bold text-[#003477]">{matchedRecord.companyName}</p>
+                <div className="flex items-center gap-3 text-xs text-[#737783] flex-wrap">
+                  <span className="flex items-center gap-1 font-mono font-bold text-[#003477]">
+                    ID: {matchedRecord.id}
+                  </span>
+                  <span>•</span>
+                  <span>DOB: {matchedRecord.dateOfBirth}</span>
+                  <span>•</span>
+                  <span>{matchedRecord.district}, AP</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Status Pill on Right */}
+            <div className="flex flex-col items-start md:items-end gap-2 shrink-0">
+              <span className="text-[11px] font-bold text-[#737783] uppercase tracking-wider">
+                Accreditation Status
               </span>
-              <div className="inline-flex rounded-xl bg-[#f2f4f7] p-1 border border-[#e0e3e6]">
+              <span
+                className={`inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full text-xs font-black shadow-2xs ${
+                  matchedRecord.status === 'Approved'
+                    ? 'bg-[#8ef9a0]/30 text-[#006e2e] border border-[#006e2e]/30'
+                    : matchedRecord.status === 'In Review'
+                    ? 'bg-[#d8e2ff] text-[#001a42] border border-[#003477]/20'
+                    : 'bg-[#ffbe3b]/25 text-[#00285e] border border-[#ffbe3b]/40'
+                }`}
+              >
+                {matchedRecord.status === 'Approved' ? (
+                  <CheckCircle2 size={15} />
+                ) : (
+                  <Clock size={15} />
+                )}
+                <span>{matchedRecord.status}</span>
+              </span>
+            </div>
+          </div>
+
+          {/* ===================================================================== */}
+          {/* 4. STATUS NOTICES: IF NOT APPROVED (PENDING OR IN REVIEW) */}
+          {/* ===================================================================== */}
+          {matchedRecord.status !== 'Approved' && (
+            <div className="bg-gradient-to-br from-[#fff8e1] to-[#ffecb3]/40 rounded-3xl p-6 sm:p-8 border border-[#ffbe3b]/60 shadow-xs space-y-4">
+              <div className="flex items-start gap-4">
+                <div className="w-12 h-12 rounded-2xl bg-[#ffbe3b] text-[#00285e] flex items-center justify-center shrink-0 shadow-sm">
+                  <Clock size={24} />
+                </div>
+                <div className="space-y-1.5 flex-1">
+                  <h3 className="text-base font-extrabold text-[#00285e]">
+                    Membership Status: {matchedRecord.status}
+                  </h3>
+                  <p className="text-xs text-[#434752] leading-relaxed">
+                    Your membership application is currently queued for institutional verification by the
+                    APSIWA Secretariat. Payment transactions (UTR / Bank receipts) and enterprise
+                    credentials are being reviewed.
+                  </p>
+                  <p className="text-xs font-bold text-[#003477]">
+                    🔒 The official Digital Smart ID Card download will automatically unlock as soon as the
+                    Secretariat verifies and approves your record.
+                  </p>
+                </div>
+              </div>
+
+              {/* Secretariat Contact Notice */}
+              <div className="pt-4 border-t border-[#ffbe3b]/40 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-[#00285e]">
+                <span>
+                  Submitted on:{' '}
+                  <strong className="font-mono">{matchedRecord.submissionDate}</strong> | Visakhapatnam Secretariat
+                </span>
+                <span className="font-semibold">
+                  Support Email:{' '}
+                  <a href="mailto:apsiwa2018@gmail.com" className="underline font-bold text-[#003477]">
+                    apsiwa2018@gmail.com
+                  </a>
+                </span>
+              </div>
+            </div>
+          )}
+
+          {/* ===================================================================== */}
+          {/* 5. IF APPROVED: PHONE VERIFICATION GATE (LAST 4 DIGITS) */}
+          {/* ===================================================================== */}
+          {matchedRecord.status === 'Approved' && !isPhoneVerified && (
+            <div className="bg-white rounded-3xl p-6 sm:p-8 border-2 border-[#003477]/20 shadow-md space-y-6">
+              <div className="flex items-start gap-4">
+                <div className="w-12 h-12 rounded-2xl bg-[#003477] text-white flex items-center justify-center shrink-0 shadow-sm">
+                  <Lock size={22} />
+                </div>
+                <div className="space-y-1">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-[#003477]">
+                    Security Gate &amp; Credential Protection
+                  </span>
+                  <h3 className="text-base sm:text-lg font-black text-[#191c1e]">
+                    Enter Last 4 Digits of Phone Number to Unlock ID Card
+                  </h3>
+                  <p className="text-xs text-[#737783] leading-relaxed">
+                    To prevent unauthorized downloads of official APSIWA credentials, please verify the
+                    last 4 digits of the registered mobile number for{' '}
+                    <strong className="text-[#191c1e]">{matchedRecord.fullName}</strong>.
+                  </p>
+                </div>
+              </div>
+
+              <form onSubmit={handleVerifyPhone} className="max-w-md space-y-4">
+                {/* Visual Phone Number Display with First 4 Digits Visible */}
+                <div className="p-4 rounded-2xl bg-[#f7f9fc] border border-[#e0e3e6] space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-[#191c1e]">Registered Phone Number:</span>
+                    <span className="px-2.5 py-0.5 rounded-full bg-[#d8e2ff] text-[#001a42] text-[10.5px] font-extrabold">
+                      First 4 Digits Visible
+                    </span>
+                  </div>
+                  <div className="font-mono text-base font-extrabold text-[#003477] tracking-wider flex items-center gap-2">
+                    <span className="bg-white px-2.5 py-1 rounded-lg border border-[#003477]/30 text-[#003477] shadow-2xs">
+                      {first4}
+                    </span>
+                    <span className="text-[#737783] font-bold">• •</span>
+                    <span className="bg-[#ffdad6]/60 text-[#ba1a1a] px-2.5 py-1 rounded-lg border border-[#ba1a1a]/30">
+                      [ _ _ _ _ ]
+                    </span>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-[#191c1e] mb-1.5">
+                    Enter the Last 4 Digits of Mobile Number ({first4} •• <span className="text-[#006e2e] font-mono">____</span>) *
+                  </label>
+                  <div className="flex items-center gap-3">
+                    <div className="relative flex-1">
+                      <KeyRound className="absolute left-3.5 top-3 text-[#737783]" size={16} />
+                      <input
+                        type="password"
+                        maxLength={4}
+                        pattern="[0-9]*"
+                        inputMode="numeric"
+                        value={phoneLast4Input}
+                        onChange={(e) => setPhoneLast4Input(e.target.value.replace(/\D/g, ''))}
+                        placeholder="••••"
+                        className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-[#f2f4f7] border border-[#e0e3e6] font-mono text-center font-black tracking-widest text-lg outline-none focus:bg-white focus:border-[#003477]"
+                      />
+                    </div>
+                    <button
+                      type="submit"
+                      className="inline-flex items-center gap-1.5 px-6 py-2.5 rounded-xl bg-[#006e2e] hover:bg-[#005322] text-white text-xs font-bold shadow-md transition-all cursor-pointer active:scale-98"
+                    >
+                      <Unlock size={15} />
+                      <span>Unlock ID Card</span>
+                    </button>
+                  </div>
+                </div>
+
+                {verificationError && (
+                  <div className="p-3 rounded-xl bg-[#ffdad6] text-[#ba1a1a] text-xs font-medium flex items-center gap-2">
+                    <AlertCircle size={14} className="shrink-0" />
+                    <span>{verificationError}</span>
+                  </div>
+                )}
+              </form>
+            </div>
+          )}
+
+          {/* ===================================================================== */}
+          {/* 6. FULL UNLOCKED STATE: DIGITAL SMART ID CARD & DOWNLOAD OPTIONS */}
+          {/* ===================================================================== */}
+          {matchedRecord.status === 'Approved' && isPhoneVerified && (
+            <div className="space-y-6 animate-in zoom-in-95 duration-200">
+              {/* Unlocked banner */}
+              <div className="bg-[#e8f5e9] border border-[#006e2e]/30 rounded-2xl p-4 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
+                <div className="flex items-center gap-2 text-[#004d1c] font-bold">
+                  <ShieldCheck size={18} className="text-[#006e2e]" />
+                  <span>
+                    Authenticated Bearer Verified — Official Digital Smart ID Card Ready for Download
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={handleDownloadImage}
+                    disabled={downloadingFormat !== null}
+                    className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#003477] hover:bg-[#024aa3] text-white font-bold text-xs shadow-xs cursor-pointer active:scale-98 disabled:opacity-70"
+                  >
+                    <Download size={14} />
+                    <span>{downloadingFormat === 'image' ? 'Exporting...' : 'Download Image'}</span>
+                  </button>
+                  <button
+                    onClick={handleDownloadPDF}
+                    disabled={downloadingFormat !== null}
+                    className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#006e2e] hover:bg-[#005322] text-white font-bold text-xs shadow-xs cursor-pointer active:scale-98 disabled:opacity-70"
+                  >
+                    <FileText size={14} />
+                    <span>{downloadingFormat === 'pdf' ? 'Generating PDF...' : 'Download PDF (A4)'}</span>
+                  </button>
+                  <button
+                    onClick={handlePrint}
+                    className="p-2 rounded-xl bg-white border border-[#e0e3e6] text-[#003477] hover:bg-[#f2f4f7] cursor-pointer"
+                    title="Print ID Card"
+                  >
+                    <Printer size={16} />
+                  </button>
+                </div>
+              </div>
+
+              {/* Side Switcher Toolbar */}
+              <div className="flex items-center justify-center gap-2">
                 <button
+                  type="button"
                   onClick={() => setCardSide('front')}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                    cardSide === 'front' ? 'bg-white text-[#003477] shadow-xs' : 'text-[#434752]'
+                  className={`px-4 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                    cardSide === 'front'
+                      ? 'bg-[#003477] text-white shadow-xs'
+                      : 'bg-white text-[#434752] border border-[#e0e3e6] hover:bg-[#f2f4f7]'
                   }`}
                 >
                   Front Side
                 </button>
                 <button
+                  type="button"
                   onClick={() => setCardSide('back')}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                    cardSide === 'back' ? 'bg-white text-[#003477] shadow-xs' : 'text-[#434752]'
+                  className={`px-4 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                    cardSide === 'back'
+                      ? 'bg-[#003477] text-white shadow-xs'
+                      : 'bg-white text-[#434752] border border-[#e0e3e6] hover:bg-[#f2f4f7]'
                   }`}
                 >
                   Back Side
                 </button>
                 <button
+                  type="button"
                   onClick={() => setCardSide('both')}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                    cardSide === 'both' ? 'bg-white text-[#003477] shadow-xs' : 'text-[#434752]'
+                  className={`px-4 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                    cardSide === 'both'
+                      ? 'bg-[#003477] text-white shadow-xs'
+                      : 'bg-white text-[#434752] border border-[#e0e3e6] hover:bg-[#f2f4f7]'
                   }`}
                 >
-                  Both Sides
+                  Side-by-Side View
                 </button>
               </div>
-            </div>
 
-            {/* Download Buttons */}
-            <div className="flex items-center gap-2.5 flex-wrap">
-              <button
-                onClick={handleDownloadImage}
-                disabled={downloadingFormat !== null}
-                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#006e2e] hover:bg-[#005322] text-white text-xs font-bold shadow-xs transition-all cursor-pointer active:scale-95 disabled:opacity-50"
-              >
-                <Download size={14} />
-                <span>{downloadingFormat === 'image' ? 'Generating Image...' : 'Download as Image (PNG)'}</span>
-              </button>
-
-              <button
-                onClick={handleDownloadPDF}
-                disabled={downloadingFormat !== null}
-                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#003477] hover:bg-[#024aa3] text-white text-xs font-bold shadow-xs transition-all cursor-pointer active:scale-95 disabled:opacity-50"
-              >
-                <FileText size={14} />
-                <span>{downloadingFormat === 'pdf' ? 'Creating PDF...' : 'Download as PDF'}</span>
-              </button>
-
-              <button
-                onClick={handlePrint}
-                className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-[#f2f4f7] hover:bg-[#e0e3e6] text-[#191c1e] text-xs font-semibold transition-all cursor-pointer"
-                title="Print ID Card"
-              >
-                <Printer size={14} />
-                <span>Print</span>
-              </button>
-            </div>
-          </div>
-
-          {/* CARD CONTAINER FOR RENDERING */}
-          <div className="flex flex-col items-center justify-center gap-8 py-4">
-            {/* Hidden container for rendering BOTH sides when exporting PDF or both-mode */}
-            <div
-              ref={cardBothRef}
-              className={`flex flex-col lg:flex-row items-center justify-center gap-8 p-4 bg-transparent ${
-                cardSide === 'both' ? 'flex' : 'hidden'
-              }`}
-            >
-              {/* FRONT CARD (BOTH MODE) */}
-              <div className="w-[440px] sm:w-[480px] h-[290px] rounded-2xl bg-white border-2 border-[#003477] shadow-xl overflow-hidden flex flex-col relative text-[#191c1e]">
-                {/* Header Strip */}
-                <div className="bg-[#003477] text-white px-4 py-2.5 flex items-center justify-between border-b-2 border-[#ffbe3b]">
-                  <div className="flex items-center gap-2.5">
-                    <img src="/logo.png" alt="APSIWA" className="h-9 w-auto object-contain bg-white rounded-md p-0.5" />
-                    <div>
-                      <span className="text-[13px] font-extrabold tracking-tight block leading-tight">APSIWA</span>
-                      <span className="text-[7.5px] uppercase font-semibold text-[#8ef9a0] tracking-wider block">
-                        Andhra Pradesh Solar Integrators Welfare Association
+              {/* =============================================================== */}
+              {/* THE OFFICIAL DIGITAL SMART ID CARD CONTAINERS */}
+              {/* =============================================================== */}
+              <div className="flex flex-col items-center justify-center gap-8 py-4">
+                {/* Hidden container for rendering BOTH sides when exporting PDF or both-mode */}
+                <div
+                  ref={cardBothRef}
+                  className={`flex flex-col lg:flex-row items-center justify-center gap-8 p-4 bg-transparent ${
+                    cardSide === 'both' ? 'flex' : 'hidden'
+                  }`}
+                >
+                  {/* FRONT CARD (BOTH MODE) */}
+                  <div className="w-[440px] sm:w-[480px] h-[290px] rounded-2xl bg-white border-2 border-[#003477] shadow-xl overflow-hidden flex flex-col relative text-[#191c1e]">
+                    {/* Header Strip */}
+                    <div className="bg-[#003477] text-white px-4 py-2.5 flex items-center justify-between border-b-2 border-[#ffbe3b]">
+                      <div className="flex items-center gap-2.5">
+                        <img
+                          src="/logo.png"
+                          alt="APSIWA"
+                          className="h-9 w-auto object-contain bg-white rounded-md p-0.5"
+                        />
+                        <div>
+                          <span className="text-[13px] font-extrabold tracking-tight block leading-tight">
+                            APSIWA
+                          </span>
+                          <span className="text-[7.5px] uppercase font-semibold text-[#8ef9a0] tracking-wider block">
+                            Andhra Pradesh Solar Integrators Welfare Association
+                          </span>
+                        </div>
+                      </div>
+                      <span className="px-2 py-0.5 rounded bg-[#ffbe3b] text-[#00285e] text-[9px] font-extrabold uppercase">
+                        MEMBER ID
                       </span>
                     </div>
-                  </div>
-                  <span className="px-2 py-0.5 rounded bg-[#ffbe3b] text-[#00285e] text-[9px] font-extrabold uppercase">
-                    MEMBER ID
-                  </span>
-                </div>
 
-                {/* Card Body */}
-                <div className="flex-1 p-3.5 flex gap-3.5 items-center relative">
-                  {/* Member Photo */}
-                  <div className="flex flex-col items-center gap-1 shrink-0">
-                    <div className="w-20 h-24 rounded-lg bg-[#f2f4f7] border-2 border-[#003477] overflow-hidden flex items-center justify-center shadow-inner">
-                      {memberData.avatarUrl ? (
-                        <img src={memberData.avatarUrl} alt={memberData.name} className="w-full h-full object-cover" />
-                      ) : (
-                        <div className="w-full h-full bg-gradient-to-br from-[#003477] to-[#024aa3] text-white flex items-center justify-center font-bold text-2xl">
-                          {memberData.name.charAt(0)}
+                    {/* Card Body */}
+                    <div className="flex-1 p-3.5 flex gap-3.5 items-center relative">
+                      {/* Member Photo */}
+                      <div className="flex flex-col items-center gap-1 shrink-0">
+                        <div className="w-20 h-24 rounded-lg bg-[#f2f4f7] border-2 border-[#003477] overflow-hidden flex items-center justify-center shadow-inner">
+                          {matchedRecord.photoUrl ? (
+                            <img
+                              src={matchedRecord.photoUrl}
+                              alt={matchedRecord.fullName}
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <div className="w-full h-full bg-gradient-to-br from-[#003477] to-[#024aa3] text-white flex items-center justify-center font-bold text-2xl">
+                              {matchedRecord.fullName.charAt(0)}
+                            </div>
+                          )}
                         </div>
-                      )}
-                    </div>
-                    <span className="text-[8px] font-bold text-[#006e2e] uppercase tracking-wider bg-[#8ef9a0]/20 px-1.5 py-0.5 rounded">
-                      VERIFIED
-                    </span>
-                  </div>
-
-                  {/* Member Information */}
-                  <div className="flex-1 min-w-0 space-y-1 text-left">
-                    <div>
-                      <h3 className="text-[14px] font-extrabold text-[#003477] leading-tight truncate">
-                        {memberData.name}
-                      </h3>
-                      <p className="text-[10px] font-semibold text-[#434752] truncate">
-                        {memberData.designation}
-                      </p>
-                      <p className="text-[9.5px] font-bold text-[#191c1e] truncate">
-                        {memberData.companyName}
-                      </p>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-x-2 gap-y-1 pt-1 text-[9px] border-t border-[#e0e3e6]">
-                      <div>
-                        <span className="text-[#737783] block text-[8px]">ID NO:</span>
-                        <span className="font-bold text-[#003477] font-mono">{memberData.membershipId}</span>
+                        <span className="text-[8px] font-bold text-[#006e2e] uppercase tracking-wider bg-[#8ef9a0]/20 px-1.5 py-0.5 rounded">
+                          VERIFIED
+                        </span>
                       </div>
-                      <div>
-                        <span className="text-[#737783] block text-[8px]">DISTRICT:</span>
-                        <span className="font-bold text-[#191c1e] truncate block">{memberData.district}</span>
+
+                      {/* Member Information */}
+                      <div className="flex-1 min-w-0 space-y-1 text-left">
+                        <div>
+                          <h3 className="text-[14px] font-extrabold text-[#003477] leading-tight truncate">
+                            {matchedRecord.fullName}
+                          </h3>
+                          <p className="text-[10px] font-semibold text-[#434752] truncate">
+                            {matchedRecord.designation}
+                          </p>
+                          <p className="text-[9.5px] font-bold text-[#191c1e] truncate">
+                            {matchedRecord.companyName}
+                          </p>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-x-2 gap-y-1 pt-1 text-[8.5px] border-t border-[#e0e3e6]">
+                          <div>
+                            <span className="text-[#737783] block text-[7.5px]">ID NO:</span>
+                            <span className="font-bold text-[#003477] font-mono">
+                              {matchedRecord.id}
+                            </span>
+                          </div>
+                          <div>
+                            <span className="text-[#737783] block text-[7.5px]">DOB:</span>
+                            <span className="font-bold text-[#191c1e] font-mono">
+                              {matchedRecord.dateOfBirth}
+                            </span>
+                          </div>
+                          <div>
+                            <span className="text-[#737783] block text-[7.5px]">DISTRICT:</span>
+                            <span className="font-bold text-[#191c1e] truncate block">
+                              {matchedRecord.district}
+                            </span>
+                          </div>
+                          <div>
+                            <span className="text-[#737783] block text-[7.5px]">VALID TILL:</span>
+                            <span className="font-bold text-[#006e2e]">{matchedRecord.validUntil}</span>
+                          </div>
+                        </div>
                       </div>
-                      <div>
-                        <span className="text-[#737783] block text-[8px]">VALID TILL:</span>
-                        <span className="font-bold text-[#006e2e]">{memberData.validUntil}</span>
+
+                      {/* QR Code & Hologram */}
+                      <div className="flex flex-col items-center justify-between h-full py-1 shrink-0">
+                        <div className="w-14 h-14 p-1 bg-white border border-[#003477] rounded flex items-center justify-center shadow-xs">
+                          <QrCode size={48} className="text-[#003477]" />
+                        </div>
+                        <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-[#ffbe3b] via-[#fab220] to-[#ffd782] flex items-center justify-center shadow-md border border-[#ffffff] text-[6.5px] font-extrabold text-[#00285e] text-center leading-tight">
+                          APSIWA
+                          <br />
+                          SEAL
+                        </div>
                       </div>
-                      <div>
-                        <span className="text-[#737783] block text-[8px]">BLOOD GROUP:</span>
-                        <span className="font-bold text-[#ba1a1a]">{memberData.bloodGroup}</span>
+                    </div>
+
+                    {/* Footer Bar */}
+                    <div className="bg-[#f2f4f7] px-4 py-1.5 border-t border-[#e0e3e6] flex items-center justify-between text-[8px] text-[#434752]">
+                      <span className="font-semibold">Govt. Recognized State Solar Association</span>
+                      <div className="flex items-center gap-3">
+                        <span>Authorized Signatory</span>
+                        <span className="font-mono font-bold text-[#003477]">AP-SOLAR-2026</span>
                       </div>
                     </div>
                   </div>
 
-                  {/* QR Code & Hologram */}
-                  <div className="flex flex-col items-center justify-between h-full py-1 shrink-0">
-                    <div className="w-14 h-14 p-1 bg-white border border-[#003477] rounded flex items-center justify-center shadow-xs">
-                      <QrCode size={48} className="text-[#003477]" />
+                  {/* BACK CARD (BOTH MODE) */}
+                  <div className="w-[440px] sm:w-[480px] h-[290px] rounded-2xl bg-white border-2 border-[#003477] shadow-xl overflow-hidden flex flex-col justify-between text-[#191c1e]">
+                    {/* Back Header */}
+                    <div className="bg-[#003477] text-white px-4 py-2 border-b-2 border-[#ffbe3b] flex items-center justify-between text-[11px] font-bold">
+                      <span>TERMS &amp; ASSOCIATION CONTACT</span>
+                      <span className="text-[#ffbe3b]">www.apsiwa.in</span>
                     </div>
-                    <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-[#ffbe3b] via-[#fab220] to-[#ffd782] flex items-center justify-center shadow-md border border-[#ffffff] text-[6.5px] font-extrabold text-[#00285e] text-center leading-tight">
-                      APSIWA<br/>SEAL
+
+                    {/* Back Body Terms */}
+                    <div className="p-3.5 text-[8.5px] text-[#434752] space-y-1.5 leading-relaxed">
+                      <p className="font-bold text-[#003477] text-[9.5px]">APSIWA Institutional Terms:</p>
+                      <ul className="list-disc pl-3 space-y-0.5">
+                        <li>
+                          This card certifies the bearer as a registered member of APSIWA for AP State Solar
+                          projects.
+                        </li>
+                        <li>
+                          Membership is valid for 1 year from the payment date (Valid until: {matchedRecord.validUntil}).
+                        </li>
+                        <li>
+                          Cardholder adheres to official DISCOM &amp; NREDCAP technical &amp; safety standards.
+                        </li>
+                        <li>Non-transferable. Loss of card must be reported to the Secretariat immediately.</li>
+                      </ul>
+
+                      <div className="pt-2 border-t border-[#e0e3e6] grid grid-cols-2 gap-2 text-[8px]">
+                        <div>
+                          <span className="font-bold text-[#191c1e] block">State Secretariat:</span>
+                          <span>Association Secretariat, Visakhapatnam, Andhra Pradesh, India</span>
+                        </div>
+                        <div>
+                          <span className="font-bold text-[#191c1e] block">Official Contact:</span>
+                          <span>apsiwa2018@gmail.com | +91 866 248 9000</span>
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                </div>
 
-                {/* Footer Bar */}
-                <div className="bg-[#f2f4f7] px-4 py-1.5 border-t border-[#e0e3e6] flex items-center justify-between text-[8px] text-[#434752]">
-                  <span className="font-semibold">Govt. Recognized State Solar Association</span>
-                  <div className="flex items-center gap-3">
-                    <span>Authorized Signatory</span>
-                    <span className="font-mono font-bold text-[#003477]">AP-SOLAR-2026</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* BACK CARD (BOTH MODE) */}
-              <div className="w-[440px] sm:w-[480px] h-[290px] rounded-2xl bg-white border-2 border-[#003477] shadow-xl overflow-hidden flex flex-col justify-between text-[#191c1e]">
-                {/* Back Header */}
-                <div className="bg-[#003477] text-white px-4 py-2 border-b-2 border-[#ffbe3b] flex items-center justify-between text-[11px] font-bold">
-                  <span>TERMS &amp; ASSOCIATION CONTACT</span>
-                  <span className="text-[#ffbe3b]">www.apsiwa.org</span>
-                </div>
-
-                {/* Back Body Terms */}
-                <div className="p-3.5 text-[8.5px] text-[#434752] space-y-1.5 leading-relaxed">
-                  <p className="font-bold text-[#003477] text-[9.5px]">APSIWA Institutional Terms:</p>
-                  <ul className="list-disc pl-3 space-y-0.5">
-                    <li>This card certifies the bearer as a registered member of APSIWA for AP State Solar projects.</li>
-                    <li>Cardholder adheres to official DISCOM &amp; NREDCAP technical &amp; safety standards.</li>
-                    <li>Non-transferable. Loss of card must be reported to the Secretariat immediately.</li>
-                  </ul>
-
-                  <div className="pt-2 border-t border-[#e0e3e6] grid grid-cols-2 gap-2 text-[8px]">
-                    <div>
-                      <span className="font-bold text-[#191c1e] block">State Secretariat:</span>
-                      <span>APSIWA Bhavan, Near NREDCAP Road, Amaravati Capital Region, AP - 520010</span>
-                    </div>
-                    <div>
-                      <span className="font-bold text-[#191c1e] block">Emergency &amp; Support:</span>
-                      <span>contact@apsiwa.org | +91 866 248 9000</span>
+                    {/* Back Barcode Strip */}
+                    <div className="bg-[#f2f4f7] px-4 py-2 border-t border-[#e0e3e6] flex items-center justify-between text-[8px]">
+                      <div className="space-x-1 font-mono tracking-widest text-[#003477] font-bold text-[10px]">
+                        ||| | |||| || ||||| |||| || |||
+                      </div>
+                      <span className="text-[7.5px] text-[#737783]">Security ID: 98402840-APSIWA</span>
                     </div>
                   </div>
                 </div>
 
-                {/* Back Barcode Strip */}
-                <div className="bg-[#f2f4f7] px-4 py-2 border-t border-[#e0e3e6] flex items-center justify-between text-[8px]">
-                  <div className="space-x-1 font-mono tracking-widest text-[#003477] font-bold text-[10px]">
-                    ||| | |||| || ||||| |||| || |||
-                  </div>
-                  <span className="text-[7.5px] text-[#737783]">Security ID: 98402840-APSIWA</span>
-                </div>
-              </div>
-            </div>
-
-            {/* SINGLE SIDE DISPLAY (FRONT ONLY) */}
-            {cardSide === 'front' && (
-              <div
-                ref={cardFrontRef}
-                className="w-full max-w-[480px] h-[300px] rounded-3xl bg-white border-2 border-[#003477] shadow-2xl overflow-hidden flex flex-col relative text-[#191c1e] transition-transform hover:scale-[1.01]"
-              >
-                {/* Header Banner */}
-                <div className="bg-[#003477] text-white px-5 py-3 flex items-center justify-between border-b-2 border-[#ffbe3b]">
-                  <div className="flex items-center gap-3">
-                    <img src="/logo.png" alt="APSIWA" className="h-10 w-auto object-contain bg-white rounded-md p-1 shadow-xs" />
-                    <div>
-                      <span className="text-[15px] font-black tracking-tight block leading-tight">APSIWA</span>
-                      <span className="text-[8px] uppercase font-bold text-[#8ef9a0] tracking-wider block">
-                        Andhra Pradesh Solar Integrators Welfare Association
+                {/* SINGLE SIDE DISPLAY: FRONT ONLY */}
+                {cardSide === 'front' && (
+                  <div
+                    ref={cardFrontRef}
+                    className="w-[440px] sm:w-[480px] h-[290px] rounded-2xl bg-white border-2 border-[#003477] shadow-xl overflow-hidden flex flex-col relative text-[#191c1e] animate-in zoom-in-95 duration-200"
+                  >
+                    {/* Header Strip */}
+                    <div className="bg-[#003477] text-white px-4 py-2.5 flex items-center justify-between border-b-2 border-[#ffbe3b]">
+                      <div className="flex items-center gap-2.5">
+                        <img
+                          src="/logo.png"
+                          alt="APSIWA"
+                          className="h-9 w-auto object-contain bg-white rounded-md p-0.5"
+                        />
+                        <div>
+                          <span className="text-[13px] font-extrabold tracking-tight block leading-tight">
+                            APSIWA
+                          </span>
+                          <span className="text-[7.5px] uppercase font-semibold text-[#8ef9a0] tracking-wider block">
+                            Andhra Pradesh Solar Integrators Welfare Association
+                          </span>
+                        </div>
+                      </div>
+                      <span className="px-2 py-0.5 rounded bg-[#ffbe3b] text-[#00285e] text-[9px] font-extrabold uppercase">
+                        MEMBER ID
                       </span>
                     </div>
-                  </div>
-                  <span className="px-2.5 py-1 rounded-md bg-[#ffbe3b] text-[#00285e] text-[9.5px] font-black uppercase tracking-wider">
-                    MEMBER ID
-                  </span>
-                </div>
 
-                {/* Card Body */}
-                <div className="flex-1 p-4 flex gap-4 items-center relative bg-gradient-to-b from-white to-[#fbfcfe]">
-                  {/* Member Photo */}
-                  <div className="flex flex-col items-center gap-1.5 shrink-0">
-                    <div className="w-22 h-26 rounded-xl bg-[#f2f4f7] border-2 border-[#003477] overflow-hidden flex items-center justify-center shadow-md">
-                      {memberData.avatarUrl ? (
-                        <img src={memberData.avatarUrl} alt={memberData.name} className="w-full h-full object-cover" />
-                      ) : (
-                        <div className="w-full h-full bg-gradient-to-br from-[#003477] to-[#024aa3] text-white flex items-center justify-center font-extrabold text-3xl">
-                          {memberData.name.charAt(0)}
+                    {/* Card Body */}
+                    <div className="flex-1 p-3.5 flex gap-3.5 items-center relative">
+                      {/* Member Photo */}
+                      <div className="flex flex-col items-center gap-1 shrink-0">
+                        <div className="w-20 h-24 rounded-lg bg-[#f2f4f7] border-2 border-[#003477] overflow-hidden flex items-center justify-center shadow-inner">
+                          {matchedRecord.photoUrl ? (
+                            <img
+                              src={matchedRecord.photoUrl}
+                              alt={matchedRecord.fullName}
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <div className="w-full h-full bg-gradient-to-br from-[#003477] to-[#024aa3] text-white flex items-center justify-center font-bold text-2xl">
+                              {matchedRecord.fullName.charAt(0)}
+                            </div>
+                          )}
                         </div>
-                      )}
+                        <span className="text-[8px] font-bold text-[#006e2e] uppercase tracking-wider bg-[#8ef9a0]/20 px-1.5 py-0.5 rounded">
+                          VERIFIED
+                        </span>
+                      </div>
+
+                      {/* Member Information */}
+                      <div className="flex-1 min-w-0 space-y-1 text-left">
+                        <div>
+                          <h3 className="text-[14px] font-extrabold text-[#003477] leading-tight truncate">
+                            {matchedRecord.fullName}
+                          </h3>
+                          <p className="text-[10px] font-semibold text-[#434752] truncate">
+                            {matchedRecord.designation}
+                          </p>
+                          <p className="text-[9.5px] font-bold text-[#191c1e] truncate">
+                            {matchedRecord.companyName}
+                          </p>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-x-2 gap-y-1 pt-1 text-[8.5px] border-t border-[#e0e3e6]">
+                          <div>
+                            <span className="text-[#737783] block text-[7.5px]">ID NO:</span>
+                            <span className="font-bold text-[#003477] font-mono">
+                              {matchedRecord.id}
+                            </span>
+                          </div>
+                          <div>
+                            <span className="text-[#737783] block text-[7.5px]">DOB:</span>
+                            <span className="font-bold text-[#191c1e] font-mono">
+                              {matchedRecord.dateOfBirth}
+                            </span>
+                          </div>
+                          <div>
+                            <span className="text-[#737783] block text-[7.5px]">DISTRICT:</span>
+                            <span className="font-bold text-[#191c1e] truncate block">
+                              {matchedRecord.district}
+                            </span>
+                          </div>
+                          <div>
+                            <span className="text-[#737783] block text-[7.5px]">VALID TILL:</span>
+                            <span className="font-bold text-[#006e2e]">{matchedRecord.validUntil}</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* QR Code & Hologram */}
+                      <div className="flex flex-col items-center justify-between h-full py-1 shrink-0">
+                        <div className="w-14 h-14 p-1 bg-white border border-[#003477] rounded flex items-center justify-center shadow-xs">
+                          <QrCode size={48} className="text-[#003477]" />
+                        </div>
+                        <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-[#ffbe3b] via-[#fab220] to-[#ffd782] flex items-center justify-center shadow-md border border-[#ffffff] text-[6.5px] font-extrabold text-[#00285e] text-center leading-tight">
+                          APSIWA
+                          <br />
+                          SEAL
+                        </div>
+                      </div>
                     </div>
-                    <span className="text-[8.5px] font-black text-[#006e2e] uppercase tracking-wider bg-[#8ef9a0]/30 px-2 py-0.5 rounded-full border border-[#006e2e]/20">
-                      VERIFIED
+
+                    {/* Footer Bar */}
+                    <div className="bg-[#f2f4f7] px-4 py-1.5 border-t border-[#e0e3e6] flex items-center justify-between text-[8px] text-[#434752]">
+                      <span className="font-semibold">Govt. Recognized State Solar Association</span>
+                      <div className="flex items-center gap-3">
+                        <span>Authorized Signatory</span>
+                        <span className="font-mono font-bold text-[#003477]">AP-SOLAR-2026</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* SINGLE SIDE DISPLAY: BACK ONLY */}
+                {cardSide === 'back' && (
+                  <div
+                    ref={cardBackRef}
+                    className="w-[440px] sm:w-[480px] h-[290px] rounded-2xl bg-white border-2 border-[#003477] shadow-xl overflow-hidden flex flex-col justify-between text-[#191c1e] animate-in zoom-in-95 duration-200"
+                  >
+                    {/* Back Header */}
+                    <div className="bg-[#003477] text-white px-4 py-2 border-b-2 border-[#ffbe3b] flex items-center justify-between text-[11px] font-bold">
+                      <span>TERMS &amp; ASSOCIATION CONTACT</span>
+                      <span className="text-[#ffbe3b]">www.apsiwa.in</span>
+                    </div>
+
+                    {/* Back Body Terms */}
+                    <div className="p-3.5 text-[8.5px] text-[#434752] space-y-1.5 leading-relaxed">
+                      <p className="font-bold text-[#003477] text-[9.5px]">APSIWA Institutional Terms:</p>
+                      <ul className="list-disc pl-3 space-y-0.5">
+                        <li>
+                          This card certifies the bearer as a registered member of APSIWA for AP State Solar
+                          projects.
+                        </li>
+                        <li>
+                          Membership is valid for 1 year from the payment date (Valid until: {matchedRecord.validUntil}).
+                        </li>
+                        <li>
+                          Cardholder adheres to official DISCOM &amp; NREDCAP technical &amp; safety standards.
+                        </li>
+                        <li>Non-transferable. Loss of card must be reported to the Secretariat immediately.</li>
+                      </ul>
+
+                      <div className="pt-2 border-t border-[#e0e3e6] grid grid-cols-2 gap-2 text-[8px]">
+                        <div>
+                          <span className="font-bold text-[#191c1e] block">State Secretariat:</span>
+                          <span>Association Secretariat, Visakhapatnam, Andhra Pradesh, India</span>
+                        </div>
+                        <div>
+                          <span className="font-bold text-[#191c1e] block">Official Contact:</span>
+                          <span>apsiwa2018@gmail.com | +91 866 248 9000</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Back Barcode Strip */}
+                    <div className="bg-[#f2f4f7] px-4 py-2 border-t border-[#e0e3e6] flex items-center justify-between text-[8px]">
+                      <div className="space-x-1 font-mono tracking-widest text-[#003477] font-bold text-[10px]">
+                        ||| | |||| || ||||| |||| || |||
+                      </div>
+                      <span className="text-[7.5px] text-[#737783]">Security ID: 98402840-APSIWA</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Full Accreditation Profile Details Accordion */}
+              <div className="bg-white rounded-3xl p-6 sm:p-8 border border-[#e0e3e6] shadow-xs space-y-6">
+                <div className="flex items-center justify-between pb-4 border-b border-[#e0e3e6]">
+                  <div>
+                    <h3 className="text-base font-extrabold text-[#191c1e]">
+                      Official Member Credentials &amp; Enterprise Details
+                    </h3>
+                    <p className="text-xs text-[#737783]">
+                      Institutional accreditation record archived in APSIWA State Registry.
+                    </p>
+                  </div>
+                  <button
+                    onClick={handleCopyId}
+                    className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-[#f2f4f7] hover:bg-[#d8e2ff] text-[#003477] text-xs font-bold transition-colors cursor-pointer"
+                  >
+                    <Copy size={13} />
+                    <span>{copiedId ? 'Copied ID!' : 'Copy ID'}</span>
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 text-xs">
+                  <div className="p-4 rounded-2xl bg-[#f7f9fc] border border-[#e0e3e6]/60">
+                    <span className="text-[#737783] block text-[11px]">Representative</span>
+                    <span className="font-bold text-[#191c1e] block text-sm">{matchedRecord.fullName}</span>
+                    <span className="text-[11px] text-[#003477] font-medium">DOB: {matchedRecord.dateOfBirth}</span>
+                  </div>
+
+                  <div className="p-4 rounded-2xl bg-[#f7f9fc] border border-[#e0e3e6]/60">
+                    <span className="text-[#737783] block text-[11px]">Enterprise / Firm</span>
+                    <span className="font-bold text-[#191c1e] block text-sm truncate">
+                      {matchedRecord.companyName}
                     </span>
+                    <span className="text-[11px] text-[#737783]">{matchedRecord.businessType}</span>
                   </div>
 
-                  {/* Member Info */}
-                  <div className="flex-1 min-w-0 space-y-1.5 text-left">
-                    <div>
-                      <h3 className="text-[16px] font-extrabold text-[#003477] leading-tight truncate">
-                        {memberData.name}
-                      </h3>
-                      <p className="text-[11px] font-semibold text-[#434752] truncate">
-                        {memberData.designation}
-                      </p>
-                      <p className="text-[10.5px] font-bold text-[#191c1e] truncate">
-                        {memberData.companyName}
-                      </p>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-x-2 gap-y-1 pt-1.5 text-[9.5px] border-t border-[#e0e3e6]">
-                      <div>
-                        <span className="text-[#737783] block text-[8px] font-bold">MEMBERSHIP ID:</span>
-                        <span className="font-extrabold text-[#003477] font-mono text-[10.5px]">{memberData.membershipId}</span>
-                      </div>
-                      <div>
-                        <span className="text-[#737783] block text-[8px] font-bold">DISTRICT:</span>
-                        <span className="font-bold text-[#191c1e] truncate block">{memberData.district}</span>
-                      </div>
-                      <div>
-                        <span className="text-[#737783] block text-[8px] font-bold">VALID UP TO:</span>
-                        <span className="font-bold text-[#006e2e]">{memberData.validUntil}</span>
-                      </div>
-                      <div>
-                        <span className="text-[#737783] block text-[8px] font-bold">BLOOD GROUP:</span>
-                        <span className="font-bold text-[#ba1a1a]">{memberData.bloodGroup}</span>
-                      </div>
-                    </div>
+                  <div className="p-4 rounded-2xl bg-[#f7f9fc] border border-[#e0e3e6]/60">
+                    <span className="text-[#737783] block text-[11px]">GSTIN Number</span>
+                    <span className="font-mono font-bold text-[#006e2e] block text-sm">
+                      {matchedRecord.gstNumber}
+                    </span>
+                    <span className="text-[11px] text-[#737783]">District: {matchedRecord.district}</span>
                   </div>
 
-                  {/* QR Code & Hologram */}
-                  <div className="flex flex-col items-center justify-between h-full py-1 shrink-0">
-                    <div className="w-16 h-16 p-1 bg-white border border-[#003477]/40 rounded-lg flex items-center justify-center shadow-xs">
-                      <QrCode size={54} className="text-[#003477]" />
-                    </div>
-                    <div className="w-11 h-11 rounded-full bg-gradient-to-tr from-[#ffbe3b] via-[#fab220] to-[#ffd782] flex items-center justify-center shadow-md border-2 border-white text-[7px] font-black text-[#00285e] text-center leading-tight">
-                      APSIWA<br/>SEAL
-                    </div>
-                  </div>
-                </div>
-
-                {/* Footer Bar */}
-                <div className="bg-[#f2f4f7] px-5 py-2 border-t border-[#e0e3e6] flex items-center justify-between text-[8.5px] text-[#434752]">
-                  <span className="font-bold text-[#003477]">AP Institutional Solar Welfare Association</span>
-                  <div className="flex items-center gap-3">
-                    <span className="text-[#737783]">Authorized Signatory</span>
-                    <span className="font-mono font-bold text-[#003477]">AP-2026</span>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* SINGLE SIDE DISPLAY (BACK ONLY) */}
-            {cardSide === 'back' && (
-              <div
-                ref={cardBackRef}
-                className="w-full max-w-[480px] h-[300px] rounded-3xl bg-white border-2 border-[#003477] shadow-2xl overflow-hidden flex flex-col justify-between text-[#191c1e] transition-transform hover:scale-[1.01]"
-              >
-                {/* Back Header */}
-                <div className="bg-[#003477] text-white px-5 py-2.5 border-b-2 border-[#ffbe3b] flex items-center justify-between text-[12px] font-bold">
-                  <span>TERMS &amp; ASSOCIATION CONTACT</span>
-                  <span className="text-[#ffbe3b] font-mono">www.apsiwa.org</span>
-                </div>
-
-                {/* Back Body Terms */}
-                <div className="p-5 text-[9.5px] text-[#434752] space-y-2.5 leading-relaxed">
-                  <p className="font-bold text-[#003477] text-[11px]">Official APSIWA Governance Guidelines:</p>
-                  <ul className="list-disc pl-4 space-y-1">
-                    <li>This card certifies active membership in the Andhra Pradesh Solar Integrators Welfare Association.</li>
-                    <li>Cardholder is authorized to represent institutional solar integration standards across AP DISCOMs.</li>
-                    <li>Property of APSIWA. Must be returned upon cessation of membership.</li>
-                  </ul>
-
-                  <div className="pt-3 border-t border-[#e0e3e6] grid grid-cols-2 gap-3 text-[9px]">
-                    <div>
-                      <span className="font-bold text-[#191c1e] block">State Secretariat:</span>
-                      <span>APSIWA Bhavan, Amaravati Capital Region, Andhra Pradesh - 520010</span>
-                    </div>
-                    <div>
-                      <span className="font-bold text-[#191c1e] block">Official Inquiries:</span>
-                      <span>contact@apsiwa.org | +91 866 248 9000</span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Back Barcode Strip */}
-                <div className="bg-[#f2f4f7] px-5 py-2.5 border-t border-[#e0e3e6] flex items-center justify-between text-[9px]">
-                  <div className="space-x-1 font-mono tracking-widest text-[#003477] font-bold text-[12px]">
-                    ||| | |||| || ||||| |||| || |||
-                  </div>
-                  <span className="text-[8px] text-[#737783] font-mono">ID: {memberData.membershipId}</span>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* ========================================================================= */}
-      {/* TAB 2: MEMBERSHIP STATUS & TIMELINE TRACKER */}
-      {/* ========================================================================= */}
-      {activeTab === 'status' && (
-        <div className="space-y-6">
-          {/* Status Overview Card */}
-          <div className="bg-white rounded-3xl p-6 sm:p-8 border border-[#e0e3e6] shadow-xs space-y-6">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-[#e0e3e6]">
-              <div>
-                <span className="text-xs font-bold text-[#003477] tracking-wider uppercase block">
-                  Enrolment Lifecycle
-                </span>
-                <h2 className="text-xl font-extrabold text-[#191c1e] mt-0.5">
-                  Membership Status: <span className="text-[#006e2e]">Active &amp; Certified</span>
-                </h2>
-              </div>
-
-              <div className="flex items-center gap-2">
-                <span className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-[#8ef9a0]/25 border border-[#006e2e]/30 text-[#006e2e] text-xs font-bold">
-                  <span className="w-2 h-2 rounded-full bg-[#006e2e] animate-pulse" />
-                  Life Membership Active
-                </span>
-              </div>
-            </div>
-
-            {/* Stepper Timeline */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 relative">
-              {/* Step 1 */}
-              <div className="p-4 rounded-2xl bg-[#f2f4f7] border border-[#e0e3e6] space-y-2">
-                <div className="flex items-center gap-2 text-[#006e2e]">
-                  <CheckCircle2 size={18} />
-                  <span className="text-xs font-bold uppercase tracking-wider">Step 1: Completed</span>
-                </div>
-                <h4 className="text-sm font-bold text-[#191c1e]">Application &amp; KYC</h4>
-                <p className="text-xs text-[#434752] leading-relaxed">
-                  Institutional registration and firm details verified.
-                </p>
-                <span className="text-[11px] text-[#737783] block font-mono">01-Mar-2026</span>
-              </div>
-
-              {/* Step 2 */}
-              <div className="p-4 rounded-2xl bg-[#f2f4f7] border border-[#e0e3e6] space-y-2">
-                <div className="flex items-center gap-2 text-[#006e2e]">
-                  <CheckCircle2 size={18} />
-                  <span className="text-xs font-bold uppercase tracking-wider">Step 2: Completed</span>
-                </div>
-                <h4 className="text-sm font-bold text-[#191c1e]">Payment &amp; UTR</h4>
-                <p className="text-xs text-[#434752] leading-relaxed">
-                  Admission fee &amp; welfare subscription verified via UTR.
-                </p>
-                <span className="text-[11px] text-[#737783] block font-mono">UTR: 409218204910</span>
-              </div>
-
-              {/* Step 3 */}
-              <div className="p-4 rounded-2xl bg-[#f2f4f7] border border-[#e0e3e6] space-y-2">
-                <div className="flex items-center gap-2 text-[#006e2e]">
-                  <CheckCircle2 size={18} />
-                  <span className="text-xs font-bold uppercase tracking-wider">Step 3: Completed</span>
-                </div>
-                <h4 className="text-sm font-bold text-[#191c1e]">District Scrutiny</h4>
-                <p className="text-xs text-[#434752] leading-relaxed">
-                  District executive council cleared installation credentials.
-                </p>
-                <span className="text-[11px] text-[#737783] block font-mono">Zone AP-Central</span>
-              </div>
-
-              {/* Step 4 */}
-              <div className="p-4 rounded-2xl bg-[#8ef9a0]/15 border border-[#006e2e]/30 space-y-2">
-                <div className="flex items-center gap-2 text-[#006e2e]">
-                  <ShieldCheck size={18} />
-                  <span className="text-xs font-bold uppercase tracking-wider">Step 4: Active</span>
-                </div>
-                <h4 className="text-sm font-bold text-[#006e2e]">Certified &amp; Issued</h4>
-                <p className="text-xs text-[#434752] leading-relaxed">
-                  Official Digital ID Card &amp; Certificate in good standing.
-                </p>
-                <span className="text-[11px] text-[#006e2e] font-bold block">Valid till 2029</span>
-              </div>
-            </div>
-
-            {/* Application Summary Box */}
-            <div className="bg-[#f7f9fc] rounded-2xl p-5 border border-[#e0e3e6] grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 text-xs">
-              <div>
-                <span className="text-[#737783] block">Membership Tier</span>
-                <span className="font-bold text-[#191c1e] text-sm">{memberData.membershipTier}</span>
-              </div>
-              <div>
-                <span className="text-[#737783] block">State Registration No.</span>
-                <span className="font-bold text-[#003477] font-mono text-sm">{memberData.membershipId}</span>
-              </div>
-              <div>
-                <span className="text-[#737783] block">Validity Horizon</span>
-                <span className="font-bold text-[#006e2e] text-sm">3 Years (2026 - 2029)</span>
-              </div>
-              <div>
-                <span className="text-[#737783] block">Secretariat Verification</span>
-                <span className="font-bold text-[#191c1e] text-sm">Amaravati Council</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ========================================================================= */}
-      {/* TAB 3: PROFILE DETAILS & EDITING */}
-      {/* ========================================================================= */}
-      {activeTab === 'details' && (
-        <div className="bg-white rounded-3xl p-6 sm:p-8 border border-[#e0e3e6] shadow-xs space-y-6">
-          <div className="flex items-center justify-between pb-4 border-b border-[#e0e3e6]">
-            <div>
-              <h2 className="text-xl font-extrabold text-[#191c1e]">Personal &amp; Firm Information</h2>
-              <p className="text-xs text-[#434752] mt-0.5">
-                Official institutional profile registered in APSIWA State Registry.
-              </p>
-            </div>
-
-            <button
-              onClick={() => setIsEditing(!isEditing)}
-              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#f2f4f7] hover:bg-[#e0e3e6] text-[#003477] text-xs font-bold transition-all cursor-pointer"
-            >
-              {isEditing ? (
-                <>
-                  <AlertCircle size={14} />
-                  <span>Cancel Edit</span>
-                </>
-              ) : (
-                <>
-                  <Edit3 size={14} />
-                  <span>Edit Profile</span>
-                </>
-              )}
-            </button>
-          </div>
-
-          {isEditing ? (
-            <form onSubmit={handleSaveProfile} className="space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-semibold text-[#191c1e] mb-1">Full Name</label>
-                  <input
-                    type="text"
-                    required
-                    value={editFormData.name}
-                    onChange={(e) => setEditFormData({ ...editFormData, name: e.target.value })}
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-[#f2f4f7] border border-[#e0e3e6] text-xs font-medium focus:bg-white focus:border-[#003477] outline-none"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-[#191c1e] mb-1">Phone Number</label>
-                  <input
-                    type="tel"
-                    required
-                    value={editFormData.phone}
-                    onChange={(e) => setEditFormData({ ...editFormData, phone: e.target.value })}
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-[#f2f4f7] border border-[#e0e3e6] text-xs font-medium focus:bg-white focus:border-[#003477] outline-none"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-[#191c1e] mb-1">Company / Firm Name</label>
-                  <input
-                    type="text"
-                    value={editFormData.companyName}
-                    onChange={(e) => setEditFormData({ ...editFormData, companyName: e.target.value })}
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-[#f2f4f7] border border-[#e0e3e6] text-xs font-medium focus:bg-white focus:border-[#003477] outline-none"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-[#191c1e] mb-1">Designation</label>
-                  <input
-                    type="text"
-                    value={editFormData.designation}
-                    onChange={(e) => setEditFormData({ ...editFormData, designation: e.target.value })}
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-[#f2f4f7] border border-[#e0e3e6] text-xs font-medium focus:bg-white focus:border-[#003477] outline-none"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-[#191c1e] mb-1">District</label>
-                  <input
-                    type="text"
-                    value={editFormData.district}
-                    onChange={(e) => setEditFormData({ ...editFormData, district: e.target.value })}
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-[#f2f4f7] border border-[#e0e3e6] text-xs font-medium focus:bg-white focus:border-[#003477] outline-none"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-[#191c1e] mb-1">GSTIN Number</label>
-                  <input
-                    type="text"
-                    value={editFormData.gstNumber}
-                    onChange={(e) => setEditFormData({ ...editFormData, gstNumber: e.target.value })}
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-[#f2f4f7] border border-[#e0e3e6] text-xs font-medium focus:bg-white focus:border-[#003477] outline-none"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-[#191c1e] mb-1">Blood Group</label>
-                  <input
-                    type="text"
-                    value={editFormData.bloodGroup}
-                    onChange={(e) => setEditFormData({ ...editFormData, bloodGroup: e.target.value })}
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-[#f2f4f7] border border-[#e0e3e6] text-xs font-medium focus:bg-white focus:border-[#003477] outline-none"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-[#191c1e] mb-1">Office Address</label>
-                  <input
-                    type="text"
-                    value={editFormData.address}
-                    onChange={(e) => setEditFormData({ ...editFormData, address: e.target.value })}
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-[#f2f4f7] border border-[#e0e3e6] text-xs font-medium focus:bg-white focus:border-[#003477] outline-none"
-                  />
-                </div>
-              </div>
-
-              <div className="pt-3 flex justify-end gap-3">
-                <button
-                  type="button"
-                  onClick={() => setIsEditing(false)}
-                  className="px-4 py-2 rounded-xl bg-[#f2f4f7] hover:bg-[#e0e3e6] text-xs font-semibold text-[#434752] cursor-pointer"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="inline-flex items-center gap-1.5 px-5 py-2 rounded-xl bg-[#006e2e] hover:bg-[#005322] text-white text-xs font-bold shadow-sm transition-all cursor-pointer"
-                >
-                  <Save size={14} />
-                  <span>Save Changes</span>
-                </button>
-              </div>
-            </form>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Personal Section */}
-              <div className="p-5 rounded-2xl bg-[#f2f4f7] border border-[#e0e3e6] space-y-4">
-                <div className="flex items-center gap-2 text-[#003477] font-bold text-sm">
-                  <User size={16} />
-                  <span>Personal Details</span>
-                </div>
-                <div className="space-y-2.5 text-xs">
-                  <div className="flex justify-between py-1 border-b border-[#e0e3e6]">
-                    <span className="text-[#737783]">Full Name:</span>
-                    <span className="font-bold text-[#191c1e]">{memberData.name}</span>
-                  </div>
-                  <div className="flex justify-between py-1 border-b border-[#e0e3e6]">
-                    <span className="text-[#737783]">Email Address:</span>
-                    <span className="font-bold text-[#191c1e]">{memberData.email}</span>
-                  </div>
-                  <div className="flex justify-between py-1 border-b border-[#e0e3e6]">
-                    <span className="text-[#737783]">Phone Number:</span>
-                    <span className="font-bold text-[#191c1e]">{memberData.phone}</span>
-                  </div>
-                  <div className="flex justify-between py-1 border-b border-[#e0e3e6]">
-                    <span className="text-[#737783]">Blood Group:</span>
-                    <span className="font-bold text-[#ba1a1a]">{memberData.bloodGroup}</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Firm Section */}
-              <div className="p-5 rounded-2xl bg-[#f2f4f7] border border-[#e0e3e6] space-y-4">
-                <div className="flex items-center gap-2 text-[#003477] font-bold text-sm">
-                  <Building2 size={16} />
-                  <span>Enterprise / Firm Details</span>
-                </div>
-                <div className="space-y-2.5 text-xs">
-                  <div className="flex justify-between py-1 border-b border-[#e0e3e6]">
-                    <span className="text-[#737783]">Company Name:</span>
-                    <span className="font-bold text-[#191c1e]">{memberData.companyName}</span>
-                  </div>
-                  <div className="flex justify-between py-1 border-b border-[#e0e3e6]">
-                    <span className="text-[#737783]">Designation:</span>
-                    <span className="font-bold text-[#191c1e]">{memberData.designation}</span>
-                  </div>
-                  <div className="flex justify-between py-1 border-b border-[#e0e3e6]">
-                    <span className="text-[#737783]">District:</span>
-                    <span className="font-bold text-[#191c1e]">{memberData.district}</span>
-                  </div>
-                  <div className="flex justify-between py-1 border-b border-[#e0e3e6]">
-                    <span className="text-[#737783]">GSTIN Number:</span>
-                    <span className="font-bold text-[#003477] font-mono">{memberData.gstNumber}</span>
+                  <div className="p-4 rounded-2xl bg-[#f7f9fc] border border-[#e0e3e6]/60">
+                    <span className="text-[#737783] block text-[11px]">Contact &amp; Secretarial</span>
+                    <span className="font-mono font-bold text-[#191c1e] block text-xs">
+                      {matchedRecord.mobileNumber}
+                    </span>
+                    <span className="text-[11px] text-[#737783] block truncate">
+                      {matchedRecord.emailAddress}
+                    </span>
                   </div>
                 </div>
               </div>

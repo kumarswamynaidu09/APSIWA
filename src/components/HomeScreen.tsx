@@ -1,5 +1,35 @@
 import React from 'react';
 import { NavTab, GalleryItem } from '../types';
+import {
+  Calendar,
+  MapPin,
+  Maximize2,
+  Sun,
+  Wind,
+  BatteryCharging,
+  FlaskConical,
+  Car,
+  Leaf,
+  ArrowRight,
+  ShieldCheck,
+  CheckCircle2,
+  Building2,
+  Award,
+  Users,
+  BookOpen,
+  Megaphone,
+  Briefcase,
+  ChevronRight,
+  Sparkles,
+  Layers,
+  HeartHandshake,
+  Landmark,
+  Shield,
+  GraduationCap,
+  Images,
+  ExternalLink,
+  Check
+} from 'lucide-react';
 
 interface HomeScreenProps {
   onNavigate: (tab: NavTab) => void;
@@ -60,7 +90,199 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
 
   return (
     <div className="flex flex-col w-full">
-      {/* HERO SECTION */}
+      {/* ANDHRA PRADESH ENERGY EXPO 2026 FEATURE BANNER (AT TOP) */}
+      <section className="w-full py-8 sm:py-12 bg-gradient-to-b from-[#f0f9f4] via-[#ffffff] to-[#f2f4f7] border-b border-[#d2e6da]">
+        <div className="max-w-7xl mx-auto px-margin">
+          {/* Section Header Tag */}
+          <div className="flex items-center justify-between flex-wrap gap-3 mb-5">
+            <div className="flex items-center gap-2">
+              <span className="flex h-3 w-3 relative">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#00873d] opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-3 w-3 bg-[#006e2e]"></span>
+              </span>
+              <span className="text-[12px] font-bold text-[#006e2e] uppercase tracking-widest">
+                Official State Summit • 2nd Edition
+              </span>
+            </div>
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#e3f4e9] text-[#006e2e] text-[12px] font-bold border border-[#b8e5c8]">
+              <ShieldCheck size={16} className="text-[#006e2e]" />
+              Co-Organised by APSIWA &amp; FirstVIEW Group
+            </div>
+          </div>
+
+          {/* Main Expo Banner Card */}
+          <div className="relative rounded-3xl overflow-hidden bg-gradient-to-br from-[#003477] via-[#004e8c] to-[#016e3c] text-white shadow-2xl border border-[#028b49]/30">
+            {/* Background Glow & Pattern Effects */}
+            <div className="absolute top-0 right-0 w-96 h-96 bg-[#8ef9a0]/15 rounded-full blur-3xl pointer-events-none"></div>
+            <div className="absolute bottom-0 left-0 w-80 h-80 bg-[#00a859]/20 rounded-full blur-3xl pointer-events-none"></div>
+            <div className="absolute inset-0 opacity-10 pointer-events-none bg-[radial-gradient(#ffffff_1.5px,transparent_1.5px)] [background-size:24px_24px]"></div>
+
+            <div className="relative z-10 p-6 sm:p-10 lg:p-12 flex flex-col gap-8">
+              {/* Top Banner Row: Logos & Event Title */}
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+                <div className="lg:col-span-7 flex flex-col space-y-4">
+                  {/* Co-host tag */}
+                  <div className="flex flex-wrap items-center gap-3 text-xs text-white/90">
+                    <span className="px-3 py-1 rounded-lg bg-white/15 backdrop-blur-sm font-semibold uppercase tracking-wider text-[11px] border border-white/20">
+                      Organised by <strong className="text-white">FirstVIEW Group</strong> &amp; <strong className="text-[#8ef9a0]">APSIWA</strong>
+                    </span>
+                    <span className="px-3 py-1 rounded-lg bg-[#00a859]/30 backdrop-blur-sm text-[#8ef9a0] font-bold uppercase tracking-wider text-[11px] border border-[#8ef9a0]/30">
+                      Innovate • Connect • Transform
+                    </span>
+                  </div>
+
+                  {/* Headline */}
+                  <div>
+                    <span className="text-[13px] sm:text-[15px] font-bold tracking-widest text-[#8ef9a0] uppercase block">
+                      South India's Leading Clean Energy Expo
+                    </span>
+                    <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black tracking-tight text-white mt-1 leading-tight">
+                      ANDHRA PRADESH <br />
+                      <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#8ef9a0] via-[#c6ff00] to-[#ffffff]">
+                        ENERGY EXPO 2026
+                      </span>
+                    </h2>
+                    <p className="text-sm sm:text-base text-white/85 font-medium mt-2 max-w-xl leading-relaxed">
+                      "A Sustainable Andhra Pradesh, A Brighter Tomorrow" — Connecting 10,000+ industry leaders, solar EPC contractors, policy makers, and clean tech innovators.
+                    </p>
+                  </div>
+
+                  {/* Key Event Details Pills */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+                    <div className="flex items-center gap-3 p-3 rounded-2xl bg-white/10 backdrop-blur-md border border-white/15">
+                      <div className="w-10 h-10 rounded-xl bg-[#8ef9a0]/20 flex items-center justify-center text-[#8ef9a0] shrink-0">
+                        <Calendar size={22} />
+                      </div>
+                      <div>
+                        <span className="text-[10px] uppercase font-bold text-white/70 block tracking-wider">Event Dates</span>
+                        <span className="text-[14px] font-bold text-white">25 – 26 September 2026</span>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-3 p-3 rounded-2xl bg-white/10 backdrop-blur-md border border-white/15">
+                      <div className="w-10 h-10 rounded-xl bg-[#8ef9a0]/20 flex items-center justify-center text-[#8ef9a0] shrink-0">
+                        <MapPin size={22} />
+                      </div>
+                      <div>
+                        <span className="text-[10px] uppercase font-bold text-white/70 block tracking-wider">Host Venue</span>
+                        <span className="text-[13px] font-bold text-white leading-tight block">Gadiraju Palace, Visakhapatnam</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Right Column: High-Res Visual Poster Display */}
+                <div className="lg:col-span-5 flex flex-col items-center">
+                  <div className="w-full max-w-md bg-white/10 backdrop-blur-md rounded-2xl p-3 shadow-xl border border-white/20">
+                    <div className="relative rounded-xl overflow-hidden group shadow-sm bg-gray-900">
+                      <img
+                        src="/ap-energy-expo-2026.jpg"
+                        alt="Andhra Pradesh Energy Expo 2026 Official Flyer"
+                        className="w-full h-auto max-h-[360px] object-cover object-top hover:scale-105 transition-transform duration-500 cursor-pointer"
+                        onClick={() => window.open('/ap-energy-expo-2026.jpg', '_blank')}
+                      />
+                      <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center pointer-events-none">
+                        <span className="bg-white/95 text-[#003477] text-xs font-bold px-3.5 py-2 rounded-lg shadow-md flex items-center gap-1.5">
+                          <Maximize2 size={16} /> Click to View Full Size
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Middle Strip: Focus Sectors */}
+              <div className="border-t border-white/15 pt-6">
+                <div className="text-center sm:text-left mb-4">
+                  <span className="text-[11px] font-bold uppercase tracking-widest text-[#8ef9a0]">
+                    Key Energy Sectors &amp; Focus Domains
+                  </span>
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+                  <div className="flex flex-col items-center justify-center p-3 rounded-xl bg-white/10 backdrop-blur-sm border border-white/15 text-center hover:bg-white/20 transition-colors">
+                    <Sun size={26} className="text-[#8ef9a0] mb-1" />
+                    <span className="text-[12px] font-bold text-white">Solar Energy</span>
+                  </div>
+                  <div className="flex flex-col items-center justify-center p-3 rounded-xl bg-white/10 backdrop-blur-sm border border-white/15 text-center hover:bg-white/20 transition-colors">
+                    <Wind size={26} className="text-[#8ef9a0] mb-1" />
+                    <span className="text-[12px] font-bold text-white">Wind Energy</span>
+                  </div>
+                  <div className="flex flex-col items-center justify-center p-3 rounded-xl bg-white/10 backdrop-blur-sm border border-white/15 text-center hover:bg-white/20 transition-colors">
+                    <BatteryCharging size={26} className="text-[#8ef9a0] mb-1" />
+                    <span className="text-[12px] font-bold text-white">Energy Storage</span>
+                  </div>
+                  <div className="flex flex-col items-center justify-center p-3 rounded-xl bg-white/10 backdrop-blur-sm border border-white/15 text-center hover:bg-white/20 transition-colors">
+                    <FlaskConical size={26} className="text-[#8ef9a0] mb-1" />
+                    <span className="text-[12px] font-bold text-white">Green Hydrogen</span>
+                  </div>
+                  <div className="flex flex-col items-center justify-center p-3 rounded-xl bg-white/10 backdrop-blur-sm border border-white/15 text-center hover:bg-white/20 transition-colors">
+                    <Car size={26} className="text-[#8ef9a0] mb-1" />
+                    <span className="text-[12px] font-bold text-white">E-Mobility</span>
+                  </div>
+                  <div className="flex flex-col items-center justify-center p-3 rounded-xl bg-white/10 backdrop-blur-sm border border-white/15 text-center hover:bg-white/20 transition-colors">
+                    <Leaf size={26} className="text-[#8ef9a0] mb-1" />
+                    <span className="text-[12px] font-bold text-white">Net Zero Solutions</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Event Statistics Metrics Row */}
+              <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 bg-black/25 backdrop-blur-md rounded-2xl p-4 sm:p-5 border border-white/10">
+                <div className="text-center">
+                  <span className="text-2xl sm:text-3xl font-black text-[#8ef9a0] block">10,000+</span>
+                  <span className="text-[11px] font-semibold text-white/80 uppercase tracking-wider">Delegates &amp; Attendees</span>
+                </div>
+                <div className="text-center border-l border-white/15">
+                  <span className="text-2xl sm:text-3xl font-black text-[#8ef9a0] block">250+</span>
+                  <span className="text-[11px] font-semibold text-white/80 uppercase tracking-wider">Exhibiting Brands</span>
+                </div>
+                <div className="text-center border-l border-white/15">
+                  <span className="text-2xl sm:text-3xl font-black text-[#8ef9a0] block">50+</span>
+                  <span className="text-[11px] font-semibold text-white/80 uppercase tracking-wider">Keynote Speakers</span>
+                </div>
+                <div className="text-center border-l border-white/15 col-span-1">
+                  <span className="text-2xl sm:text-3xl font-black text-[#8ef9a0] block">B2B</span>
+                  <span className="text-[11px] font-semibold text-white/80 uppercase tracking-wider">Business Networking</span>
+                </div>
+                <div className="text-center border-l border-white/15 col-span-2 sm:col-span-1">
+                  <span className="text-2xl sm:text-3xl font-black text-[#8ef9a0] block">Live</span>
+                  <span className="text-[11px] font-semibold text-white/80 uppercase tracking-wider">Tech Showcase</span>
+                </div>
+              </div>
+
+              {/* BOTTOM OF THE BANNER: REGISTER NOW FOR MEMBERSHIP */}
+              <div className="border-t border-white/20 pt-6 flex flex-col sm:flex-row items-center justify-between gap-4 bg-white/5 -mx-6 -mb-6 sm:-mx-10 sm:-mb-10 lg:-mx-12 lg:-mb-12 p-6 sm:p-8 rounded-b-3xl">
+                <div className="flex flex-col text-center sm:text-left">
+                  <div className="flex items-center justify-center sm:justify-start gap-2">
+                    <span className="w-2 h-2 rounded-full bg-[#8ef9a0] animate-ping"></span>
+                    <span className="text-[13px] font-bold uppercase tracking-widest text-[#8ef9a0]">
+                      APSIWA Membership &amp; Expo Access
+                    </span>
+                  </div>
+                  <p className="text-sm text-white/90 font-medium mt-0.5">
+                    Register today for APSIWA State Membership and unlock full association benefits and expo access.
+                  </p>
+                </div>
+
+                <div className="flex items-center gap-3 w-full sm:w-auto">
+                  <button
+                    onClick={() => {
+                      onNavigate('membership');
+                      window.scrollTo({ top: 0, behavior: 'smooth' });
+                    }}
+                    className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-10 py-4 rounded-xl bg-gradient-to-r from-[#e31e24] to-[#c4161c] text-white text-[16px] font-black tracking-wide hover:from-[#c4161c] hover:to-[#a01217] transition-all shadow-xl hover:scale-[1.02] cursor-pointer"
+                  >
+                    <span>REGISTER NOW</span>
+                    <ArrowRight size={20} />
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* HERO SECTION (BELOW EVENT BANNER) */}
       <section className="relative w-full bg-[#f2f4f7] overflow-hidden py-10 lg:py-16">
         <div className="max-w-7xl mx-auto px-margin">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
@@ -93,10 +315,10 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                     onNavigate('membership');
                     window.scrollTo({ top: 0, behavior: 'smooth' });
                   }}
-                  className="inline-flex items-center justify-center px-6 py-3 rounded-xl bg-[#024aa3] text-[#ffffff] text-[14px] font-semibold hover:bg-[#003477] transition-all shadow-sm cursor-pointer"
+                  className="inline-flex items-center justify-center px-6 py-3 rounded-xl bg-[#024aa3] text-[#ffffff] text-[14px] font-semibold hover:bg-[#003477] transition-all shadow-sm cursor-pointer gap-2"
                 >
                   <span>Become a Member</span>
-                  <span className="material-symbols-outlined text-[18px] ml-1.5">arrow_forward</span>
+                  <ArrowRight size={18} />
                 </button>
                 <button
                   onClick={() => {
@@ -145,7 +367,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                 />
                 <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-[#003477]/95 via-[#003477]/70 to-transparent p-4 sm:p-5 flex items-center justify-between">
                   <div className="flex items-center gap-2 text-[#ffffff]">
-                    <span className="material-symbols-outlined text-[20px] text-[#8ef9a0]">solar_power</span>
+                    <Sun size={20} className="text-[#8ef9a0]" />
                     <span className="text-[13px] font-semibold tracking-wide">
                       Andhra Pradesh Solar Grid Infrastructure
                     </span>
@@ -159,7 +381,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
               {/* Decorative Floating Accreditation Metric */}
               <div className="hidden sm:flex absolute -top-3 -right-3 bg-[#ffffff] rounded-xl p-3 shadow-md items-center gap-3 border border-[#e0e3e6]">
                 <div className="w-10 h-10 rounded-lg bg-[#006e2e]/10 flex items-center justify-center text-[#006e2e]">
-                  <span className="material-symbols-outlined text-[22px]">energy_savings_leaf</span>
+                  <Leaf size={22} />
                 </div>
                 <div>
                   <p className="text-[11px] text-[#434752] uppercase font-bold tracking-wider">AP Clean Energy</p>
@@ -196,9 +418,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
 
               <div className="space-y-3 pt-2">
                 <div className="flex items-start gap-3 p-3.5 rounded-xl bg-[#ffffff] border border-[#e0e3e6] shadow-xs">
-                  <span className="material-symbols-outlined text-[#003477] text-[24px] shrink-0 mt-0.5">
-                    account_balance
-                  </span>
+                  <Landmark size={24} className="text-[#003477] shrink-0 mt-0.5" />
                   <div>
                     <h3 className="text-[14px] font-bold text-[#191c1e]">Regulatory Liaison</h3>
                     <p className="text-[13px] text-[#434752] mt-0.5">
@@ -209,9 +429,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                 </div>
 
                 <div className="flex items-start gap-3 p-3.5 rounded-xl bg-[#ffffff] border border-[#e0e3e6] shadow-xs">
-                  <span className="material-symbols-outlined text-[#006e2e] text-[24px] shrink-0 mt-0.5">
-                    verified
-                  </span>
+                  <ShieldCheck size={24} className="text-[#006e2e] shrink-0 mt-0.5" />
                   <div>
                     <h3 className="text-[14px] font-bold text-[#191c1e]">Standardised Technical Protocols</h3>
                     <p className="text-[13px] text-[#434752] mt-0.5">
@@ -222,9 +440,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                 </div>
 
                 <div className="flex items-start gap-3 p-3.5 rounded-xl bg-[#ffffff] border border-[#e0e3e6] shadow-xs">
-                  <span className="material-symbols-outlined text-[#803a00] text-[24px] shrink-0 mt-0.5">
-                    shield_person
-                  </span>
+                  <Shield size={24} className="text-[#803a00] shrink-0 mt-0.5" />
                   <div>
                     <h3 className="text-[14px] font-bold text-[#191c1e]">Joint Welfare &amp; Safety Net</h3>
                     <p className="text-[13px] text-[#434752] mt-0.5">
@@ -244,7 +460,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                   className="inline-flex items-center gap-1.5 px-6 py-2.5 rounded-xl bg-[#003477] text-[#ffffff] text-[13px] font-semibold hover:bg-[#024aa3] transition-all cursor-pointer shadow-xs"
                 >
                   <span>Read Full Association Profile</span>
-                  <span className="material-symbols-outlined text-[16px]">chevron_right</span>
+                  <ChevronRight size={16} />
                 </button>
               </div>
             </div>
@@ -259,7 +475,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                 />
                 <div className="absolute bottom-0 inset-x-0 bg-[#ffffff]/95 backdrop-blur-md p-4 flex items-center justify-between border-t border-[#e0e3e6]">
                   <div className="flex items-center gap-2">
-                    <span className="material-symbols-outlined text-[#006e2e] text-[22px]">engineering</span>
+                    <ShieldCheck size={22} className="text-[#006e2e]" />
                     <span className="text-[13px] font-bold text-[#191c1e]">
                       Field excellence &amp; standard testing protocols
                     </span>
@@ -297,7 +513,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
             {/* 1. Member Welfare */}
             <div className="bg-[#ffffff] rounded-xl p-6 shadow-xs hover:shadow-md transition-shadow border border-[#e0e3e6] flex flex-col space-y-3">
               <div className="w-12 h-12 rounded-xl bg-[#eceef1] flex items-center justify-center text-[#003477]">
-                <span className="material-symbols-outlined text-[26px]">health_and_safety</span>
+                <HeartHandshake size={26} />
               </div>
               <h3 className="font-headline-sm text-[#003477] font-bold">1. Member Welfare</h3>
               <p className="font-body-sm text-[#434752] leading-relaxed">
@@ -306,7 +522,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
               </p>
               <div className="pt-2 mt-auto">
                 <span className="text-[12px] text-[#003477] font-bold inline-flex items-center gap-1">
-                  Protected Welfare Ecosystem <span className="material-symbols-outlined text-[14px]">check</span>
+                  Protected Welfare Ecosystem <Check size={14} />
                 </span>
               </div>
             </div>
@@ -314,7 +530,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
             {/* 2. Industry Representation */}
             <div className="bg-[#ffffff] rounded-xl p-6 shadow-xs hover:shadow-md transition-shadow border border-[#e0e3e6] flex flex-col space-y-3">
               <div className="w-12 h-12 rounded-xl bg-[#eceef1] flex items-center justify-center text-[#003477]">
-                <span className="material-symbols-outlined text-[26px]">gavel</span>
+                <Landmark size={26} />
               </div>
               <h3 className="font-headline-sm text-[#003477] font-bold">2. Industry Representation</h3>
               <p className="font-body-sm text-[#434752] leading-relaxed">
@@ -323,7 +539,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
               </p>
               <div className="pt-2 mt-auto">
                 <span className="text-[12px] text-[#003477] font-bold inline-flex items-center gap-1">
-                  State Policy Dialogues <span className="material-symbols-outlined text-[14px]">check</span>
+                  State Policy Dialogues <Check size={14} />
                 </span>
               </div>
             </div>
@@ -331,7 +547,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
             {/* 3. Networking & Collaboration */}
             <div className="bg-[#ffffff] rounded-xl p-6 shadow-xs hover:shadow-md transition-shadow border border-[#e0e3e6] flex flex-col space-y-3">
               <div className="w-12 h-12 rounded-xl bg-[#eceef1] flex items-center justify-center text-[#003477]">
-                <span className="material-symbols-outlined text-[26px]">hub</span>
+                <Layers size={26} />
               </div>
               <h3 className="font-headline-sm text-[#003477] font-bold">3. Networking &amp; Collaboration</h3>
               <p className="font-body-sm text-[#434752] leading-relaxed">
@@ -340,7 +556,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
               </p>
               <div className="pt-2 mt-auto">
                 <span className="text-[12px] text-[#003477] font-bold inline-flex items-center gap-1">
-                  B2B Partnerships <span className="material-symbols-outlined text-[14px]">check</span>
+                  B2B Partnerships <Check size={14} />
                 </span>
               </div>
             </div>
@@ -348,7 +564,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
             {/* 4. Knowledge Sharing */}
             <div className="bg-[#ffffff] rounded-xl p-6 shadow-xs hover:shadow-md transition-shadow border border-[#e0e3e6] flex flex-col space-y-3">
               <div className="w-12 h-12 rounded-xl bg-[#eceef1] flex items-center justify-center text-[#003477]">
-                <span className="material-symbols-outlined text-[26px]">menu_book</span>
+                <BookOpen size={26} />
               </div>
               <h3 className="font-headline-sm text-[#003477] font-bold">4. Knowledge Sharing</h3>
               <p className="font-body-sm text-[#434752] leading-relaxed">
@@ -357,7 +573,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
               </p>
               <div className="pt-2 mt-auto">
                 <span className="text-[12px] text-[#003477] font-bold inline-flex items-center gap-1">
-                  Quarterly Briefings <span className="material-symbols-outlined text-[14px]">check</span>
+                  Quarterly Briefings <Check size={14} />
                 </span>
               </div>
             </div>
@@ -365,7 +581,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
             {/* 5. Solar Industry Awareness */}
             <div className="bg-[#ffffff] rounded-xl p-6 shadow-xs hover:shadow-md transition-shadow border border-[#e0e3e6] flex flex-col space-y-3">
               <div className="w-12 h-12 rounded-xl bg-[#eceef1] flex items-center justify-center text-[#003477]">
-                <span className="material-symbols-outlined text-[26px]">campaign</span>
+                <Megaphone size={26} />
               </div>
               <h3 className="font-headline-sm text-[#003477] font-bold">5. Solar Industry Awareness</h3>
               <p className="font-body-sm text-[#434752] leading-relaxed">
@@ -374,7 +590,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
               </p>
               <div className="pt-2 mt-auto">
                 <span className="text-[12px] text-[#003477] font-bold inline-flex items-center gap-1">
-                  Public Empowerment <span className="material-symbols-outlined text-[14px]">check</span>
+                  Public Empowerment <Check size={14} />
                 </span>
               </div>
             </div>
@@ -382,7 +598,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
             {/* 6. Professional Development */}
             <div className="bg-[#ffffff] rounded-xl p-6 shadow-xs hover:shadow-md transition-shadow border border-[#e0e3e6] flex flex-col space-y-3">
               <div className="w-12 h-12 rounded-xl bg-[#eceef1] flex items-center justify-center text-[#003477]">
-                <span className="material-symbols-outlined text-[26px]">workspace_premium</span>
+                <GraduationCap size={26} />
               </div>
               <h3 className="font-headline-sm text-[#003477] font-bold">6. Professional Development</h3>
               <p className="font-body-sm text-[#434752] leading-relaxed">
@@ -391,7 +607,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
               </p>
               <div className="pt-2 mt-auto">
                 <span className="text-[12px] text-[#003477] font-bold inline-flex items-center gap-1">
-                  Skill Accreditation <span className="material-symbols-outlined text-[14px]">check</span>
+                  Skill Accreditation <Check size={14} />
                 </span>
               </div>
             </div>
@@ -424,10 +640,10 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                     onNavigate('membership');
                     window.scrollTo({ top: 0, behavior: 'smooth' });
                   }}
-                  className="w-full sm:w-auto inline-flex items-center justify-center px-8 py-3.5 rounded-xl bg-[#ffffff] text-[#003477] text-[14px] font-bold hover:bg-[#f2f4f7] transition-all shadow-md cursor-pointer"
+                  className="w-full sm:w-auto inline-flex items-center justify-center px-8 py-3.5 rounded-xl bg-[#ffffff] text-[#003477] text-[14px] font-bold hover:bg-[#f2f4f7] transition-all shadow-md cursor-pointer gap-2"
                 >
                   <span>Become a Member</span>
-                  <span className="material-symbols-outlined text-[20px] ml-2">badge</span>
+                  <Award size={20} />
                 </button>
               </div>
             </div>
@@ -459,7 +675,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
               className="inline-flex items-center gap-1.5 px-5 py-2 rounded-xl bg-[#ffffff] text-[#003477] text-[13px] font-semibold hover:bg-[#eceef1] transition-all shadow-xs shrink-0 cursor-pointer border border-[#e0e3e6]"
             >
               <span>View Full Gallery</span>
-              <span className="material-symbols-outlined text-[16px]">arrow_outward</span>
+              <ExternalLink size={16} />
             </button>
           </div>
 
@@ -485,7 +701,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                   </span>
                   <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-3">
                     <span className="inline-flex items-center gap-1 text-white text-[12px] bg-[#003477]/80 backdrop-blur-sm px-2.5 py-1 rounded">
-                      <span className="material-symbols-outlined text-[16px]">fullscreen</span> View Activity
+                      <Maximize2 size={16} /> View Activity
                     </span>
                   </div>
                 </div>
@@ -513,7 +729,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
               className="inline-flex items-center gap-2 px-8 py-3 rounded-xl bg-[#003477] text-[#ffffff] text-[14px] font-semibold hover:bg-[#024aa3] transition-all shadow-sm cursor-pointer"
             >
               <span>View All Gallery Activities</span>
-              <span className="material-symbols-outlined text-[18px]">photo_library</span>
+              <Images size={18} />
             </button>
           </div>
         </div>

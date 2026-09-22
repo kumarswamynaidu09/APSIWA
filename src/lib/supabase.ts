@@ -388,7 +388,7 @@ export async function saveMembershipApplication(
 }
 
 /**
- * Fetch Membership Applications (Realtime from Supabase with local fallback)
+ * Fetch Membership Applications (Realtime from Supabase with local cache sync)
  */
 export async function fetchUserApplications(userEmail?: string): Promise<MembershipApplication[]> {
   const localAppsRaw = localStorage.getItem('apsiwa_membership_applications');
@@ -400,38 +400,54 @@ export async function fetchUserApplications(userEmail?: string): Promise<Members
 
   try {
     let query = supabase.from('membership_applications').select('*').order('created_at', { ascending: false });
-    if (userEmail) {
-      query = query.eq('email_address', userEmail);
+    
+    // Only filter by email if a non-admin member email is provided
+    if (userEmail && !isAdminUser(userEmail)) {
+      query = query.eq('email_address', userEmail.trim());
     }
+
     const { data, error } = await query;
-    if (error || !data || data.length === 0) {
+    if (error) {
+      console.warn('Supabase fetch applications notice:', error.message);
       return localApps;
     }
 
-    return data.map((item: any) => ({
-      id: item.id,
-      fullName: item.full_name || item.fullName,
-      dateOfBirth: item.date_of_birth || item.dateOfBirth || item.dob || '1990-01-01',
-      mobileNumber: item.mobile_number || item.mobileNumber,
-      emailAddress: item.email_address || item.emailAddress,
-      companyName: item.company_name || item.companyName,
-      designation: item.designation,
-      gstNumber: item.gst_number || item.gstNumber,
-      businessType: item.business_type || item.businessType,
-      experience: item.experience,
-      district: item.district,
-      officeAddress: item.office_address || item.officeAddress,
-      pincode: item.pincode,
-      photoUrl: item.photo_url || item.photoUrl || '',
-      utrNumber: item.utr_number || item.utrNumber,
-      paymentDate: item.payment_date || item.paymentDate,
-      amountPaid: item.amount_paid || item.amountPaid || '₹ 2,000.00',
-      paymentScreenshotUrl: item.payment_screenshot_url || item.paymentScreenshotUrl,
-      submissionDate: item.submission_date || item.submissionDate,
-      applicationType: item.application_type || item.applicationType || 'New Member',
-      status: item.status || 'Approved',
-    }));
-  } catch {
+    if (data) {
+      const mapped: MembershipApplication[] = data.map((item: any) => ({
+        id: item.id,
+        fullName: item.full_name || item.fullName || 'Member',
+        dateOfBirth: item.date_of_birth || item.dateOfBirth || item.dob || '',
+        mobileNumber: item.mobile_number || item.mobileNumber || '',
+        emailAddress: item.email_address || item.emailAddress || '',
+        companyName: item.company_name || item.companyName || '',
+        designation: item.designation || '',
+        gstNumber: item.gst_number || item.gstNumber || undefined,
+        businessType: item.business_type || item.businessType || 'Solar EPC Integrator',
+        experience: item.experience || '1 - 3 Years',
+        district: item.district || 'Andhra Pradesh',
+        officeAddress: item.office_address || item.officeAddress || '',
+        pincode: item.pincode || '',
+        photoUrl: item.photo_url || item.photoUrl || '',
+        utrNumber: item.utr_number || item.utrNumber || 'N/A',
+        paymentDate: item.payment_date || item.paymentDate || new Date().toISOString(),
+        amountPaid: item.amount_paid || item.amountPaid || '₹ 2,000.00',
+        paymentScreenshotUrl: item.payment_screenshot_url || item.paymentScreenshotUrl || undefined,
+        submissionDate: item.submission_date || item.submissionDate || new Date().toISOString().slice(0, 10),
+        applicationType: item.application_type || item.applicationType || 'New Member',
+        status: item.status || 'Approved',
+        validUntil: item.valid_until || item.validUntil || calculateValidityDate(item.payment_date || item.created_at),
+      }));
+
+      try {
+        localStorage.setItem('apsiwa_membership_applications', JSON.stringify(mapped));
+      } catch {}
+
+      return mapped;
+    }
+
+    return [];
+  } catch (err) {
+    console.warn('fetchUserApplications catch error:', err);
     return localApps;
   }
 }

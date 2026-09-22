@@ -102,14 +102,20 @@ export function App() {
   };
 
   // Check active Supabase session on startup & listen to auth changes (for Admin users)
+  // Check active Supabase session on startup & listen to auth changes & Realtime DB changes
   useEffect(() => {
+    // Initial fetch on mount
+    fetchUserApplications(currentUser?.email).then((apps) => {
+      if (apps) setApplications(apps);
+    });
+
     if (isSupabaseConfigured()) {
       supabase.auth.getSession().then(({ data: { session } }) => {
         if (session?.user) {
           const profile = mapSupabaseUserToProfile(session.user);
           setCurrentUser(profile);
           fetchUserApplications(session.user.email).then((apps) => {
-            if (apps && apps.length > 0) setApplications(apps);
+            if (apps) setApplications(apps);
           });
         }
       });
@@ -124,7 +130,7 @@ export function App() {
             localStorage.setItem('apsiwa_current_user', JSON.stringify(profile));
           } catch {}
           fetchUserApplications(session.user.email).then((apps) => {
-            if (apps && apps.length > 0) setApplications(apps);
+            if (apps) setApplications(apps);
           });
         } else {
           setCurrentUser(null);
@@ -134,8 +140,23 @@ export function App() {
         }
       });
 
+      // Realtime subscription on membership_applications table
+      const realtimeChannel = supabase
+        .channel('public:membership_applications')
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'membership_applications' },
+          () => {
+            fetchUserApplications(currentUser?.email).then((apps) => {
+              if (apps) setApplications(apps);
+            });
+          }
+        )
+        .subscribe();
+
       return () => {
         subscription.unsubscribe();
+        supabase.removeChannel(realtimeChannel);
       };
     }
   }, []);

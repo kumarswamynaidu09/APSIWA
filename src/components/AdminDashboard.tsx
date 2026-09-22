@@ -1118,51 +1118,51 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                           {/* Quick Admin Actions */}
                           <td className="py-3.5 px-4 text-right">
                             <div className="flex items-center justify-end gap-1.5 flex-wrap">
-                              {/* Full Review Modal */}
+                              {/* Comprehensive View Details & Payment Verification Button */}
                               <button
                                 type="button"
                                 onClick={() => setViewingApp(app)}
-                                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-[#f0f4ff] hover:bg-[#d8e2ff] text-[#003477] text-[11px] font-bold transition-all cursor-pointer"
-                                title="Open Full Review & Document Verification"
+                                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#003477] hover:bg-[#024aa3] text-white text-[11px] font-extrabold shadow-xs transition-all cursor-pointer active:scale-95"
+                                title="Open Complete Application Dossier & Verify Payment"
                               >
-                                <Eye size={12} />
-                                <span>Review</span>
+                                <Eye size={13} />
+                                <span>View Details &amp; Payment</span>
                               </button>
 
                               {!isAppApproved ? (
-                                <button
-                                  type="button"
-                                  onClick={() => handleQuickApprove(app)}
-                                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-[#006e2e] hover:bg-[#005322] text-white text-[11px] font-bold transition-all cursor-pointer shadow-xs active:scale-95"
-                                  title="1-Click Approve Application & Dispatch Resend Email with ID Card"
-                                >
-                                  <Check size={12} />
-                                  <span>Approve</span>
-                                </button>
-                              ) : (
                                 <>
                                   <button
                                     type="button"
-                                    onClick={() => handleCopyWhatsAppMessage(app)}
-                                    className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-[#e8f5e9] hover:bg-[#c8e6c9] text-[#006e2e] text-[11px] font-bold transition-colors cursor-pointer"
-                                    title="Copy WhatsApp approval message to send to applicant"
+                                    onClick={() => handleQuickApprove(app)}
+                                    className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-[#006e2e] hover:bg-[#005322] text-white text-[11px] font-bold transition-all cursor-pointer shadow-xs active:scale-95"
+                                    title="1-Click Approve Application & Issue Live Digital ID Card"
                                   >
-                                    <MessageSquare size={12} />
-                                    <span>WhatsApp</span>
+                                    <Check size={12} />
+                                    <span>Approve</span>
                                   </button>
 
-                                  {app.emailAddress && (
-                                    <button
-                                      type="button"
-                                      onClick={() => handleSendEmailConfirmation(app)}
-                                      className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-[#e0edff] hover:bg-[#c5dcfa] text-[#003477] text-[11px] font-bold transition-colors cursor-pointer"
-                                      title={`Push confirmation email & digital ID card to ${app.emailAddress} via Resend`}
-                                    >
-                                      <Send size={11} />
-                                      <span>Email</span>
-                                    </button>
-                                  )}
+                                  <button
+                                    type="button"
+                                    onClick={() => handleQuickReject(app)}
+                                    className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-[#ffdad6] hover:bg-[#ffb4ab] text-[#ba1a1a] text-[11px] font-bold transition-all cursor-pointer"
+                                    title="Reject Application"
+                                  >
+                                    <X size={12} />
+                                    <span>Reject</span>
+                                  </button>
                                 </>
+                              ) : (
+                                app.emailAddress && (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleSendEmailConfirmation(app)}
+                                    className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-[#e0edff] hover:bg-[#c5dcfa] text-[#003477] text-[11px] font-bold transition-colors cursor-pointer"
+                                    title={`Send confirmation & digital ID card email to ${app.emailAddress} via Resend`}
+                                  >
+                                    <Send size={11} />
+                                    <span>Email Card</span>
+                                  </button>
+                                )
                               )}
 
                               {/* Copy ID Button */}
@@ -1208,115 +1208,232 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
       )}
 
       {/* ========================================================================= */}
-      {/* DETAILED MEMBER REVIEW & APPROVAL MODAL */}
+      {/* COMPREHENSIVE MEMBER APPLICATION & PAYMENT VERIFICATION DOSSIER MODAL */}
       {/* ========================================================================= */}
       {viewingApp && (
-        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-150 overflow-y-auto">
-          <div className="bg-white rounded-3xl max-w-2xl w-full p-6 sm:p-8 space-y-6 animate-in zoom-in-95 duration-150 my-8 shadow-2xl border border-[#e0e3e6]">
-            {/* Modal Header */}
-            <div className="flex items-center justify-between border-b border-[#e0e3e6] pb-4">
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-14 rounded-2xl bg-[#003477] text-white overflow-hidden flex items-center justify-center font-bold shadow-md border-2 border-[#003477]">
+        <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-150 overflow-y-auto">
+          <div className="bg-white rounded-3xl max-w-3xl w-full p-6 sm:p-8 space-y-6 animate-in zoom-in-95 duration-150 my-8 shadow-2xl border border-[#e0e3e6] max-h-[92vh] overflow-y-auto">
+            {/* Modal Header Banner */}
+            <div className="flex items-start justify-between border-b border-[#e0e3e6] pb-5 gap-4">
+              <div className="flex items-center gap-4">
+                <div className="w-16 h-20 rounded-2xl bg-[#003477] text-white overflow-hidden flex items-center justify-center font-bold shadow-md border-2 border-[#003477] shrink-0">
                   {viewingApp.photoUrl ? (
-                    <img src={viewingApp.photoUrl} alt="Photo" className="w-full h-full object-cover" />
+                    <img src={viewingApp.photoUrl} alt={viewingApp.fullName} className="w-full h-full object-cover" />
                   ) : (
-                    <span className="text-sm font-black">{viewingApp.fullName.charAt(0)}</span>
+                    <span className="text-xl font-black">{viewingApp.fullName.charAt(0)}</span>
                   )}
                 </div>
                 <div>
-                  <div className="flex items-center gap-2">
-                    <h3 className="text-lg font-black text-[#191c1e]">{viewingApp.fullName}</h3>
+                  <div className="flex items-center gap-2.5 flex-wrap">
+                    <h3 className="text-xl sm:text-2xl font-black text-[#191c1e]">{viewingApp.fullName}</h3>
                     <span
-                      className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold ${viewingApp.status === 'Approved'
+                      className={`px-3 py-0.5 rounded-full text-[11px] font-extrabold flex items-center gap-1 ${viewingApp.status === 'Approved'
                           ? 'bg-[#e8f5e9] text-[#006e2e] border border-[#006e2e]/30'
-                          : 'bg-[#ffbe3b]/25 text-[#00285e] border border-[#ffbe3b]/40'
+                          : viewingApp.status === 'In Review'
+                            ? 'bg-[#d8e2ff] text-[#001a42] border border-[#003477]/20'
+                            : viewingApp.status === 'Rejected'
+                              ? 'bg-[#ffdad6] text-[#ba1a1a] border border-[#ba1a1a]/30'
+                              : 'bg-[#ffbe3b]/25 text-[#00285e] border border-[#ffbe3b]/40'
                         }`}
                     >
+                      <span className={`w-2 h-2 rounded-full ${viewingApp.status === 'Approved' ? 'bg-[#006e2e]' : 'bg-[#ffbe3b]'}`}></span>
                       {viewingApp.status}
                     </span>
                   </div>
-                  <p className="text-xs font-mono font-bold text-[#003477]">
-                    ID: {viewingApp.id} • {viewingApp.applicationType || 'New Member'}
+                  <p className="text-xs font-mono font-bold text-[#003477] mt-1">
+                    Application ID: <span className="bg-[#f0f4ff] px-2 py-0.5 rounded border border-[#003477]/20">{viewingApp.id}</span> • Type: {viewingApp.applicationType || 'New Member'}
+                  </p>
+                  <p className="text-[11px] text-[#737783] mt-0.5">
+                    Submitted: {viewingApp.submissionDate || 'Live Online'}
                   </p>
                 </div>
               </div>
 
               <button
                 onClick={() => setViewingApp(null)}
-                className="p-2 rounded-full bg-[#f2f4f7] hover:bg-[#e0e3e6] text-[#434752] cursor-pointer"
+                className="p-2 rounded-full bg-[#f2f4f7] hover:bg-[#e0e3e6] text-[#434752] cursor-pointer shrink-0"
               >
-                <X size={18} />
+                <X size={20} />
               </button>
             </div>
 
-            {/* Information Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
-              <div className="p-3.5 rounded-xl bg-[#f7f9fc] border border-[#e0e3e6] space-y-1">
-                <span className="text-[10.5px] uppercase font-bold text-[#737783] block">Personal Information</span>
-                <p className="font-bold text-[#191c1e]">{viewingApp.fullName}</p>
-                <p className="text-[#003477] font-semibold">DOB: {viewingApp.dateOfBirth || 'Not Provided'}</p>
-                <p className="text-[#434752]">Phone: {viewingApp.mobileNumber}</p>
-                <p className="text-[#434752] truncate">Email: {viewingApp.emailAddress}</p>
-              </div>
-
-              <div className="p-3.5 rounded-xl bg-[#f7f9fc] border border-[#e0e3e6] space-y-1">
-                <span className="text-[10.5px] uppercase font-bold text-[#737783] block">Firm &amp; Enterprise</span>
-                <p className="font-bold text-[#003477]">{viewingApp.companyName}</p>
-                <p className="text-[#434752] font-semibold">{viewingApp.businessType}</p>
-                <p className="text-[#191c1e]">District: {viewingApp.district}</p>
-                <p className="text-[#737783] font-mono">GSTIN: {viewingApp.gstNumber || 'N/A'}</p>
-              </div>
-
-              <div className="sm:col-span-2 p-3.5 rounded-xl bg-[#f7f9fc] border border-[#e0e3e6] space-y-1">
-                <span className="text-[10.5px] uppercase font-bold text-[#737783] block">Office Address</span>
-                <p className="text-[#191c1e] leading-relaxed">{viewingApp.officeAddress || 'Not Provided'}</p>
-              </div>
-
-              {/* Payment & Validity Section */}
-              <div className="sm:col-span-2 p-4 rounded-2xl bg-gradient-to-r from-[#f0f9f4] to-[#f0f4ff] border border-[#b8e5c8] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                <div>
-                  <span className="text-[10px] uppercase font-extrabold text-[#006e2e] block tracking-wider">
-                    Membership Validity &amp; Payment
-                  </span>
-                  <div className="flex items-center gap-3 mt-1">
-                    <span className="text-sm font-black text-[#003477]">
-                      {viewingApp.applicationType === 'Existing Member' ? 'Existing Member (Fee Exempt)' : `Paid: ${viewingApp.amountPaid || '₹ 2,000.00'}`}
-                    </span>
-                    <span className="font-mono text-xs font-bold text-[#006e2e] bg-white px-2 py-0.5 rounded-md border border-[#006e2e]/20">
-                      UTR: {viewingApp.utrNumber}
-                    </span>
-                  </div>
-                  <p className="text-[11px] text-[#434752] mt-1">
-                    Membership Valid Until: <strong className="text-[#006e2e]">{viewingApp.validUntil || calculateValidityDate(viewingApp.paymentDate)}</strong> (1 Year)
-                  </p>
+            {/* Comprehensive Information Sections */}
+            <div className="space-y-5 text-xs">
+              {/* SECTION 1: Personal & Representative Credentials */}
+              <div className="p-4 rounded-2xl bg-[#f7f9fc] border border-[#e0e3e6] space-y-3">
+                <div className="flex items-center gap-2 text-[#003477] pb-2 border-b border-[#e0e3e6]">
+                  <Users size={16} />
+                  <h4 className="font-extrabold uppercase text-[11px] tracking-wider">1. Applicant Representative Credentials</h4>
                 </div>
 
-                {viewingApp.paymentScreenshotUrl && (
-                  <button
-                    type="button"
-                    onClick={() => setViewingReceiptUrl(viewingApp.paymentScreenshotUrl || null)}
-                    className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white text-[#003477] font-bold text-xs shadow-xs border border-[#e0e3e6] hover:bg-[#f2f4f7] cursor-pointer"
-                  >
-                    <Eye size={14} />
-                    <span>View Receipt Proof</span>
-                  </button>
-                )}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
+                  <div>
+                    <span className="text-[#737783] block text-[10.5px] uppercase font-bold">Representative Name</span>
+                    <span className="font-extrabold text-[#191c1e] text-sm">{viewingApp.fullName}</span>
+                  </div>
+                  <div>
+                    <span className="text-[#737783] block text-[10.5px] uppercase font-bold">Date of Birth (For ID Card)</span>
+                    <span className="font-bold text-[#003477]">{viewingApp.dateOfBirth || 'Not Provided'}</span>
+                  </div>
+                  <div>
+                    <span className="text-[#737783] block text-[10.5px] uppercase font-bold">Mobile Phone</span>
+                    <span className="font-bold text-[#191c1e] font-mono">+91 {viewingApp.mobileNumber}</span>
+                  </div>
+                  <div className="sm:col-span-2">
+                    <span className="text-[#737783] block text-[10.5px] uppercase font-bold">Registered Email Address</span>
+                    <span className="font-bold text-[#003477]">{viewingApp.emailAddress}</span>
+                  </div>
+                  <div>
+                    <span className="text-[#737783] block text-[10.5px] uppercase font-bold">ID Card Photo Status</span>
+                    <span className="font-bold text-[#006e2e]">
+                      {viewingApp.photoUrl ? '✓ Photo Uploaded & Verified' : 'Standard Avatar'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* SECTION 2: Enterprise & Business Profile */}
+              <div className="p-4 rounded-2xl bg-[#f7f9fc] border border-[#e0e3e6] space-y-3">
+                <div className="flex items-center gap-2 text-[#003477] pb-2 border-b border-[#e0e3e6]">
+                  <Building2 size={16} />
+                  <h4 className="font-extrabold uppercase text-[11px] tracking-wider">2. Business Firm &amp; Operational Profile</h4>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
+                  <div className="sm:col-span-2">
+                    <span className="text-[#737783] block text-[10.5px] uppercase font-bold">Firm / Company Name</span>
+                    <span className="font-extrabold text-[#003477] text-sm">{viewingApp.companyName}</span>
+                  </div>
+                  <div>
+                    <span className="text-[#737783] block text-[10.5px] uppercase font-bold">Designation</span>
+                    <span className="font-bold text-[#191c1e]">{viewingApp.designation || 'Solar EPC Integrator'}</span>
+                  </div>
+                  <div>
+                    <span className="text-[#737783] block text-[10.5px] uppercase font-bold">District</span>
+                    <span className="font-bold text-[#191c1e]">{viewingApp.district || 'Andhra Pradesh'}</span>
+                  </div>
+                  <div>
+                    <span className="text-[#737783] block text-[10.5px] uppercase font-bold">Business Entity Type</span>
+                    <span className="font-semibold text-[#434752]">{viewingApp.businessType || 'Solar EPC'}</span>
+                  </div>
+                  <div>
+                    <span className="text-[#737783] block text-[10.5px] uppercase font-bold">GSTIN Number</span>
+                    <span className="font-mono font-bold text-[#003477]">{viewingApp.gstNumber || 'Unregistered / Not Provided'}</span>
+                  </div>
+                  <div className="sm:col-span-2">
+                    <span className="text-[#737783] block text-[10.5px] uppercase font-bold">Office Address</span>
+                    <span className="font-medium text-[#191c1e] leading-relaxed">{viewingApp.officeAddress || 'Not Provided'}</span>
+                  </div>
+                  <div>
+                    <span className="text-[#737783] block text-[10.5px] uppercase font-bold">Pincode</span>
+                    <span className="font-mono font-bold text-[#191c1e]">{viewingApp.pincode || 'N/A'}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* SECTION 3: PAYMENT & REMITTANCE PROOF AUDIT (THE KEY SECTION) */}
+              <div className="p-5 rounded-2xl bg-gradient-to-r from-[#f0f9f4] via-[#f7f9fc] to-[#f0f4ff] border-2 border-[#006e2e]/30 space-y-4 shadow-xs">
+                <div className="flex items-center justify-between pb-3 border-b border-[#e0e3e6] flex-wrap gap-2">
+                  <div className="flex items-center gap-2 text-[#006e2e]">
+                    <CreditCard size={18} />
+                    <h4 className="font-black uppercase text-[12px] tracking-wider">
+                      3. Payment &amp; Remittance Verification Audit
+                    </h4>
+                  </div>
+                  <span className="px-3 py-1 rounded-full bg-[#006e2e] text-white text-[11px] font-black uppercase">
+                    {viewingApp.amountPaid || '₹ 2,000.00'}
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-2.5">
+                    <div>
+                      <span className="text-[#737783] block text-[10.5px] uppercase font-bold">Bank UTR / Transaction Reference</span>
+                      <div className="flex items-center gap-2 mt-0.5">
+                        <span className="font-mono font-black text-[#006e2e] text-sm bg-white px-3 py-1 rounded-lg border border-[#006e2e]/30 shadow-2xs">
+                          {viewingApp.utrNumber || 'N/A'}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => handleCopyText(viewingApp.utrNumber, 'UTR Number')}
+                          className="p-1.5 rounded-lg bg-white hover:bg-[#e0e3e6] text-[#003477] border border-[#e0e3e6] cursor-pointer"
+                          title="Copy UTR Reference"
+                        >
+                          <Copy size={13} />
+                        </button>
+                      </div>
+                    </div>
+
+                    <div>
+                      <span className="text-[#737783] block text-[10.5px] uppercase font-bold">Payment Remittance Date</span>
+                      <span className="font-bold text-[#191c1e] text-xs">{viewingApp.paymentDate || 'N/A'}</span>
+                    </div>
+
+                    <div>
+                      <span className="text-[#737783] block text-[10.5px] uppercase font-bold">Admission Type &amp; Mode</span>
+                      <span className="font-semibold text-[#003477]">
+                        {viewingApp.applicationType === 'Existing Member'
+                          ? 'Existing Member (Fee Exempt)'
+                          : viewingApp.utrNumber?.startsWith('ONSPOT')
+                            ? '⚡ On-Spot Secretariat Admission (Fee Waived)'
+                            : 'UPI / Bank Transfer (Solar Expo 60% OFF)'}
+                      </span>
+                    </div>
+
+                    <div>
+                      <span className="text-[#737783] block text-[10.5px] uppercase font-bold">Calculated Card Validity Period</span>
+                      <span className="font-mono font-black text-[#006e2e] text-xs">
+                        Valid Until: {viewingApp.validUntil || calculateValidityDate(viewingApp.paymentDate)} (1 Year)
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Payment Receipt Screenshot Preview */}
+                  <div className="flex flex-col justify-between p-3.5 rounded-xl bg-white border border-[#e0e3e6] shadow-2xs">
+                    <span className="text-[#737783] block text-[10.5px] uppercase font-bold mb-2">
+                      Uploaded Payment Receipt Proof
+                    </span>
+                    {viewingApp.paymentScreenshotUrl ? (
+                      <div className="space-y-2">
+                        <div
+                          onClick={() => setViewingReceiptUrl(viewingApp.paymentScreenshotUrl || null)}
+                          className="h-36 w-full rounded-lg bg-[#f7f9fc] border border-[#e0e3e6] overflow-hidden flex items-center justify-center cursor-pointer group relative"
+                          title="Click to expand payment screenshot"
+                        >
+                          <img
+                            src={viewingApp.paymentScreenshotUrl}
+                            alt="Payment Receipt"
+                            className="w-full h-full object-contain group-hover:scale-105 transition-transform"
+                          />
+                          <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white font-bold text-xs gap-1.5">
+                            <Eye size={16} />
+                            <span>Click to Zoom</span>
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setViewingReceiptUrl(viewingApp.paymentScreenshotUrl || null)}
+                          className="w-full py-1.5 rounded-lg bg-[#f0f4ff] hover:bg-[#d8e2ff] text-[#003477] font-bold text-[11px] flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                        >
+                          <Eye size={13} />
+                          <span>Open Fullscreen Receipt Screenshot</span>
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="h-36 rounded-lg bg-[#f7f9fc] border border-dashed border-[#e0e3e6] flex flex-col items-center justify-center text-center p-3 text-[#737783]">
+                        <CheckCircle2 size={24} className="text-[#006e2e] mb-1" />
+                        <span className="font-bold text-[#191c1e] text-[11px]">Direct Secretariat Enrolment</span>
+                        <span className="text-[10px]">No payment receipt uploaded (Verified on desk)</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
               </div>
             </div>
 
-            {/* Modal Actions */}
+            {/* Modal Verification Actions Bar */}
             <div className="pt-4 border-t border-[#e0e3e6] flex flex-wrap items-center justify-between gap-3">
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => handleCopyWhatsAppMessage(viewingApp)}
-                  className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[#e8f5e9] hover:bg-[#c8e6c9] text-[#006e2e] font-bold text-xs transition-colors cursor-pointer"
-                  title="Copy WhatsApp notification"
-                >
-                  <MessageSquare size={14} />
-                  <span>WhatsApp Notice</span>
-                </button>
-
+              <div className="flex items-center gap-2 flex-wrap">
                 {viewingApp.emailAddress && (
                   <button
                     type="button"
@@ -1325,40 +1442,18 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                     title={`Send confirmation & digital ID card email to ${viewingApp.emailAddress} via Resend`}
                   >
                     <Send size={14} />
-                    <span>Email Member</span>
+                    <span>Email Confirmation &amp; ID Card</span>
                   </button>
                 )}
 
                 <button
                   type="button"
                   onClick={() => handleCopyText(viewingApp.id, 'Membership ID')}
-                  className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-[#f2f4f7] hover:bg-[#e0e3e6] text-[#434752] font-bold text-xs transition-colors cursor-pointer"
+                  className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[#f2f4f7] hover:bg-[#e0e3e6] text-[#434752] font-bold text-xs transition-colors cursor-pointer"
                 >
                   <Copy size={14} />
                   <span>Copy ID</span>
                 </button>
-              </div>
-
-              <div className="flex items-center gap-2">
-                {viewingApp.status !== 'Approved' ? (
-                  <button
-                    type="button"
-                    onClick={() => handleQuickApprove(viewingApp)}
-                    className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-xl bg-[#006e2e] hover:bg-[#005322] text-white font-black text-xs shadow-md transition-all cursor-pointer active:scale-95"
-                  >
-                    <CheckCheck size={16} />
-                    <span>Approve &amp; Issue ID Card</span>
-                  </button>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() => handleQuickReject(viewingApp)}
-                    className="inline-flex items-center gap-1 px-3.5 py-2 rounded-xl bg-[#ffdad6] hover:bg-[#ffb4ab] text-[#ba1a1a] font-bold text-xs transition-colors cursor-pointer"
-                  >
-                    <X size={14} />
-                    <span>Revoke / Reject</span>
-                  </button>
-                )}
 
                 <button
                   type="button"
@@ -1366,11 +1461,44 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                     setEditingApp({ ...viewingApp });
                     setViewingApp(null);
                   }}
-                  className="inline-flex items-center gap-1 px-3.5 py-2 rounded-xl bg-[#003477] hover:bg-[#024aa3] text-white font-bold text-xs transition-colors cursor-pointer"
+                  className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[#f2f4f7] hover:bg-[#d8e2ff] text-[#003477] font-bold text-xs transition-colors cursor-pointer"
                 >
                   <Edit3 size={14} />
-                  <span>Edit</span>
+                  <span>Edit Record</span>
                 </button>
+              </div>
+
+              <div className="flex items-center gap-2">
+                {viewingApp.status !== 'Approved' ? (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => handleQuickReject(viewingApp)}
+                      className="inline-flex items-center gap-1 px-3.5 py-2.5 rounded-xl bg-[#ffdad6] hover:bg-[#ffb4ab] text-[#ba1a1a] font-bold text-xs transition-colors cursor-pointer"
+                    >
+                      <X size={14} />
+                      <span>Reject</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => handleQuickApprove(viewingApp)}
+                      className="inline-flex items-center gap-1.5 px-6 py-2.5 rounded-xl bg-gradient-to-r from-[#006e2e] to-[#008738] text-white font-black text-xs sm:text-sm shadow-md transition-all cursor-pointer active:scale-95"
+                    >
+                      <CheckCheck size={16} />
+                      <span>Approve &amp; Issue Live ID Card</span>
+                    </button>
+                  </>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => handleQuickReject(viewingApp)}
+                    className="inline-flex items-center gap-1 px-4 py-2 rounded-xl bg-[#ffdad6] hover:bg-[#ffb4ab] text-[#ba1a1a] font-bold text-xs transition-colors cursor-pointer"
+                  >
+                    <X size={14} />
+                    <span>Revoke / Reject</span>
+                  </button>
+                )}
               </div>
             </div>
           </div>

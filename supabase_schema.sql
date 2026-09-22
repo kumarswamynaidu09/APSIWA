@@ -125,6 +125,10 @@ CREATE POLICY "Users can update their own profile"
   ON public.profiles FOR UPDATE 
   USING (auth.uid() = id);
 
+CREATE POLICY "Allow delete for profile removal" 
+  ON public.profiles FOR DELETE 
+  USING (true);
+
 -- 2. Membership Applications Policies
 CREATE POLICY "Allow public select for verified status checks" 
   ON public.membership_applications FOR SELECT 
@@ -138,6 +142,10 @@ CREATE POLICY "Allow update for application approval"
   ON public.membership_applications FOR UPDATE 
   USING (true);
 
+CREATE POLICY "Allow delete for application removal" 
+  ON public.membership_applications FOR DELETE 
+  USING (true);
+
 -- 3. Payments Policies
 CREATE POLICY "Payments viewable by everyone or owner" 
   ON public.payments FOR SELECT 
@@ -149,6 +157,10 @@ CREATE POLICY "Allow inserting payment proof"
 
 CREATE POLICY "Allow updating payment verification" 
   ON public.payments FOR UPDATE 
+  USING (true);
+
+CREATE POLICY "Allow delete for payment removal" 
+  ON public.payments FOR DELETE 
   USING (true);
 
 -- ==============================================================================

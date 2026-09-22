@@ -64,8 +64,18 @@ export function App() {
   // Reload applications helper
   const handleRefreshApplications = async () => {
     const apps = await fetchUserApplications(currentUser?.email);
-    if (apps && apps.length > 0) {
+    if (apps) {
       setApplications(apps);
+    }
+  };
+
+  // Direct Delete Application Handler (optimistic + DB sync)
+  const handleDeleteApplication = async (id: string) => {
+    setApplications((prev) => prev.filter((a) => a.id !== id));
+    await deleteApplication(id);
+    const updated = await fetchUserApplications(currentUser?.email);
+    if (updated) {
+      setApplications(updated);
     }
   };
 
@@ -310,6 +320,7 @@ export function App() {
                 currentUser={currentUser}
                 applications={applications}
                 onRefreshApplications={handleRefreshApplications}
+                onDeleteApplication={handleDeleteApplication}
                 websiteSettings={websiteSettings}
                 onUpdateWebsiteSettings={handleUpdateWebsiteSettings}
                 onNavigateHome={() => setCurrentTab('home')}

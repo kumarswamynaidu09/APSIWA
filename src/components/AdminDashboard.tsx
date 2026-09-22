@@ -105,6 +105,7 @@ interface AdminDashboardProps {
   currentUser: UserProfile | null;
   applications: MembershipApplication[];
   onRefreshApplications: () => void;
+  onDeleteApplication?: (id: string) => Promise<void>;
   websiteSettings: WebsiteSettings;
   onUpdateWebsiteSettings: (newSettings: WebsiteSettings) => void;
   onNavigateHome: () => void;
@@ -115,6 +116,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   currentUser,
   applications,
   onRefreshApplications,
+  onDeleteApplication,
   websiteSettings,
   onUpdateWebsiteSettings,
   onNavigateHome,
@@ -521,11 +523,23 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
   // Delete Application
   const handleDeleteApp = async (id: string, name: string) => {
-    if (window.confirm(`Are you sure you want to delete application ${id} for ${name}?`)) {
-      await deleteApplication(id);
-      setActionSuccessMsg(`Application ${id} deleted.`);
-      onRefreshApplications();
-      setTimeout(() => setActionSuccessMsg(''), 3000);
+    if (window.confirm(`Are you sure you want to permanently delete application ${id} for ${name}? This action will permanently remove the record.`)) {
+      if (viewingApp?.id === id) {
+        setViewingApp(null);
+      }
+      if (onDeleteApplication) {
+        await onDeleteApplication(id);
+      } else {
+        const res = await deleteApplication(id);
+        if (res.error) {
+          setActionSuccessMsg(`Delete notice: ${res.error}`);
+        } else {
+          setActionSuccessMsg(`Application ${id} permanently deleted.`);
+        }
+        onRefreshApplications();
+      }
+      setActionSuccessMsg(`Application ${id} permanently deleted.`);
+      setTimeout(() => setActionSuccessMsg(''), 3500);
     }
   };
 
@@ -1465,6 +1479,16 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 >
                   <Edit3 size={14} />
                   <span>Edit Record</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => handleDeleteApp(viewingApp.id, viewingApp.fullName)}
+                  className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[#ffdad6] hover:bg-[#ffb4ab] text-[#ba1a1a] font-bold text-xs transition-colors cursor-pointer"
+                  title="Permanently Delete Application"
+                >
+                  <Trash2 size={14} />
+                  <span>Delete</span>
                 </button>
               </div>
 

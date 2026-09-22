@@ -503,21 +503,37 @@ export async function updateApplicationDetails(app: MembershipApplication): Prom
 /**
  * Delete an application (Admin action)
  */
-export async function deleteApplication(id: string): Promise<{ success: boolean }> {
+export async function deleteApplication(id: string): Promise<{ success: boolean; error?: string | null }> {
   try {
     const existingRaw = localStorage.getItem('apsiwa_membership_applications');
     const existing: MembershipApplication[] = existingRaw ? JSON.parse(existingRaw) : [];
     const filtered = existing.filter((a) => a.id !== id);
     localStorage.setItem('apsiwa_membership_applications', JSON.stringify(filtered));
-  } catch {}
+  } catch (e) {
+    console.error('Error removing application from localStorage:', e);
+  }
 
   if (isSupabaseConfigured()) {
     try {
-      await supabase.from('membership_applications').delete().eq('id', id);
-    } catch {}
+      // 1. Delete associated payment ledger entry if present to satisfy foreign keys
+      const { error: payErr } = await supabase.from('payments').delete().eq('application_id', id);
+      if (payErr) {
+        console.warn('Note deleting associated payment row:', payErr.message);
+      }
+
+      // 2. Delete membership application row
+      const { error: appErr } = await supabase.from('membership_applications').delete().eq('id', id);
+      if (appErr) {
+        console.error('Supabase delete application error:', appErr.message);
+        return { success: false, error: appErr.message };
+      }
+    } catch (err: any) {
+      console.error('Supabase delete exception:', err);
+      return { success: false, error: err?.message || 'Delete failed' };
+    }
   }
 
-  return { success: true };
+  return { success: true, error: null };
 }
 
 // Default Website Settings

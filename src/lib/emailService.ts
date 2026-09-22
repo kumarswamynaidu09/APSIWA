@@ -21,7 +21,11 @@ function formatDate(dateStr?: string): string {
 
 /**
  * Generates official AP SIWA Membership Approval Confirmation HTML Email
- * matching the exact wording and structure requested by the Secretariat.
+ * Formatted as an official A4 Certificate Sheet:
+ * - 75% Personal and Business Accreditation Details Dossier
+ * - Scissor Cut Detachable Guideline
+ * - 25% Front-Side Membership ID Card (NO QR Codes)
+ * - Direct Member Portal Download Link
  */
 export function generateApprovalEmailHtml(
   app: MembershipApplication,
@@ -29,7 +33,16 @@ export function generateApprovalEmailHtml(
 ): string {
   const memberName = app.fullName || 'Member';
   const membershipId = app.id;
-  const membershipType = app.applicationType || 'New Member';
+  const companyName = app.companyName || 'Solar EPC Integrator';
+  const designation = app.designation || 'Authorized Representative';
+  const district = app.district || 'Andhra Pradesh';
+  const dob = app.dateOfBirth || 'N/A';
+  const mobileNumber = app.mobileNumber || 'N/A';
+  const emailAddress = app.emailAddress || 'N/A';
+  const businessType = app.businessType || 'Solar EPC Integrator';
+  const gstNumber = app.gstNumber || 'N/A';
+  const officeAddress = app.officeAddress || 'Andhra Pradesh';
+  const pincode = app.pincode || '';
   const paymentDate = formatDate(app.paymentDate);
   const validUntil = app.validUntil || calculateValidityDate(app.paymentDate || new Date().toISOString());
   const origin = 'https://www.apsiwa.in';
@@ -41,210 +54,288 @@ export function generateApprovalEmailHtml(
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>AP SIWA Membership Confirmation</title>
+  <title>APSIWA Official Membership Certificate & Identity Card</title>
 </head>
-<body style="margin: 0; padding: 0; background-color: #f4f6f9; font-family: 'Segoe UI', Roboto, -apple-system, BlinkMacSystemFont, Arial, sans-serif; -webkit-font-smoothing: antialiased; color: #1e293b; line-height: 1.6;">
-  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color: #f4f6f9; padding: 28px 12px;">
+<body style="margin: 0; padding: 0; background-color: #e9ecef; font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, Arial, sans-serif; -webkit-font-smoothing: antialiased; color: #1e293b; line-height: 1.5;">
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color: #e9ecef; padding: 24px 10px;">
     <tr>
       <td align="center">
-        <!-- Main Email Container -->
-        <table role="presentation" width="100%" max-width="600" cellspacing="0" cellpadding="0" border="0" style="max-width: 600px; background-color: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 20px rgba(0, 52, 119, 0.08); border: 1px solid #e2e8f0;">
+        <!-- Main A4 Document Sheet Container (Width 640px) -->
+        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="max-width: 640px; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 8px 30px rgba(0, 52, 119, 0.12); border: 1px solid #cbd5e1;">
           
-          <!-- Official Header Banner -->
+          <!-- ================================================================= -->
+          <!-- TOP 75%: OFFICIAL CERTIFICATE & ACCREDITATION DOSSIER -->
+          <!-- ================================================================= -->
           <tr>
-            <td style="background: linear-gradient(135deg, #001d4a 0%, #003477 65%, #024aa3 100%); padding: 28px 24px; text-align: center;">
-              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
+            <td style="padding: 24px 28px 16px 28px; background-color: #ffffff;">
+              
+              <!-- Letterhead Header -->
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="border-bottom: 2.5px solid #003477; padding-bottom: 14px; margin-bottom: 16px;">
                 <tr>
-                  <td align="center">
-                    <span style="display: inline-block; background-color: #ffbe3b; color: #00285e; font-size: 11px; font-weight: 900; letter-spacing: 1.5px; text-transform: uppercase; padding: 4px 12px; border-radius: 20px; margin-bottom: 8px;">
-                      OFFICIAL CONFIRMATION
+                  <td valign="middle" style="width: 70px;">
+                    <div style="background-color: #003477; color: #ffffff; width: 56px; height: 56px; border-radius: 10px; text-align: center; line-height: 56px; font-size: 18px; font-weight: 900; border: 2px solid #ffbe3b;">
+                      SIWA
+                    </div>
+                  </td>
+                  <td valign="middle" style="padding-left: 10px;">
+                    <span style="display: inline-block; background-color: #ffbe3b; color: #00285e; font-size: 9px; font-weight: 900; letter-spacing: 1px; text-transform: uppercase; padding: 2px 8px; border-radius: 4px; margin-bottom: 3px;">
+                      GOVT. RECOGNIZED STATE SOLAR WELFARE BODY
                     </span>
-                    <h1 style="color: #ffffff; font-size: 22px; font-weight: 800; margin: 0 0 4px 0; letter-spacing: -0.3px;">
-                      AP SIWA
-                    </h1>
-                    <p style="color: #8ef9a0; font-size: 12px; font-weight: 700; margin: 0; text-transform: uppercase; letter-spacing: 0.5px;">
+                    <h1 style="color: #003477; font-size: 18px; font-weight: 900; margin: 0 0 2px 0; text-transform: uppercase; letter-spacing: -0.2px;">
                       Andhra Pradesh Solar Integrators Welfare Association
+                    </h1>
+                    <p style="color: #475569; font-size: 10.5px; font-weight: 600; margin: 0;">
+                      State Secretariat: Visakhapatnam &bull; CPDCL / EPDCL Regulatory Liaison Body &bull; www.apsiwa.in
                     </p>
                   </td>
                 </tr>
               </table>
-            </td>
-          </tr>
 
-          <!-- Email Content Body -->
-          <tr>
-            <td style="padding: 32px 28px;">
-              <p style="font-size: 15px; margin: 0 0 16px 0; color: #1e293b;">
+              <!-- Certificate Title & Reference Meta -->
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px 14px; margin-bottom: 16px;">
+                <tr>
+                  <td>
+                    <span style="color: #64748b; font-size: 9.5px; text-transform: uppercase; font-weight: 700; display: block;">MEMBERSHIP NUMBER</span>
+                    <span style="color: #003477; font-size: 14px; font-family: monospace; font-weight: 900;">${membershipId}</span>
+                  </td>
+                  <td align="center">
+                    <span style="color: #64748b; font-size: 9.5px; text-transform: uppercase; font-weight: 700; display: block;">ADMISSION STATUS</span>
+                    <span style="color: #006e2e; font-size: 11.5px; font-weight: 800; background-color: #dcfce7; padding: 2px 8px; border-radius: 12px; border: 1px solid #86efac; display: inline-block;">
+                      &bull; APPROVED &amp; ACTIVE
+                    </span>
+                  </td>
+                  <td align="right">
+                    <span style="color: #64748b; font-size: 9.5px; text-transform: uppercase; font-weight: 700; display: block;">VALIDITY PERIOD</span>
+                    <span style="color: #006e2e; font-size: 12px; font-weight: 800; font-family: monospace;">${validUntil}</span>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Formal Greeting -->
+              <p style="font-size: 13.5px; margin: 0 0 10px 0; color: #1e293b;">
                 Dear <strong>${memberName}</strong>,
               </p>
-              
-              <p style="font-size: 14px; margin: 0 0 14px 0; color: #334155;">
-                Greetings from <strong>AP SIWA</strong>.
-              </p>
-              
-              <p style="font-size: 14px; margin: 0 0 14px 0; color: #334155;">
-                We are pleased to inform you that your membership application has been successfully approved.
-              </p>
-              
-              <p style="font-size: 14px; margin: 0 0 24px 0; color: #334155;">
-                We warmly welcome you to the <strong>AP SIWA</strong> membership community and thank you for choosing to be associated with us.
+              <p style="font-size: 12px; margin: 0 0 14px 0; color: #334155; line-height: 1.5;">
+                We are pleased to confirm that your institutional membership accreditation with the <strong>Andhra Pradesh Solar Integrators Welfare Association (APSIWA)</strong> has been verified and registered. Below is your official membership accreditation dossier and your detachable Smart ID Card.
               </p>
 
-              <!-- Membership Details Card Box -->
-              <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 18px 20px; margin-bottom: 24px;">
-                <h3 style="margin: 0 0 12px 0; font-size: 14px; font-weight: 800; color: #003477; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid #e2e8f0; padding-bottom: 8px;">
-                  Membership Details
-                </h3>
-                <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="font-size: 13px;">
-                  <tr>
-                    <td style="padding: 4px 0; color: #64748b; width: 140px;">Member Name:</td>
-                    <td style="padding: 4px 0; color: #0f172a; font-weight: 700;">${memberName}</td>
-                  </tr>
-                  <tr>
-                    <td style="padding: 4px 0; color: #64748b;">Membership ID:</td>
-                    <td style="padding: 4px 0; color: #003477; font-weight: 800; font-family: monospace;">${membershipId}</td>
-                  </tr>
-                  <tr>
-                    <td style="padding: 4px 0; color: #64748b;">Membership Type:</td>
-                    <td style="padding: 4px 0; color: #0f172a; font-weight: 600;">${membershipType}</td>
-                  </tr>
-                  <tr>
-                    <td style="padding: 4px 0; color: #64748b;">Date of Payment:</td>
-                    <td style="padding: 4px 0; color: #0f172a; font-weight: 600;">${paymentDate}</td>
-                  </tr>
-                  <tr>
-                    <td style="padding: 4px 0; color: #64748b;">Valid Until:</td>
-                    <td style="padding: 4px 0; color: #006e2e; font-weight: 800;">${validUntil}</td>
-                  </tr>
-                </table>
-              </div>
-
-              <p style="font-size: 14px; margin: 0 0 18px 0; color: #334155;">
-                Your Digital Smart Membership Card is now available through the AP SIWA Member Portal.
-              </p>
-
-              <!-- DIGITAL MEMBERSHIP CARD GRAPHIC PREVIEW -->
-              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin-bottom: 24px;">
+              <!-- Two-Column Details Box: 1. Representative & 2. Enterprise Profile -->
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin-bottom: 14px;">
                 <tr>
-                  <td style="background: linear-gradient(140deg, #001d4a 0%, #003477 65%, #00285e 100%); border-radius: 14px; padding: 20px; color: #ffffff; border: 2px solid #ffbe3b; box-shadow: 0 6px 20px rgba(0, 29, 74, 0.25);">
-                    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
+                  <!-- Column 1: Personal Profile -->
+                  <td width="48%" valign="top" style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px 14px;">
+                    <h3 style="margin: 0 0 8px 0; font-size: 11.5px; font-weight: 900; color: #003477; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid #e2e8f0; padding-bottom: 4px;">
+                      1. Representative Profile
+                    </h3>
+                    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="font-size: 11px;">
                       <tr>
-                        <td valign="middle">
-                          <span style="background-color: #ffbe3b; color: #00285e; font-size: 8.5px; font-weight: 900; padding: 2px 7px; border-radius: 8px; text-transform: uppercase;">
-                            AP STATE SOLAR WELFARE ASSOC.
-                          </span>
-                          <h4 style="font-size: 14px; font-weight: 800; color: #ffffff; margin: 3px 0 0 0;">
-                            Your Digital Membership Card
-                          </h4>
-                        </td>
-                        <td align="right" valign="top">
-                          <span style="font-size: 9.5px; color: #8ef9a0; font-weight: 800; border: 1px solid #8ef9a0; padding: 2px 6px; border-radius: 6px;">
-                            ● ACTIVE
-                          </span>
-                        </td>
+                        <td style="padding: 2.5px 0; color: #64748b; width: 90px;">Full Name:</td>
+                        <td style="padding: 2.5px 0; color: #0f172a; font-weight: 800;">${memberName}</td>
                       </tr>
                       <tr>
-                        <td colspan="2" style="padding-top: 14px;">
-                          <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
-                            <tr>
-                              <td width="56" valign="top">
-                                ${
-                                  app.photoUrl
-                                    ? `<img src="${app.photoUrl}" alt="${memberName}" width="54" height="66" style="border-radius: 6px; object-fit: cover; border: 2px solid #ffffff; display: block;" />`
-                                    : `<div style="width: 54px; height: 66px; background-color: #ffffff; border-radius: 6px; color: #003477; font-size: 22px; font-weight: 800; text-align: center; line-height: 66px;">${memberName.charAt(0)}</div>`
-                                }
-                              </td>
-                              <td style="padding-left: 12px;" valign="top">
-                                <h3 style="font-size: 15px; font-weight: 800; color: #ffffff; margin: 0 0 2px 0;">
-                                  ${memberName}
-                                </h3>
-                                <p style="font-size: 11.5px; color: #ffbe3b; font-weight: 700; margin: 0 0 3px 0;">
-                                  ${app.companyName || 'Solar EPC Integrator'}
-                                </p>
-                                <p style="font-size: 10.5px; color: #d0d7e5; margin: 0 0 2px 0;">
-                                  District: <strong>${app.district || 'Andhra Pradesh'}</strong>
-                                </p>
-                                <p style="font-size: 10.5px; color: #d0d7e5; margin: 0;">
-                                  DOB: <strong>${app.dateOfBirth || 'N/A'}</strong>
-                                </p>
-                              </td>
-                            </tr>
-                          </table>
-                        </td>
+                        <td style="padding: 2.5px 0; color: #64748b;">Designation:</td>
+                        <td style="padding: 2.5px 0; color: #0f172a; font-weight: 700;">${designation}</td>
                       </tr>
                       <tr>
-                        <td colspan="2" style="padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.15); margin-top: 12px;">
-                          <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
-                            <tr>
-                              <td>
-                                <span style="font-size: 8.5px; color: #a4b3cc; text-transform: uppercase; display: block;">MEMBERSHIP NUMBER</span>
-                                <span style="font-size: 13px; font-family: monospace; font-weight: 800; color: #ffbe3b;">${membershipId}</span>
-                              </td>
-                              <td align="right">
-                                <span style="font-size: 8.5px; color: #a4b3cc; text-transform: uppercase; display: block;">VALIDITY</span>
-                                <span style="font-size: 12px; font-family: monospace; font-weight: 700; color: #8ef9a0;">${validUntil}</span>
-                              </td>
-                            </tr>
-                          </table>
-                        </td>
+                        <td style="padding: 2.5px 0; color: #64748b;">Date of Birth:</td>
+                        <td style="padding: 2.5px 0; color: #0f172a; font-weight: 700; font-family: monospace;">${dob}</td>
+                      </tr>
+                      <tr>
+                        <td style="padding: 2.5px 0; color: #64748b;">Mobile:</td>
+                        <td style="padding: 2.5px 0; color: #0f172a; font-weight: 700;">${mobileNumber}</td>
+                      </tr>
+                      <tr>
+                        <td style="padding: 2.5px 0; color: #64748b;">Email:</td>
+                        <td style="padding: 2.5px 0; color: #003477; font-weight: 700;">${emailAddress}</td>
+                      </tr>
+                    </table>
+                  </td>
+
+                  <td width="4%"></td>
+
+                  <!-- Column 2: Enterprise Credentials -->
+                  <td width="48%" valign="top" style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px 14px;">
+                    <h3 style="margin: 0 0 8px 0; font-size: 11.5px; font-weight: 900; color: #003477; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid #e2e8f0; padding-bottom: 4px;">
+                      2. Business Credentials
+                    </h3>
+                    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="font-size: 11px;">
+                      <tr>
+                        <td style="padding: 2.5px 0; color: #64748b; width: 90px;">Firm Name:</td>
+                        <td style="padding: 2.5px 0; color: #003477; font-weight: 800;">${companyName}</td>
+                      </tr>
+                      <tr>
+                        <td style="padding: 2.5px 0; color: #64748b;">Business Type:</td>
+                        <td style="padding: 2.5px 0; color: #0f172a; font-weight: 700;">${businessType}</td>
+                      </tr>
+                      <tr>
+                        <td style="padding: 2.5px 0; color: #64748b;">District:</td>
+                        <td style="padding: 2.5px 0; color: #0f172a; font-weight: 700;">${district}, AP</td>
+                      </tr>
+                      <tr>
+                        <td style="padding: 2.5px 0; color: #64748b;">GSTIN:</td>
+                        <td style="padding: 2.5px 0; color: #0f172a; font-weight: 700; font-family: monospace;">${gstNumber}</td>
+                      </tr>
+                      <tr>
+                        <td style="padding: 2.5px 0; color: #64748b;">Office Address:</td>
+                        <td style="padding: 2.5px 0; color: #0f172a; font-weight: 600;">${officeAddress} ${pincode ? `- ${pincode}` : ''}</td>
                       </tr>
                     </table>
                   </td>
                 </tr>
               </table>
 
-              <p style="font-size: 13.5px; margin: 0 0 20px 0; color: #475569; line-height: 1.6;">
-                You can access and download your high-resolution membership card from the member portal using your <strong>Membership ID</strong> and the <strong>last four digits of your registered mobile number</strong>.
-              </p>
-
-              <!-- DOWNLOAD BUTTON -->
-              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin-bottom: 24px;">
+              <!-- Secretariat Seal & Verification Signatures -->
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="padding-top: 8px; margin-bottom: 12px; border-top: 1px solid #e2e8f0;">
                 <tr>
-                  <td align="center">
-                    <a href="${origin}" target="_blank" rel="noopener noreferrer" style="display: inline-block; background: linear-gradient(135deg, #003477 0%, #024aa3 100%); color: #ffffff; text-decoration: none; font-size: 14px; font-weight: 800; padding: 13px 28px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0, 52, 119, 0.25);">
-                      [ Download Membership Card ]
-                    </a>
+                  <td valign="middle">
+                    <p style="font-size: 10px; color: #64748b; margin: 0; line-height: 1.4;">
+                      &bull; State Association Tier: <strong>Life Member (Tier-1 EPC)</strong><br />
+                      &bull; Secretariat Record: <strong>Verified &amp; Sealed at Visakhapatnam</strong><br />
+                      &bull; Admission Date: <strong>${paymentDate}</strong>
+                    </p>
+                  </td>
+                  <td align="right" valign="middle">
+                    <div style="display: inline-block; text-align: center; border: 1.5px solid #003477; padding: 4px 12px; border-radius: 6px; background-color: #f0fdf4;">
+                      <span style="color: #006e2e; font-size: 9px; font-weight: 900; text-transform: uppercase; display: block;">OFFICIAL SEAL</span>
+                      <span style="color: #003477; font-size: 11px; font-weight: 900;">APSIWA 2026</span>
+                    </div>
                   </td>
                 </tr>
               </table>
 
-              <p style="font-size: 13px; margin: 0 0 16px 0; color: #475569; line-height: 1.5;">
-                Please keep your membership credentials secure and use your membership ID for all future communication with <strong>AP SIWA</strong>.
-              </p>
-
-              <p style="font-size: 13px; margin: 0 0 16px 0; color: #475569; line-height: 1.5;">
-                If you have any questions regarding your membership, membership card, or account, please contact the AP SIWA Secretariat at:<br />
-                Email: <a href="mailto:${secEmail}" style="color: #003477; font-weight: 700; text-decoration: none;">${secEmail}</a>
-              </p>
-
-              <p style="font-size: 13.5px; margin: 0 0 24px 0; color: #334155; line-height: 1.5;">
-                We look forward to your active participation and continued association with AP SIWA.
-              </p>
-
-              <!-- Sign-off Block -->
-              <div style="border-top: 1px solid #e2e8f0; padding-top: 18px; margin-bottom: 18px;">
-                <p style="font-size: 13.5px; margin: 0 0 3px 0; color: #1e293b;">
-                  Warm regards,
-                </p>
-                <p style="font-size: 14px; font-weight: 800; color: #003477; margin: 0 0 2px 0;">
-                  AP SIWA Secretariat
-                </p>
-                <p style="font-size: 13px; font-weight: 700; color: #475569; margin: 0 0 4px 0;">
-                  AP SIWA
-                </p>
-                <p style="font-size: 12.5px; margin: 0; color: #64748b;">
-                  Email: <a href="mailto:${secEmail}" style="color: #003477; text-decoration: none; font-weight: 600;">${secEmail}</a>
-                </p>
+              <!-- Download Button Link -->
+              <div style="text-align: center; margin-top: 10px; margin-bottom: 6px;">
+                <a href="${origin}" target="_blank" rel="noopener noreferrer" style="display: inline-block; background-color: #003477; color: #ffffff; text-decoration: none; font-size: 12.5px; font-weight: 800; padding: 10px 24px; border-radius: 6px; border: 1px solid #00285e;">
+                  [ Download Official Membership Card &amp; Certificate ]
+                </a>
               </div>
 
             </td>
           </tr>
 
-          <!-- Footer Disclaimer -->
+          <!-- ================================================================= -->
+          <!-- SCISSOR CUT LINE (DELIMITER BETWEEN 75% SHEET & 25% CARD) -->
+          <!-- ================================================================= -->
           <tr>
-            <td style="background-color: #f8fafc; padding: 16px 24px; text-align: center; border-top: 1px solid #e2e8f0;">
-              <p style="font-size: 11px; color: #94a3b8; margin: 0; line-height: 1.4;">
-                This is an automated membership confirmation email. Please retain this email for your records.
+            <td style="padding: 6px 20px; background-color: #f1f5f9; text-align: center; border-top: 2px dashed #94a3b8; border-bottom: 2px dashed #94a3b8;">
+              <span style="font-size: 11px; font-weight: 800; color: #475569; letter-spacing: 0.5px; text-transform: uppercase;">
+                &#9986; - - - - - - - - Cut Along Dotted Line To Detach Membership ID Card - - - - - - - - &#9986;
+              </span>
+            </td>
+          </tr>
+
+          <!-- ================================================================= -->
+          <!-- BOTTOM 25%: WALLET-SIZED FRONT MEMBERSHIP ID CARD (NO QR CODE) -->
+          <!-- ================================================================= -->
+          <tr>
+            <td style="padding: 20px 24px 24px 24px; background-color: #f8fafc;" align="center">
+              
+              <!-- Front Card Container (Wallet Aspect Ratio, Crisp Blue Border) -->
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="max-width: 520px; background: linear-gradient(135deg, #001d4a 0%, #003477 65%, #00285e 100%); border-radius: 12px; overflow: hidden; border: 2.5px solid #ffbe3b; box-shadow: 0 4px 16px rgba(0, 52, 119, 0.25); color: #ffffff;">
+                
+                <!-- Card Header -->
+                <tr>
+                  <td style="background-color: #002255; padding: 10px 14px; border-bottom: 2px solid #ffbe3b;">
+                    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
+                      <tr>
+                        <td valign="middle">
+                          <span style="font-size: 13px; font-weight: 900; color: #ffffff; letter-spacing: 0.3px;">
+                            APSIWA
+                          </span>
+                          <span style="font-size: 8px; color: #8ef9a0; font-weight: 800; display: block; text-transform: uppercase; letter-spacing: 0.5px;">
+                            Andhra Pradesh Solar Integrators Welfare Association
+                          </span>
+                        </td>
+                        <td align="right" valign="middle">
+                          <span style="background-color: #ffbe3b; color: #00285e; font-size: 8px; font-weight: 900; padding: 2px 6px; border-radius: 4px; text-transform: uppercase;">
+                            MEMBER ID CARD (FRONT)
+                          </span>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+
+                <!-- Card Body -->
+                <tr>
+                  <td style="padding: 12px 14px;">
+                    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
+                      <tr>
+                        <!-- Photo Box -->
+                        <td width="64" valign="middle" align="center">
+                          ${
+                            app.photoUrl
+                              ? `<img src="${app.photoUrl}" alt="${memberName}" width="60" height="74" style="border-radius: 6px; object-fit: cover; border: 2px solid #ffffff; display: block;" />`
+                              : `<div style="width: 60px; height: 74px; background-color: #ffffff; border-radius: 6px; color: #003477; font-size: 24px; font-weight: 900; text-align: center; line-height: 74px; border: 2px solid #ffbe3b;">${memberName.charAt(0)}</div>`
+                          }
+                          <span style="display: block; font-size: 7.5px; font-weight: 900; color: #8ef9a0; margin-top: 3px; text-transform: uppercase;">
+                            &bull; VERIFIED
+                          </span>
+                        </td>
+
+                        <!-- Card Credentials Details (NO QR CODE) -->
+                        <td style="padding-left: 14px;" valign="middle">
+                          <h3 style="font-size: 14px; font-weight: 900; color: #ffffff; margin: 0 0 1px 0; text-transform: uppercase;">
+                            ${memberName}
+                          </h3>
+                          <p style="font-size: 10.5px; color: #ffbe3b; font-weight: 800; margin: 0 0 4px 0;">
+                            ${designation} &bull; ${companyName}
+                          </p>
+
+                          <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="font-size: 9.5px; border-top: 1px solid rgba(255,255,255,0.2); padding-top: 4px;">
+                            <tr>
+                              <td style="color: #cbd5e1; padding: 1.5px 0;">ID NUMBER:</td>
+                              <td style="color: #ffbe3b; font-weight: 900; font-family: monospace;">${membershipId}</td>
+                              <td style="color: #cbd5e1; padding: 1.5px 0;">DOB:</td>
+                              <td style="color: #ffffff; font-weight: 800; font-family: monospace;">${dob}</td>
+                            </tr>
+                            <tr>
+                              <td style="color: #cbd5e1; padding: 1.5px 0;">DISTRICT:</td>
+                              <td style="color: #ffffff; font-weight: 800;">${district}</td>
+                              <td style="color: #cbd5e1; padding: 1.5px 0;">VALID TILL:</td>
+                              <td style="color: #8ef9a0; font-weight: 900; font-family: monospace;">${validUntil}</td>
+                            </tr>
+                          </table>
+                        </td>
+
+                        <!-- Official Gold Crest / Emblem -->
+                        <td width="55" valign="middle" align="center">
+                          <div style="width: 44px; height: 44px; border-radius: 50%; background: linear-gradient(135deg, #ffbe3b 0%, #fab220 100%); border: 2px solid #ffffff; text-align: center; color: #00285e; box-shadow: 0 2px 8px rgba(0,0,0,0.3);">
+                            <span style="font-size: 6.5px; font-weight: 900; display: block; padding-top: 9px; line-height: 1.1;">
+                              APSIWA<br />SEAL
+                            </span>
+                          </div>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+
+                <!-- Card Footer Strip -->
+                <tr>
+                  <td style="background-color: #00193d; padding: 4px 14px; border-top: 1px solid rgba(255,255,255,0.15);">
+                    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="font-size: 8px; color: #94a3b8;">
+                      <tr>
+                        <td>Govt. Recognized State Solar Association &bull; Andhra Pradesh</td>
+                        <td align="right" style="color: #8ef9a0; font-weight: 700;">Authorized Bearer Credential</td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+
+              </table>
+
+            </td>
+          </tr>
+
+          <!-- Footer Contact Disclaimer -->
+          <tr>
+            <td style="background-color: #0f172a; padding: 14px 20px; text-align: center; color: #94a3b8; font-size: 10.5px;">
+              <p style="margin: 0 0 3px 0; color: #cbd5e1; font-weight: 600;">
+                Andhra Pradesh Solar Integrators Welfare Association (APSIWA)
+              </p>
+              <p style="margin: 0;">
+                For queries or updates, email us at <a href="mailto:${secEmail}" style="color: #ffbe3b; text-decoration: none; font-weight: 700;">${secEmail}</a> &bull; Portal: <a href="${origin}" style="color: #8ef9a0; text-decoration: none; font-weight: 700;">www.apsiwa.in</a>
               </p>
             </td>
           </tr>
@@ -259,10 +350,102 @@ export function generateApprovalEmailHtml(
 }
 
 /**
+ * Generates clean plain text email for email clients that do not render HTML
+ */
+export function generateApprovalEmailPlainText(
+  app: MembershipApplication,
+  settings?: WebsiteSettings
+): string {
+  const memberName = app.fullName || 'Member';
+  const membershipId = app.id;
+  const companyName = app.companyName || 'Solar EPC Integrator';
+  const designation = app.designation || 'Authorized Representative';
+  const district = app.district || 'Andhra Pradesh';
+  const dob = app.dateOfBirth || 'N/A';
+  const mobileNumber = app.mobileNumber || 'N/A';
+  const emailAddress = app.emailAddress || 'N/A';
+  const businessType = app.businessType || 'Solar EPC Integrator';
+  const gstNumber = app.gstNumber || 'N/A';
+  const officeAddress = app.officeAddress || 'Andhra Pradesh';
+  const paymentDate = formatDate(app.paymentDate);
+  const validUntil = app.validUntil || calculateValidityDate(app.paymentDate || new Date().toISOString());
+  const secEmail = settings?.secretariatEmail || 'apsiwa2018@gmail.com';
+
+  return `
+ANDHRA PRADESH SOLAR INTEGRATORS WELFARE ASSOCIATION (APSIWA)
+Official Membership Accreditation & Identity Card Confirmation
+--------------------------------------------------------------------------------
+
+Dear ${memberName},
+
+We are pleased to confirm that your institutional membership accreditation with the Andhra Pradesh Solar Integrators Welfare Association (APSIWA) has been officially verified and registered.
+
+================================================================================
+MEMBERSHIP DOSSIER
+================================================================================
+- Membership ID: ${membershipId}
+- Admission Status: APPROVED & ACTIVE
+- Admission Date: ${paymentDate}
+- Validity Period: Valid until ${validUntil}
+
+1. REPRESENTATIVE PROFILE
+- Full Name: ${memberName}
+- Designation: ${designation}
+- Date of Birth: ${dob}
+- Mobile Number: ${mobileNumber}
+- Email: ${emailAddress}
+
+2. BUSINESS CREDENTIALS
+- Firm Name: ${companyName}
+- Business Type: ${businessType}
+- District: ${district}, AP
+- GSTIN: ${gstNumber}
+- Office Address: ${officeAddress}
+
+================================================================================
+DOWNLOAD YOUR OFFICIAL A4 CERTIFICATE & WALLET ID CARD
+================================================================================
+You can view, print, or download your official high-resolution A4 Certificate & Detachable Smart ID Card anytime at:
+https://www.apsiwa.in
+
+State Secretariat: Visakhapatnam, Andhra Pradesh
+Secretariat Email: ${secEmail}
+Official Portal: https://www.apsiwa.in
+--------------------------------------------------------------------------------
+`.trim();
+}
+
+/**
+ * Generates direct 1-Click Gmail Web Compose URL
+ */
+export function generateGmailWebLink(
+  app: MembershipApplication,
+  settings?: WebsiteSettings
+): string {
+  const recipient = encodeURIComponent(app.emailAddress || '');
+  const subject = encodeURIComponent(`Official APSIWA Membership Certificate & Identity Card - ${app.fullName} (${app.id})`);
+  const body = encodeURIComponent(generateApprovalEmailPlainText(app, settings));
+  return `https://mail.google.com/mail/?view=cm&fs=1&to=${recipient}&su=${subject}&body=${body}`;
+}
+
+/**
+ * Generates direct 1-Click mailto: URL for default system mail client
+ */
+export function generateMailtoLink(
+  app: MembershipApplication,
+  settings?: WebsiteSettings
+): string {
+  const recipient = encodeURIComponent(app.emailAddress || '');
+  const subject = encodeURIComponent(`Official APSIWA Membership Certificate & Identity Card - ${app.fullName} (${app.id})`);
+  const body = encodeURIComponent(generateApprovalEmailPlainText(app, settings));
+  return `mailto:${recipient}?subject=${subject}&body=${body}`;
+}
+
+/**
  * Sends the Official Membership Approval Confirmation Email to the member via Resend.
  * 
  * Supports:
- * 1. Resend REST API (Direct HTTPS invocation) using API Key from Settings or VITE_RESEND_API_KEY
+ * 1. Resend REST API (Direct HTTPS invocation / Vite & Cloud proxy)
  * 2. Supabase Edge Function `send-approval-email` if configured
  * 3. Fallback simulation with full logging and rich feedback when running locally
  */
@@ -338,6 +521,13 @@ export async function sendApprovalConfirmationEmail(
           }),
         });
 
+        // Check if response is HTML (e.g. 404/SPA route fallback without proxy)
+        const contentType = response.headers.get('content-type') || '';
+        if (contentType.includes('text/html')) {
+          console.warn(`Endpoint ${endpoint} returned HTML instead of JSON. Likely unconfigured proxy route.`);
+          continue;
+        }
+
         let resData: any = {};
         try {
           resData = await response.json();
@@ -372,7 +562,7 @@ export async function sendApprovalConfirmationEmail(
             messageId: resData.id,
             simulated: false,
           };
-        } else if (response.status !== 404) {
+        } else if (response.status !== 404 && resData?.message) {
           const errorMsg = resData?.message || resData?.error || response.statusText || 'Delivery rejected';
           return {
             success: false,
@@ -381,19 +571,13 @@ export async function sendApprovalConfirmationEmail(
         }
       } catch (err: any) {
         // Continue to next endpoint if this one fails (e.g. proxy in prod or direct in dev)
-        console.warn(`Attempt on ${endpoint} failed:`, err.message);
+        console.warn(`Attempt on ${endpoint} failed:`, err?.message || err);
       }
     }
   }
 
-  // 3. Fallback Simulation (Development mode / API Key not yet entered)
-  console.info(
-    `[Resend Email Notice] Could not reach Resend directly from browser due to CORS.\n` +
-    `Ensure the dev server is running or Supabase Edge function is deployed.`
-  );
-
   return {
     success: false,
-    error: 'Browser CORS restriction. Please restart "npm run dev" to enable the proxy or deploy the Supabase Edge function.',
+    error: 'Browser CORS restriction. Please restart "npm run dev" to enable the proxy, deploy the Supabase Edge function, or use the 1-Click Gmail/Mail client option.',
   };
 }

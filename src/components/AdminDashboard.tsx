@@ -53,7 +53,13 @@ import {
   saveMembershipApplication,
   calculateValidityDate
 } from '../lib/supabase';
-import { sendApprovalConfirmationEmail } from '../lib/emailService';
+import {
+  sendApprovalConfirmationEmail,
+  generateApprovalEmailHtml,
+  generateApprovalEmailPlainText,
+  generateGmailWebLink,
+  generateMailtoLink
+} from '../lib/emailService';
 import { compressImage } from '../lib/imageUtils';
 
 export const AP_DISTRICTS = [
@@ -181,6 +187,12 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   // Settings form state
   const [settingsForm, setSettingsForm] = useState<WebsiteSettings>(websiteSettings);
 
+  // Email Dispatcher Modal State
+  const [emailDispatcherApp, setEmailDispatcherApp] = useState<MembershipApplication | null>(null);
+  const [isDispatching, setIsDispatching] = useState(false);
+  const [dispatcherSuccessMsg, setDispatcherSuccessMsg] = useState('');
+  const [dispatcherErrorMsg, setDispatcherErrorMsg] = useState('');
+
   const isAdmin = isAdminUser(currentUser?.email);
 
   // Stats calculations
@@ -218,24 +230,35 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     return matchesSearch && matchesStatus && matchesDistrict && matchesType;
   });
 
-  // Send Email Confirmation & Digital Card via Resend
-  const handleSendEmailConfirmation = async (app: MembershipApplication) => {
+  // Send Email Confirmation & Digital Card via Resend / Dispatcher
+  const handleSendEmailConfirmation = async (app: MembershipApplication, openDispatcherOnFail = true) => {
     if (!app.emailAddress) {
       alert('This member does not have an email address recorded.');
       return;
     }
     setActionSuccessMsg(`Sending membership approval & ID card email to ${app.emailAddress}...`);
+    setIsDispatching(true);
+    setDispatcherErrorMsg('');
+    setDispatcherSuccessMsg('');
+    
     const result = await sendApprovalConfirmationEmail(app, websiteSettings);
+    setIsDispatching(false);
+
     if (result.success) {
       if (result.simulated) {
         setActionSuccessMsg(`Email prepared for ${app.fullName} (${app.emailAddress}). Configure Resend API Key in Settings for live sending.`);
       } else {
         setActionSuccessMsg(`Official approval email & digital ID card sent to ${app.emailAddress} via Resend! (Message ID: ${result.messageId})`);
+        setDispatcherSuccessMsg(`Sent successfully via Resend! (ID: ${result.messageId})`);
       }
     } else {
-      setActionSuccessMsg(`Email error: ${result.error}`);
+      setActionSuccessMsg(`Email Notice: ${result.error}`);
+      setDispatcherErrorMsg(result.error || 'Failed to dispatch email directly via API.');
+      if (openDispatcherOnFail) {
+        setEmailDispatcherApp(app);
+      }
     }
-    setTimeout(() => setActionSuccessMsg(''), 5500);
+    setTimeout(() => setActionSuccessMsg(''), 6500);
   };
 
   // 1-Click Approve Handler (Updates DB & automatically pushes Resend confirmation email)
@@ -2746,6 +2769,185 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
             >
               Close
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* OFFICIAL MEMBERSHIP EMAIL DISPATCHER & CORS FALLBACK MODAL */}
+      {/* ========================================================================= */}
+      {emailDispatcherApp && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-150 overflow-y-auto">
+          <div className="bg-white rounded-3xl max-w-2xl w-full p-6 sm:p-7 space-y-5 animate-in zoom-in-95 duration-150 my-6 shadow-2xl border border-[#e0e3e6]">
+            
+            {/* Header */}
+            <div className="flex items-start justify-between border-b border-[#e0e3e6] pb-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-[#003477] text-white flex items-center justify-center">
+                  <Mail size={20} />
+                </div>
+                <div>
+                  <h3 className="text-base font-extrabold text-[#191c1e]">
+                    Membership Email Dispatcher
+                  </h3>
+                  <p className="text-xs text-[#737783]">
+                    Send official A4 certificate &amp; digital card to <strong>{emailDispatcherApp.fullName}</strong> ({emailDispatcherApp.id})
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => {
+                  setEmailDispatcherApp(null);
+                  setDispatcherSuccessMsg('');
+                  setDispatcherErrorMsg('');
+                }}
+                className="p-1.5 rounded-full bg-[#f2f4f7] text-[#434752] hover:bg-[#e0e3e6] cursor-pointer"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Recipient Details Card */}
+            <div className="p-3.5 rounded-2xl bg-[#f7f9fc] border border-[#e0e3e6] flex items-center justify-between flex-wrap gap-2 text-xs">
+              <div>
+                <span className="text-[#737783] block text-[10px] uppercase font-bold">Recipient Email</span>
+                <span className="font-extrabold text-[#003477] font-mono">{emailDispatcherApp.emailAddress}</span>
+              </div>
+              <div>
+                <span className="text-[#737783] block text-[10px] uppercase font-bold">Firm / Company</span>
+                <span className="font-bold text-[#191c1e]">{emailDispatcherApp.companyName}</span>
+              </div>
+              <div>
+                <span className="text-[#737783] block text-[10px] uppercase font-bold">Portal Download URL</span>
+                <span className="font-bold text-[#006e2e]">https://www.apsiwa.in</span>
+              </div>
+            </div>
+
+            {/* Status Alert if error or success */}
+            {dispatcherErrorMsg && (
+              <div className="p-3 rounded-xl bg-[#fff0f0] border border-[#ffb4ab] text-[#ba1a1a] text-xs flex items-start gap-2">
+                <AlertTriangle size={16} className="shrink-0 mt-0.5" />
+                <div>
+                  <span className="font-bold block">Notice:</span>
+                  <span>{dispatcherErrorMsg}</span>
+                </div>
+              </div>
+            )}
+
+            {dispatcherSuccessMsg && (
+              <div className="p-3 rounded-xl bg-[#e8f5e9] border border-[#86efac] text-[#006e2e] text-xs flex items-start gap-2">
+                <CheckCircle2 size={16} className="shrink-0 mt-0.5" />
+                <div>
+                  <span className="font-bold block">Success!</span>
+                  <span>{dispatcherSuccessMsg}</span>
+                </div>
+              </div>
+            )}
+
+            {/* 1-Click Dispatch Options Grid */}
+            <div className="space-y-3">
+              <span className="text-xs font-black uppercase text-[#003477] tracking-wider block">
+                Choose Dispatch Method:
+              </span>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {/* 1. Direct Cloud API (Resend) */}
+                <button
+                  type="button"
+                  disabled={isDispatching}
+                  onClick={() => handleSendEmailConfirmation(emailDispatcherApp, false)}
+                  className="p-3.5 rounded-2xl bg-gradient-to-br from-[#003477] to-[#00285e] hover:from-[#00285e] hover:to-[#001d4a] text-white flex flex-col justify-between text-left transition-all cursor-pointer shadow-sm active:scale-98 disabled:opacity-75"
+                >
+                  <div className="flex items-center justify-between w-full mb-2">
+                    <span className="font-extrabold text-xs">🚀 Resend Cloud API</span>
+                    {isDispatching && <RefreshCw size={14} className="animate-spin" />}
+                  </div>
+                  <span className="text-[11px] text-[#d8e2ff]">
+                    Direct serverless background dispatch with official HTML certificate.
+                  </span>
+                </button>
+
+                {/* 2. 1-Click Gmail Web Compose */}
+                <a
+                  href={generateGmailWebLink(emailDispatcherApp, websiteSettings)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="p-3.5 rounded-2xl bg-[#ea4335] hover:bg-[#d33828] text-white flex flex-col justify-between text-left transition-all cursor-pointer shadow-sm active:scale-98"
+                >
+                  <div className="flex items-center justify-between w-full mb-2">
+                    <span className="font-extrabold text-xs">📧 Open in Gmail (1-Click)</span>
+                    <ExternalLink size={14} />
+                  </div>
+                  <span className="text-[11px] text-white/90">
+                    Opens Gmail with member email, subject &amp; download link pre-filled.
+                  </span>
+                </a>
+
+                {/* 3. System Mail Client (mailto:) */}
+                <a
+                  href={generateMailtoLink(emailDispatcherApp, websiteSettings)}
+                  className="p-3.5 rounded-2xl bg-[#f2f4f7] hover:bg-[#e0e3e6] text-[#003477] border border-[#003477]/20 flex flex-col justify-between text-left transition-all cursor-pointer shadow-2xs active:scale-98"
+                >
+                  <div className="flex items-center justify-between w-full mb-2">
+                    <span className="font-extrabold text-xs">✉️ Default Mail Client</span>
+                    <ExternalLink size={14} />
+                  </div>
+                  <span className="text-[11px] text-[#434752]">
+                    Opens Outlook, Thunderbird or Apple Mail with pre-populated message.
+                  </span>
+                </a>
+
+                {/* 4. Copy Full HTML Template */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    const html = generateApprovalEmailHtml(emailDispatcherApp, websiteSettings);
+                    navigator.clipboard.writeText(html);
+                    setDispatcherSuccessMsg('Full Official A4 Certificate HTML template copied to clipboard!');
+                    setTimeout(() => setDispatcherSuccessMsg(''), 4000);
+                  }}
+                  className="p-3.5 rounded-2xl bg-[#f2f4f7] hover:bg-[#e0e3e6] text-[#006e2e] border border-[#006e2e]/20 flex flex-col justify-between text-left transition-all cursor-pointer shadow-2xs active:scale-98"
+                >
+                  <div className="flex items-center justify-between w-full mb-2">
+                    <span className="font-extrabold text-xs">📋 Copy Full HTML Code</span>
+                    <Copy size={14} />
+                  </div>
+                  <span className="text-[11px] text-[#434752]">
+                    Copy the complete A4 Certificate &amp; Card HTML template to clipboard.
+                  </span>
+                </button>
+              </div>
+            </div>
+
+            {/* Quick Copy Plain Text Link */}
+            <div className="pt-2 flex items-center justify-between flex-wrap gap-2 text-xs border-t border-[#e0e3e6]">
+              <button
+                type="button"
+                onClick={() => {
+                  const plainText = generateApprovalEmailPlainText(emailDispatcherApp, websiteSettings);
+                  navigator.clipboard.writeText(plainText);
+                  setDispatcherSuccessMsg('Plaintext message copied to clipboard!');
+                  setTimeout(() => setDispatcherSuccessMsg(''), 4000);
+                }}
+                className="inline-flex items-center gap-1.5 text-[#003477] hover:underline font-bold cursor-pointer"
+              >
+                <Copy size={13} />
+                <span>Copy Plain Text Message Only</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setEmailDispatcherApp(null);
+                  setDispatcherSuccessMsg('');
+                  setDispatcherErrorMsg('');
+                }}
+                className="px-4 py-1.5 rounded-xl bg-[#f2f4f7] hover:bg-[#e0e3e6] text-[#191c1e] font-bold cursor-pointer"
+              >
+                Done
+              </button>
+            </div>
+
           </div>
         </div>
       )}

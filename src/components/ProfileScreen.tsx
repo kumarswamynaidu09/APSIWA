@@ -18,7 +18,6 @@ import {
   Sparkles,
   Edit3,
   Save,
-  QrCode,
   Award,
   AlertCircle,
   Copy,
@@ -69,9 +68,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
   const [activeTab, setActiveTab] = useState<'card' | 'details' | 'timeline'>('card');
 
   // References for capturing DOM elements
-  const cardFrontRef = useRef<HTMLDivElement>(null);
-  const cardBackRef = useRef<HTMLDivElement>(null);
-  const cardBothRef = useRef<HTMLDivElement>(null);
+  const a4DocumentRef = useRef<HTMLDivElement>(null);
 
   // Find matching application or user profile (Only genuine submitted applications, zero mock data)
   const findMembershipRecord = (queryId: string) => {
@@ -98,6 +95,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
         businessType: foundApp.businessType || 'Solar EPC Enterprise',
         gstNumber: foundApp.gstNumber || '',
         officeAddress: foundApp.officeAddress || 'Visakhapatnam, Andhra Pradesh',
+        pincode: foundApp.pincode || '',
         photoUrl: foundApp.photoUrl,
         applicationType: foundApp.applicationType || 'New Member',
         status: foundApp.status || 'Approved',
@@ -123,6 +121,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
         businessType: user.businessType || 'Solar EPC Enterprise',
         gstNumber: user.gstNumber || '',
         officeAddress: user.address || 'Visakhapatnam, Andhra Pradesh',
+        pincode: user.pincode || '',
         photoUrl: user.avatarUrl,
         applicationType: 'New Member' as const,
         status: (user.membershipStatus === 'Active' ? 'Approved' : user.membershipStatus || 'Approved') as any,
@@ -201,39 +200,34 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
     if (!isPhoneVerified || matchedRecord?.status !== 'Approved') return;
     setDownloadingFormat('image');
     try {
-      const targetElement =
-        cardSide === 'both'
-          ? cardBothRef.current
-          : cardSide === 'front'
-          ? cardFrontRef.current
-          : cardBackRef.current;
+      const targetElement = a4DocumentRef.current;
       if (!targetElement) return;
 
       const canvas = await html2canvas(targetElement, {
         scale: 3,
         useCORS: true,
-        backgroundColor: null,
+        backgroundColor: '#ffffff',
         logging: false
       });
 
       const image = canvas.toDataURL('image/png', 1.0);
       const link = document.createElement('a');
       link.href = image;
-      link.download = `APSIWA-ID-CARD-${matchedRecord.id}-${cardSide}.png`;
+      link.download = `APSIWA-Membership-Sheet-${matchedRecord.id}.png`;
       link.click();
     } catch (err) {
-      console.error('Error generating card image:', err);
+      console.error('Error generating sheet image:', err);
     } finally {
       setDownloadingFormat(null);
     }
   };
 
-  // Download Card as PDF (A4 Print Ready)
+  // Download Card as PDF (A4 Portrait Print Ready)
   const handleDownloadPDF = async () => {
     if (!isPhoneVerified || matchedRecord?.status !== 'Approved') return;
     setDownloadingFormat('pdf');
     try {
-      const targetElement = cardBothRef.current || cardFrontRef.current;
+      const targetElement = a4DocumentRef.current;
       if (!targetElement) return;
 
       const canvas = await html2canvas(targetElement, {
@@ -245,7 +239,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
 
       const imgData = canvas.toDataURL('image/png');
       const pdf = new jsPDF({
-        orientation: 'landscape',
+        orientation: 'portrait',
         unit: 'mm',
         format: 'a4'
       });
@@ -253,46 +247,14 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
       const pageWidth = pdf.internal.pageSize.getWidth();
       const pageHeight = pdf.internal.pageSize.getHeight();
 
-      // APSIWA Header title in PDF
-      pdf.setFont('helvetica', 'bold');
-      pdf.setFontSize(14);
-      pdf.setTextColor(0, 52, 119);
-      pdf.text(
-        'ANDHRA PRADESH SOLAR INTEGRATORS WELFARE ASSOCIATION (APSIWA)',
-        pageWidth / 2,
-        15,
-        { align: 'center' }
-      );
+      // Fit calculation for standard A4 portrait (210mm x 297mm)
+      const margin = 10;
+      const printWidth = pageWidth - margin * 2;
+      const printHeight = (canvas.height * printWidth) / canvas.width;
 
-      pdf.setFont('helvetica', 'normal');
-      pdf.setFontSize(10);
-      pdf.setTextColor(67, 71, 82);
-      pdf.text(
-        `Official Institutional Member Identity Card | Issued: ${matchedRecord.submissionDate} | ID: ${matchedRecord.id}`,
-        pageWidth / 2,
-        22,
-        { align: 'center' }
-      );
+      pdf.addImage(imgData, 'PNG', margin, margin, printWidth, Math.min(printHeight, pageHeight - margin * 2));
 
-      // Fit calculation
-      const imgWidth = 220;
-      const imgHeight = (canvas.height * imgWidth) / canvas.width;
-      const posX = (pageWidth - imgWidth) / 2;
-      const posY = 30;
-
-      pdf.addImage(imgData, 'PNG', posX, posY, imgWidth, Math.min(imgHeight, pageHeight - 45));
-
-      // PDF Footer note
-      pdf.setFontSize(8);
-      pdf.setTextColor(115, 119, 131);
-      pdf.text(
-        'This is an official digitally generated membership credential verified by APSIWA Secretariat, Visakhapatnam.',
-        pageWidth / 2,
-        pageHeight - 10,
-        { align: 'center' }
-      );
-
-      pdf.save(`APSIWA-Membership-Card-${matchedRecord.id}.pdf`);
+      pdf.save(`APSIWA-Membership-Certificate-${matchedRecord.id}.pdf`);
     } catch (err) {
       console.error('Error generating PDF:', err);
     } finally {
@@ -644,20 +606,30 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
           )}
 
           {/* ===================================================================== */}
-          {/* 6. FULL UNLOCKED STATE: DIGITAL SMART ID CARD & DOWNLOAD OPTIONS */}
+          {/* 6. FULL UNLOCKED STATE: A4 MEMBERSHIP SHEET & DOWNLOAD OPTIONS */}
           {/* ===================================================================== */}
           {matchedRecord.status === 'Approved' && isPhoneVerified && (
             <div className="space-y-6 animate-in zoom-in-95 duration-200">
-              {/* Unlocked banner */}
-              <div className="bg-[#e8f5e9] border border-[#006e2e]/30 rounded-2xl p-4 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
+              {/* Unlocked banner & Export Controls */}
+              <div className="bg-[#e8f5e9] border border-[#006e2e]/30 rounded-2xl p-4 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs shadow-xs">
                 <div className="flex items-center gap-2 text-[#004d1c] font-bold">
                   <ShieldCheck size={18} className="text-[#006e2e]" />
                   <span>
-                    Authenticated Bearer Verified — Official Digital Smart ID Card Ready for Download
+                    Official A4 Membership Certificate &amp; Detachable ID Card Ready
                   </span>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap justify-end">
                   <button
+                    type="button"
+                    onClick={handleDownloadPDF}
+                    disabled={downloadingFormat !== null}
+                    className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#006e2e] hover:bg-[#005322] text-white font-bold text-xs shadow-xs cursor-pointer active:scale-98 disabled:opacity-70"
+                  >
+                    <FileText size={14} />
+                    <span>{downloadingFormat === 'pdf' ? 'Generating PDF...' : 'Download PDF (A4 Sheet)'}</span>
+                  </button>
+                  <button
+                    type="button"
                     onClick={handleDownloadImage}
                     disabled={downloadingFormat !== null}
                     className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#003477] hover:bg-[#024aa3] text-white font-bold text-xs shadow-xs cursor-pointer active:scale-98 disabled:opacity-70"
@@ -666,444 +638,272 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                     <span>{downloadingFormat === 'image' ? 'Exporting...' : 'Download Image'}</span>
                   </button>
                   <button
-                    onClick={handleDownloadPDF}
-                    disabled={downloadingFormat !== null}
-                    className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#006e2e] hover:bg-[#005322] text-white font-bold text-xs shadow-xs cursor-pointer active:scale-98 disabled:opacity-70"
-                  >
-                    <FileText size={14} />
-                    <span>{downloadingFormat === 'pdf' ? 'Generating PDF...' : 'Download PDF (A4)'}</span>
-                  </button>
-                  <button
+                    type="button"
                     onClick={handlePrint}
                     className="p-2 rounded-xl bg-white border border-[#e0e3e6] text-[#003477] hover:bg-[#f2f4f7] cursor-pointer"
-                    title="Print ID Card"
+                    title="Print Document"
                   >
                     <Printer size={16} />
                   </button>
                 </div>
               </div>
 
-              {/* Side Switcher Toolbar */}
-              <div className="flex items-center justify-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => setCardSide('front')}
-                  className={`px-4 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                    cardSide === 'front'
-                      ? 'bg-[#003477] text-white shadow-xs'
-                      : 'bg-white text-[#434752] border border-[#e0e3e6] hover:bg-[#f2f4f7]'
-                  }`}
-                >
-                  Front Side
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setCardSide('back')}
-                  className={`px-4 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                    cardSide === 'back'
-                      ? 'bg-[#003477] text-white shadow-xs'
-                      : 'bg-white text-[#434752] border border-[#e0e3e6] hover:bg-[#f2f4f7]'
-                  }`}
-                >
-                  Back Side
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setCardSide('both')}
-                  className={`px-4 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                    cardSide === 'both'
-                      ? 'bg-[#003477] text-white shadow-xs'
-                      : 'bg-white text-[#434752] border border-[#e0e3e6] hover:bg-[#f2f4f7]'
-                  }`}
-                >
-                  Side-by-Side View
-                </button>
-              </div>
-
               {/* =============================================================== */}
-              {/* THE OFFICIAL DIGITAL SMART ID CARD CONTAINERS */}
+              {/* OFFICIAL A4 MEMBERSHIP CERTIFICATE SHEET (75% DETAILS + 25% CARD) */}
               {/* =============================================================== */}
-              <div className="flex flex-col items-center justify-center gap-8 py-4">
-                {/* Hidden container for rendering BOTH sides when exporting PDF or both-mode */}
+              <div className="flex justify-center py-2">
                 <div
-                  ref={cardBothRef}
-                  className={`flex flex-col lg:flex-row items-center justify-center gap-8 p-4 bg-transparent ${
-                    cardSide === 'both' ? 'flex' : 'hidden'
-                  }`}
+                  ref={a4DocumentRef}
+                  className="w-full max-w-[760px] bg-white rounded-2xl border-2 border-[#cbd5e1] shadow-xl p-6 sm:p-9 font-sans text-[#1e293b] space-y-5 print:shadow-none print:border-none"
                 >
-                  {/* FRONT CARD (BOTH MODE) */}
-                  <div className="w-[440px] sm:w-[480px] h-[290px] rounded-2xl bg-white border-2 border-[#003477] shadow-xl overflow-hidden flex flex-col relative text-[#191c1e]">
-                    {/* Header Strip */}
-                    <div className="bg-[#003477] text-white px-4 py-2.5 flex items-center justify-between border-b-2 border-[#ffbe3b]">
-                      <div className="flex items-center gap-2.5">
+                  {/* =========================================================== */}
+                  {/* TOP 75%: OFFICIAL CERTIFICATE & ACCREDITATION DOSSIER */}
+                  {/* =========================================================== */}
+                  <div className="space-y-4">
+                    {/* Official Letterhead Header */}
+                    <div className="flex items-center justify-between pb-3.5 border-b-[2.5px] border-[#003477] gap-4">
+                      <div className="flex items-center gap-3">
                         <img
                           src="/logo.png"
                           alt="APSIWA"
-                          className="h-9 w-auto object-contain bg-white rounded-md p-0.5"
+                          className="h-14 w-auto object-contain bg-white rounded-lg p-1 border border-[#003477]/20 shadow-2xs"
                         />
                         <div>
-                          <span className="text-[13px] font-extrabold tracking-tight block leading-tight">
-                            APSIWA
+                          <span className="inline-block bg-[#ffbe3b] text-[#00285e] text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-sm">
+                            Govt. Recognized State Solar Welfare Body
                           </span>
-                          <span className="text-[7.5px] uppercase font-semibold text-[#8ef9a0] tracking-wider block">
+                          <h2 className="text-base sm:text-lg font-black text-[#003477] uppercase tracking-tight leading-tight mt-0.5">
                             Andhra Pradesh Solar Integrators Welfare Association
-                          </span>
+                          </h2>
+                          <p className="text-[10px] text-[#475569] font-semibold">
+                            State Secretariat: Visakhapatnam &bull; CPDCL / EPDCL Regulatory Liaison Body &bull; www.apsiwa.in
+                          </p>
                         </div>
                       </div>
-                      <span className="px-2 py-0.5 rounded bg-[#ffbe3b] text-[#00285e] text-[9px] font-extrabold uppercase">
-                        MEMBER ID
-                      </span>
+                      <div className="text-right shrink-0 hidden sm:block">
+                        <div className="px-3 py-1.5 rounded-lg border-2 border-[#006e2e] bg-[#f0fdf4] text-center">
+                          <span className="text-[8px] font-black text-[#006e2e] uppercase block">ACCREDITATION</span>
+                          <span className="text-[11px] font-black text-[#003477]">LIFE MEMBER</span>
+                        </div>
+                      </div>
                     </div>
 
-                    {/* Card Body */}
-                    <div className="flex-1 p-3.5 flex gap-3.5 items-center relative">
-                      {/* Member Photo */}
-                      <div className="flex flex-col items-center gap-1 shrink-0">
-                        <div className="w-20 h-24 rounded-lg bg-[#f2f4f7] border-2 border-[#003477] overflow-hidden flex items-center justify-center shadow-inner">
-                          {matchedRecord.photoUrl ? (
-                            <img
-                              src={matchedRecord.photoUrl}
-                              alt={matchedRecord.fullName}
-                              className="w-full h-full object-cover"
-                            />
-                          ) : (
-                            <div className="w-full h-full bg-gradient-to-br from-[#003477] to-[#024aa3] text-white flex items-center justify-center font-bold text-2xl">
-                              {matchedRecord.fullName.charAt(0)}
-                            </div>
-                          )}
+                    {/* Meta Reference Bar */}
+                    <div className="grid grid-cols-3 gap-2 bg-[#f8fafc] border border-[#e2e8f0] rounded-xl p-3 text-xs">
+                      <div>
+                        <span className="text-[9.5px] font-bold text-[#64748b] uppercase block">MEMBERSHIP NUMBER</span>
+                        <span className="font-mono font-black text-[#003477] text-sm sm:text-base">
+                          {matchedRecord.id}
+                        </span>
+                      </div>
+                      <div className="text-center">
+                        <span className="text-[9.5px] font-bold text-[#64748b] uppercase block">ADMISSION STATUS</span>
+                        <span className="inline-block px-2.5 py-0.5 rounded-full text-[10.5px] font-black bg-[#dcfce7] text-[#006e2e] border border-[#86efac]">
+                          &bull; APPROVED &amp; ACTIVE
+                        </span>
+                      </div>
+                      <div className="text-right">
+                        <span className="text-[9.5px] font-bold text-[#64748b] uppercase block">VALIDITY PERIOD</span>
+                        <span className="font-mono font-black text-[#006e2e] text-xs sm:text-sm">
+                          {matchedRecord.validUntil}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Formal Certificate Declaration */}
+                    <div className="text-xs text-[#334155] leading-relaxed space-y-1">
+                      <p className="font-semibold text-[#1e293b]">
+                        This official certificate confirms that the applicant enterprise and authorized representative detailed below are verified and accredited as an active institutional member of the <strong>Andhra Pradesh Solar Integrators Welfare Association (APSIWA)</strong>.
+                      </p>
+                    </div>
+
+                    {/* Two-Column Details Breakdown */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 text-xs">
+                      {/* Section 1: Representative Profile */}
+                      <div className="bg-[#f8fafc] border border-[#e2e8f0] rounded-xl p-3.5 space-y-2">
+                        <h4 className="font-black text-[11px] text-[#003477] uppercase tracking-wide border-b border-[#e2e8f0] pb-1.5 flex items-center justify-between">
+                          <span>1. Representative Profile</span>
+                          <span className="text-[9px] text-[#006e2e] font-extrabold">VERIFIED</span>
+                        </h4>
+                        <table className="w-full text-left text-[11px] border-collapse">
+                          <tbody>
+                            <tr>
+                              <td className="py-1 text-[#64748b] w-24">Full Name:</td>
+                              <td className="py-1 font-extrabold text-[#0f172a]">{matchedRecord.fullName}</td>
+                            </tr>
+                            <tr>
+                              <td className="py-1 text-[#64748b]">Designation:</td>
+                              <td className="py-1 font-bold text-[#0f172a]">{matchedRecord.designation}</td>
+                            </tr>
+                            <tr>
+                              <td className="py-1 text-[#64748b]">Date of Birth:</td>
+                              <td className="py-1 font-bold text-[#0f172a] font-mono">{matchedRecord.dateOfBirth}</td>
+                            </tr>
+                            <tr>
+                              <td className="py-1 text-[#64748b]">Mobile No:</td>
+                              <td className="py-1 font-bold text-[#0f172a] font-mono">{matchedRecord.mobileNumber}</td>
+                            </tr>
+                            <tr>
+                              <td className="py-1 text-[#64748b]">Email ID:</td>
+                              <td className="py-1 font-bold text-[#003477] truncate">{matchedRecord.emailAddress}</td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+
+                      {/* Section 2: Enterprise Credentials */}
+                      <div className="bg-[#f8fafc] border border-[#e2e8f0] rounded-xl p-3.5 space-y-2">
+                        <h4 className="font-black text-[11px] text-[#003477] uppercase tracking-wide border-b border-[#e2e8f0] pb-1.5 flex items-center justify-between">
+                          <span>2. Enterprise Credentials</span>
+                          <span className="text-[9px] text-[#003477] font-extrabold">STATE TIER-1</span>
+                        </h4>
+                        <table className="w-full text-left text-[11px] border-collapse">
+                          <tbody>
+                            <tr>
+                              <td className="py-1 text-[#64748b] w-24">Firm Name:</td>
+                              <td className="py-1 font-extrabold text-[#003477]">{matchedRecord.companyName}</td>
+                            </tr>
+                            <tr>
+                              <td className="py-1 text-[#64748b]">Business Type:</td>
+                              <td className="py-1 font-bold text-[#0f172a]">{matchedRecord.businessType}</td>
+                            </tr>
+                            <tr>
+                              <td className="py-1 text-[#64748b]">District / State:</td>
+                              <td className="py-1 font-bold text-[#0f172a]">{matchedRecord.district}, AP</td>
+                            </tr>
+                            <tr>
+                              <td className="py-1 text-[#64748b]">GSTIN:</td>
+                              <td className="py-1 font-bold text-[#0f172a] font-mono">{matchedRecord.gstNumber || 'N/A'}</td>
+                            </tr>
+                            <tr>
+                              <td className="py-1 text-[#64748b]">Office Address:</td>
+                              <td className="py-1 font-medium text-[#0f172a] leading-tight">
+                                {matchedRecord.officeAddress} {matchedRecord.pincode ? `- ${matchedRecord.pincode}` : ''}
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+
+                    {/* Secretariat Seal & Signatures Bar */}
+                    <div className="pt-2 border-t border-[#e2e8f0] flex items-center justify-between text-[10.5px] text-[#64748b]">
+                      <div>
+                        <span>Issued by: <strong>APSIWA Secretariat, Visakhapatnam</strong></span><br />
+                        <span>Admission Date: <strong>{matchedRecord.submissionDate}</strong> | ID: <strong className="font-mono text-[#003477]">{matchedRecord.id}</strong></span>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <div className="text-center border-2 border-[#003477] rounded-lg px-3 py-1 bg-[#f0fdf4]">
+                          <span className="text-[8px] font-black text-[#006e2e] uppercase block">OFFICIAL SEAL</span>
+                          <span className="text-[10px] font-black text-[#003477]">APSIWA 2026</span>
                         </div>
-                        <span className="text-[8px] font-bold text-[#006e2e] uppercase tracking-wider bg-[#8ef9a0]/20 px-1.5 py-0.5 rounded">
-                          VERIFIED
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* =========================================================== */}
+                  {/* SCISSOR CUT LINE (DELIMITER BETWEEN 75% SHEET & 25% CARD) */}
+                  {/* =========================================================== */}
+                  <div className="py-1.5 px-4 bg-[#f1f5f9] text-center border-y-2 border-dashed border-[#94a3b8] rounded-md">
+                    <span className="text-[10.5px] sm:text-xs font-black uppercase text-[#475569] tracking-wider">
+                      &#9986; - - - - - - - - Cut Along Dotted Line To Detach Membership ID Card - - - - - - - - &#9986;
+                    </span>
+                  </div>
+
+                  {/* =========================================================== */}
+                  {/* BOTTOM 25%: DETACHABLE WALLET-SIZED FRONT ID CARD (NO QR) */}
+                  {/* =========================================================== */}
+                  <div className="pt-1 flex justify-center">
+                    <div className="w-full max-w-[530px] h-[190px] rounded-xl bg-gradient-to-r from-[#001d4a] via-[#003477] to-[#00285e] border-2 border-[#ffbe3b] shadow-lg text-white overflow-hidden flex flex-col justify-between">
+                      {/* Card Header */}
+                      <div className="bg-[#002255] px-3.5 py-1.5 border-b border-[#ffbe3b] flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <img
+                            src="/logo.png"
+                            alt="APSIWA"
+                            className="h-6 w-auto object-contain bg-white rounded-sm p-0.5"
+                          />
+                          <div>
+                            <span className="text-xs font-black tracking-tight leading-none block">
+                              APSIWA
+                            </span>
+                            <span className="text-[7px] uppercase font-bold text-[#8ef9a0] tracking-wider block">
+                              Andhra Pradesh Solar Integrators Welfare Association
+                            </span>
+                          </div>
+                        </div>
+                        <span className="px-2 py-0.5 rounded bg-[#ffbe3b] text-[#00285e] text-[8px] font-black uppercase">
+                          MEMBER ID CARD (FRONT)
                         </span>
                       </div>
 
-                      {/* Member Information */}
-                      <div className="flex-1 min-w-0 space-y-1 text-left">
-                        <div>
-                          <h3 className="text-[14px] font-extrabold text-[#003477] leading-tight truncate">
-                            {matchedRecord.fullName}
-                          </h3>
-                          <p className="text-[10px] font-semibold text-[#434752] truncate">
-                            {matchedRecord.designation}
-                          </p>
-                          <p className="text-[9.5px] font-bold text-[#191c1e] truncate">
-                            {matchedRecord.companyName}
-                          </p>
-                        </div>
-
-                        <div className="grid grid-cols-2 gap-x-2 gap-y-1 pt-1 text-[8.5px] border-t border-[#e0e3e6]">
-                          <div>
-                            <span className="text-[#737783] block text-[7.5px]">ID NO:</span>
-                            <span className="font-bold text-[#003477] font-mono">
-                              {matchedRecord.id}
-                            </span>
+                      {/* Card Body (NO QR CODE) */}
+                      <div className="px-3.5 py-2 flex items-center gap-3">
+                        {/* Member Photo */}
+                        <div className="flex flex-col items-center gap-1 shrink-0">
+                          <div className="w-16 h-20 rounded-md bg-[#f2f4f7] border-2 border-[#ffffff] overflow-hidden flex items-center justify-center shadow-inner">
+                            {matchedRecord.photoUrl ? (
+                              <img
+                                src={matchedRecord.photoUrl}
+                                alt={matchedRecord.fullName}
+                                className="w-full h-full object-cover"
+                              />
+                            ) : (
+                              <div className="w-full h-full bg-gradient-to-br from-[#003477] to-[#024aa3] text-white flex items-center justify-center font-bold text-xl">
+                                {matchedRecord.fullName.charAt(0)}
+                              </div>
+                            )}
                           </div>
-                          <div>
-                            <span className="text-[#737783] block text-[7.5px]">DOB:</span>
-                            <span className="font-bold text-[#191c1e] font-mono">
-                              {matchedRecord.dateOfBirth}
-                            </span>
-                          </div>
-                          <div>
-                            <span className="text-[#737783] block text-[7.5px]">DISTRICT:</span>
-                            <span className="font-bold text-[#191c1e] truncate block">
-                              {matchedRecord.district}
-                            </span>
-                          </div>
-                          <div>
-                            <span className="text-[#737783] block text-[7.5px]">VALID TILL:</span>
-                            <span className="font-bold text-[#006e2e]">{matchedRecord.validUntil}</span>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* QR Code & Hologram */}
-                      <div className="flex flex-col items-center justify-between h-full py-1 shrink-0">
-                        <div className="w-14 h-14 p-1 bg-white border border-[#003477] rounded flex items-center justify-center shadow-xs">
-                          <QrCode size={48} className="text-[#003477]" />
-                        </div>
-                        <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-[#ffbe3b] via-[#fab220] to-[#ffd782] flex items-center justify-center shadow-md border border-[#ffffff] text-[6.5px] font-extrabold text-[#00285e] text-center leading-tight">
-                          APSIWA
-                          <br />
-                          SEAL
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Footer Bar */}
-                    <div className="bg-[#f2f4f7] px-4 py-1.5 border-t border-[#e0e3e6] flex items-center justify-between text-[8px] text-[#434752]">
-                      <span className="font-semibold">Govt. Recognized State Solar Association</span>
-                      <div className="flex items-center gap-3">
-                        <span>Authorized Signatory</span>
-                        <span className="font-mono font-bold text-[#003477]">AP-SOLAR-2026</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* BACK CARD (BOTH MODE) */}
-                  <div className="w-[440px] sm:w-[480px] h-[290px] rounded-2xl bg-white border-2 border-[#003477] shadow-xl overflow-hidden flex flex-col justify-between text-[#191c1e]">
-                    {/* Back Header */}
-                    <div className="bg-[#003477] text-white px-4 py-2 border-b-2 border-[#ffbe3b] flex items-center justify-between text-[11px] font-bold">
-                      <span>TERMS &amp; ASSOCIATION CONTACT</span>
-                      <span className="text-[#ffbe3b]">www.apsiwa.in</span>
-                    </div>
-
-                    {/* Back Body Terms */}
-                    <div className="p-3.5 text-[8.5px] text-[#434752] space-y-1.5 leading-relaxed">
-                      <p className="font-bold text-[#003477] text-[9.5px]">APSIWA Institutional Terms:</p>
-                      <ul className="list-disc pl-3 space-y-0.5">
-                        <li>
-                          This card certifies the bearer as a registered member of APSIWA for AP State Solar
-                          projects.
-                        </li>
-                        <li>
-                          Membership is valid for 1 year from the payment date (Valid until: {matchedRecord.validUntil}).
-                        </li>
-                        <li>
-                          Cardholder adheres to official DISCOM &amp; NREDCAP technical &amp; safety standards.
-                        </li>
-                        <li>Non-transferable. Loss of card must be reported to the Secretariat immediately.</li>
-                      </ul>
-
-                      <div className="pt-2 border-t border-[#e0e3e6] grid grid-cols-2 gap-2 text-[8px]">
-                        <div>
-                          <span className="font-bold text-[#191c1e] block">State Secretariat:</span>
-                          <span>Association Secretariat, Visakhapatnam, Andhra Pradesh, India</span>
-                        </div>
-                        <div>
-                          <span className="font-bold text-[#191c1e] block">Official Contact:</span>
-                          <span>apsiwa2018@gmail.com | +91 866 248 9000</span>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Back Barcode Strip */}
-                    <div className="bg-[#f2f4f7] px-4 py-2 border-t border-[#e0e3e6] flex items-center justify-between text-[8px]">
-                      <div className="space-x-1 font-mono tracking-widest text-[#003477] font-bold text-[10px]">
-                        ||| | |||| || ||||| |||| || |||
-                      </div>
-                      <span className="text-[7.5px] text-[#737783]">Security ID: 98402840-APSIWA</span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* SINGLE SIDE DISPLAY: FRONT ONLY */}
-                {cardSide === 'front' && (
-                  <div
-                    ref={cardFrontRef}
-                    className="w-[440px] sm:w-[480px] h-[290px] rounded-2xl bg-white border-2 border-[#003477] shadow-xl overflow-hidden flex flex-col relative text-[#191c1e] animate-in zoom-in-95 duration-200"
-                  >
-                    {/* Header Strip */}
-                    <div className="bg-[#003477] text-white px-4 py-2.5 flex items-center justify-between border-b-2 border-[#ffbe3b]">
-                      <div className="flex items-center gap-2.5">
-                        <img
-                          src="/logo.png"
-                          alt="APSIWA"
-                          className="h-9 w-auto object-contain bg-white rounded-md p-0.5"
-                        />
-                        <div>
-                          <span className="text-[13px] font-extrabold tracking-tight block leading-tight">
-                            APSIWA
-                          </span>
-                          <span className="text-[7.5px] uppercase font-semibold text-[#8ef9a0] tracking-wider block">
-                            Andhra Pradesh Solar Integrators Welfare Association
+                          <span className="text-[7px] font-black text-[#8ef9a0] uppercase tracking-wider">
+                            &bull; VERIFIED
                           </span>
                         </div>
-                      </div>
-                      <span className="px-2 py-0.5 rounded bg-[#ffbe3b] text-[#00285e] text-[9px] font-extrabold uppercase">
-                        MEMBER ID
-                      </span>
-                    </div>
 
-                    {/* Card Body */}
-                    <div className="flex-1 p-3.5 flex gap-3.5 items-center relative">
-                      {/* Member Photo */}
-                      <div className="flex flex-col items-center gap-1 shrink-0">
-                        <div className="w-20 h-24 rounded-lg bg-[#f2f4f7] border-2 border-[#003477] overflow-hidden flex items-center justify-center shadow-inner">
-                          {matchedRecord.photoUrl ? (
-                            <img
-                              src={matchedRecord.photoUrl}
-                              alt={matchedRecord.fullName}
-                              className="w-full h-full object-cover"
-                            />
-                          ) : (
-                            <div className="w-full h-full bg-gradient-to-br from-[#003477] to-[#024aa3] text-white flex items-center justify-center font-bold text-2xl">
-                              {matchedRecord.fullName.charAt(0)}
+                        {/* Member Details */}
+                        <div className="flex-1 min-w-0 space-y-1 text-left">
+                          <div>
+                            <h3 className="text-sm font-black text-white leading-tight truncate uppercase">
+                              {matchedRecord.fullName}
+                            </h3>
+                            <p className="text-[10px] font-bold text-[#ffbe3b] truncate">
+                              {matchedRecord.designation} &bull; {matchedRecord.companyName}
+                            </p>
+                          </div>
+
+                          <div className="grid grid-cols-2 gap-x-2 gap-y-0.5 pt-1 text-[9px] border-t border-white/20">
+                            <div>
+                              <span className="text-white/60 block text-[7.5px]">ID NUMBER:</span>
+                              <span className="font-mono font-black text-[#ffbe3b]">{matchedRecord.id}</span>
                             </div>
-                          )}
-                        </div>
-                        <span className="text-[8px] font-bold text-[#006e2e] uppercase tracking-wider bg-[#8ef9a0]/20 px-1.5 py-0.5 rounded">
-                          VERIFIED
-                        </span>
-                      </div>
-
-                      {/* Member Information */}
-                      <div className="flex-1 min-w-0 space-y-1 text-left">
-                        <div>
-                          <h3 className="text-[14px] font-extrabold text-[#003477] leading-tight truncate">
-                            {matchedRecord.fullName}
-                          </h3>
-                          <p className="text-[10px] font-semibold text-[#434752] truncate">
-                            {matchedRecord.designation}
-                          </p>
-                          <p className="text-[9.5px] font-bold text-[#191c1e] truncate">
-                            {matchedRecord.companyName}
-                          </p>
+                            <div>
+                              <span className="text-white/60 block text-[7.5px]">DOB:</span>
+                              <span className="font-mono font-bold text-white">{matchedRecord.dateOfBirth}</span>
+                            </div>
+                            <div>
+                              <span className="text-white/60 block text-[7.5px]">DISTRICT:</span>
+                              <span className="font-bold text-white truncate block">{matchedRecord.district}</span>
+                            </div>
+                            <div>
+                              <span className="text-white/60 block text-[7.5px]">VALID TILL:</span>
+                              <span className="font-mono font-black text-[#8ef9a0]">{matchedRecord.validUntil}</span>
+                            </div>
+                          </div>
                         </div>
 
-                        <div className="grid grid-cols-2 gap-x-2 gap-y-1 pt-1 text-[8.5px] border-t border-[#e0e3e6]">
-                          <div>
-                            <span className="text-[#737783] block text-[7.5px]">ID NO:</span>
-                            <span className="font-bold text-[#003477] font-mono">
-                              {matchedRecord.id}
-                            </span>
-                          </div>
-                          <div>
-                            <span className="text-[#737783] block text-[7.5px]">DOB:</span>
-                            <span className="font-bold text-[#191c1e] font-mono">
-                              {matchedRecord.dateOfBirth}
-                            </span>
-                          </div>
-                          <div>
-                            <span className="text-[#737783] block text-[7.5px]">DISTRICT:</span>
-                            <span className="font-bold text-[#191c1e] truncate block">
-                              {matchedRecord.district}
-                            </span>
-                          </div>
-                          <div>
-                            <span className="text-[#737783] block text-[7.5px]">VALID TILL:</span>
-                            <span className="font-bold text-[#006e2e]">{matchedRecord.validUntil}</span>
+                        {/* Official Gold Seal (Replaces QR) */}
+                        <div className="shrink-0 flex flex-col items-center justify-center">
+                          <div className="w-11 h-11 rounded-full bg-gradient-to-tr from-[#ffbe3b] via-[#fab220] to-[#ffd782] flex items-center justify-center shadow-md border-2 border-[#ffffff] text-[6.5px] font-black text-[#00285e] text-center leading-tight">
+                            APSIWA<br />SEAL
                           </div>
                         </div>
                       </div>
 
-                      {/* QR Code & Hologram */}
-                      <div className="flex flex-col items-center justify-between h-full py-1 shrink-0">
-                        <div className="w-14 h-14 p-1 bg-white border border-[#003477] rounded flex items-center justify-center shadow-xs">
-                          <QrCode size={48} className="text-[#003477]" />
-                        </div>
-                        <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-[#ffbe3b] via-[#fab220] to-[#ffd782] flex items-center justify-center shadow-md border border-[#ffffff] text-[6.5px] font-extrabold text-[#00285e] text-center leading-tight">
-                          APSIWA
-                          <br />
-                          SEAL
-                        </div>
+                      {/* Card Footer Bar */}
+                      <div className="bg-[#00193d] px-3.5 py-1 border-t border-white/15 flex items-center justify-between text-[7.5px] text-[#cbd5e1]">
+                        <span>Govt. Recognized State Solar Association &bull; Andhra Pradesh</span>
+                        <span className="font-bold text-[#8ef9a0]">Authorized Bearer Credential</span>
                       </div>
                     </div>
-
-                    {/* Footer Bar */}
-                    <div className="bg-[#f2f4f7] px-4 py-1.5 border-t border-[#e0e3e6] flex items-center justify-between text-[8px] text-[#434752]">
-                      <span className="font-semibold">Govt. Recognized State Solar Association</span>
-                      <div className="flex items-center gap-3">
-                        <span>Authorized Signatory</span>
-                        <span className="font-mono font-bold text-[#003477]">AP-SOLAR-2026</span>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* SINGLE SIDE DISPLAY: BACK ONLY */}
-                {cardSide === 'back' && (
-                  <div
-                    ref={cardBackRef}
-                    className="w-[440px] sm:w-[480px] h-[290px] rounded-2xl bg-white border-2 border-[#003477] shadow-xl overflow-hidden flex flex-col justify-between text-[#191c1e] animate-in zoom-in-95 duration-200"
-                  >
-                    {/* Back Header */}
-                    <div className="bg-[#003477] text-white px-4 py-2 border-b-2 border-[#ffbe3b] flex items-center justify-between text-[11px] font-bold">
-                      <span>TERMS &amp; ASSOCIATION CONTACT</span>
-                      <span className="text-[#ffbe3b]">www.apsiwa.in</span>
-                    </div>
-
-                    {/* Back Body Terms */}
-                    <div className="p-3.5 text-[8.5px] text-[#434752] space-y-1.5 leading-relaxed">
-                      <p className="font-bold text-[#003477] text-[9.5px]">APSIWA Institutional Terms:</p>
-                      <ul className="list-disc pl-3 space-y-0.5">
-                        <li>
-                          This card certifies the bearer as a registered member of APSIWA for AP State Solar
-                          projects.
-                        </li>
-                        <li>
-                          Membership is valid for 1 year from the payment date (Valid until: {matchedRecord.validUntil}).
-                        </li>
-                        <li>
-                          Cardholder adheres to official DISCOM &amp; NREDCAP technical &amp; safety standards.
-                        </li>
-                        <li>Non-transferable. Loss of card must be reported to the Secretariat immediately.</li>
-                      </ul>
-
-                      <div className="pt-2 border-t border-[#e0e3e6] grid grid-cols-2 gap-2 text-[8px]">
-                        <div>
-                          <span className="font-bold text-[#191c1e] block">State Secretariat:</span>
-                          <span>Association Secretariat, Visakhapatnam, Andhra Pradesh, India</span>
-                        </div>
-                        <div>
-                          <span className="font-bold text-[#191c1e] block">Official Contact:</span>
-                          <span>apsiwa2018@gmail.com | +91 866 248 9000</span>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Back Barcode Strip */}
-                    <div className="bg-[#f2f4f7] px-4 py-2 border-t border-[#e0e3e6] flex items-center justify-between text-[8px]">
-                      <div className="space-x-1 font-mono tracking-widest text-[#003477] font-bold text-[10px]">
-                        ||| | |||| || ||||| |||| || |||
-                      </div>
-                      <span className="text-[7.5px] text-[#737783]">Security ID: 98402840-APSIWA</span>
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* Full Accreditation Profile Details Accordion */}
-              <div className="bg-white rounded-3xl p-6 sm:p-8 border border-[#e0e3e6] shadow-xs space-y-6">
-                <div className="flex items-center justify-between pb-4 border-b border-[#e0e3e6]">
-                  <div>
-                    <h3 className="text-base font-extrabold text-[#191c1e]">
-                      Official Member Credentials &amp; Enterprise Details
-                    </h3>
-                    <p className="text-xs text-[#737783]">
-                      Institutional accreditation record archived in APSIWA State Registry.
-                    </p>
-                  </div>
-                  <button
-                    onClick={handleCopyId}
-                    className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-[#f2f4f7] hover:bg-[#d8e2ff] text-[#003477] text-xs font-bold transition-colors cursor-pointer"
-                  >
-                    <Copy size={13} />
-                    <span>{copiedId ? 'Copied ID!' : 'Copy ID'}</span>
-                  </button>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 text-xs">
-                  <div className="p-4 rounded-2xl bg-[#f7f9fc] border border-[#e0e3e6]/60">
-                    <span className="text-[#737783] block text-[11px]">Representative</span>
-                    <span className="font-bold text-[#191c1e] block text-sm">{matchedRecord.fullName}</span>
-                    <span className="text-[11px] text-[#003477] font-medium">DOB: {matchedRecord.dateOfBirth}</span>
-                  </div>
-
-                  <div className="p-4 rounded-2xl bg-[#f7f9fc] border border-[#e0e3e6]/60">
-                    <span className="text-[#737783] block text-[11px]">Enterprise / Firm</span>
-                    <span className="font-bold text-[#191c1e] block text-sm truncate">
-                      {matchedRecord.companyName}
-                    </span>
-                    <span className="text-[11px] text-[#737783]">{matchedRecord.businessType}</span>
-                  </div>
-
-                  <div className="p-4 rounded-2xl bg-[#f7f9fc] border border-[#e0e3e6]/60">
-                    <span className="text-[#737783] block text-[11px]">GSTIN Number</span>
-                    <span className="font-mono font-bold text-[#006e2e] block text-sm">
-                      {matchedRecord.gstNumber}
-                    </span>
-                    <span className="text-[11px] text-[#737783]">District: {matchedRecord.district}</span>
-                  </div>
-
-                  <div className="p-4 rounded-2xl bg-[#f7f9fc] border border-[#e0e3e6]/60">
-                    <span className="text-[#737783] block text-[11px]">Contact &amp; Secretarial</span>
-                    <span className="font-mono font-bold text-[#191c1e] block text-xs">
-                      {matchedRecord.mobileNumber}
-                    </span>
-                    <span className="text-[11px] text-[#737783] block truncate">
-                      {matchedRecord.emailAddress}
-                    </span>
                   </div>
                 </div>
               </div>

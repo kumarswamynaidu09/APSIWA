@@ -135,6 +135,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const [viewingReceiptUrl, setViewingReceiptUrl] = useState<string | null>(null);
   const [actionSuccessMsg, setActionSuccessMsg] = useState('');
   const [savingSettings, setSavingSettings] = useState(false);
+  const [isRefreshingList, setIsRefreshingList] = useState(false);
 
   // On-Spot Registration Form State (Zero Payment / Instant Accreditation)
   const initialSpotForm = {
@@ -965,11 +966,26 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               </select>
 
               <button
-                onClick={onRefreshApplications}
-                className="p-2 rounded-xl bg-[#f2f4f7] hover:bg-[#e0e3e6] text-[#003477] transition-colors cursor-pointer"
-                title="Refresh Realtime Data"
+                type="button"
+                onClick={async (e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setIsRefreshingList(true);
+                  try {
+                    await onRefreshApplications();
+                  } catch (err) {
+                    console.error('Failed to refresh members:', err);
+                  } finally {
+                    setTimeout(() => setIsRefreshingList(false), 500);
+                  }
+                }}
+                disabled={isRefreshingList}
+                className={`p-2 rounded-xl bg-[#f2f4f7] hover:bg-[#e0e3e6] text-[#003477] transition-all cursor-pointer flex items-center justify-center ${
+                  isRefreshingList ? 'opacity-70 pointer-events-none' : 'active:scale-95'
+                }`}
+                title="Refresh Member List"
               >
-                <RefreshCw size={15} />
+                <RefreshCw size={15} className={isRefreshingList ? 'animate-spin text-[#006e2e]' : ''} />
               </button>
             </div>
           </div>

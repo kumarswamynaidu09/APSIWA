@@ -148,16 +148,21 @@ export const PaymentScreen: React.FC<PaymentScreenProps> = ({
 
     try {
       // Save realtime to Supabase as Pending Verification
-      await saveMembershipApplication(pendingApp, currentUser?.id);
+      const res = await saveMembershipApplication(pendingApp, currentUser?.id);
+      if (res.error) {
+        console.warn('Membership application save notice:', res.error);
+      }
 
       setSubmitting(false);
       setSubmittedApp(pendingApp);
       setIsApproved(false);
+      onPaymentSuccess(pendingApp);
     } catch (err: any) {
       console.error('Error saving application:', err);
       setSubmitting(false);
       setSubmittedApp(pendingApp);
       setIsApproved(false);
+      onPaymentSuccess(pendingApp);
     }
   };
 

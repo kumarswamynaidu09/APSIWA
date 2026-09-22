@@ -299,88 +299,70 @@ export async function saveMembershipApplication(
     console.error('Local storage save error:', err);
   }
 
-  // Update Supabase Auth user metadata with membership info
   if (isSupabaseConfigured()) {
     try {
-      const calculatedValidUntil = app.validUntil || calculateValidityDate(app.paymentDate);
+      // Safe update user auth metadata only if an active session exists
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session?.user) {
+          const calculatedValidUntil = app.validUntil || calculateValidityDate(app.paymentDate);
+          await supabase.auth.updateUser({
+            data: {
+              company_name: app.companyName,
+              district: app.district,
+              membership_id: app.id,
+              gst_number: app.gstNumber,
+              business_type: app.businessType,
+              office_address: app.officeAddress,
+              avatar_url: app.photoUrl,
+              photo_url: app.photoUrl,
+              dob: app.dateOfBirth,
+              valid_until: calculatedValidUntil,
+              membership_tier: 'Life Member (EPC Tier-1)',
+              membership_status: 'Active',
+            },
+          });
+        }
+      } catch (authErr) {
+        console.warn('Auth user metadata update skipped (no active session):', authErr);
+      }
 
-      await supabase.auth.updateUser({
-        data: {
-          company_name: app.companyName,
-          district: app.district,
-          membership_id: app.id,
-          gst_number: app.gstNumber,
-          business_type: app.businessType,
-          office_address: app.officeAddress,
-          avatar_url: app.photoUrl,
-          photo_url: app.photoUrl,
-          date_of_birth: app.dateOfBirth,
-          valid_until: calculatedValidUntil,
-          membership_tier: 'Life Member (EPC Tier-1)',
-          membership_status: 'Active',
-        },
-      });
+      const validDob = (app.dateOfBirth && app.dateOfBirth.trim() !== '' && app.dateOfBirth !== 'N/A') ? app.dateOfBirth : null;
 
-      // Insert into membership_applications table
+      // Insert into membership_applications table matching live database schema
       const { error: appError } = await supabase.from('membership_applications').upsert({
         id: app.id,
-        user_id: userId || undefined,
+        user_id: userId || null,
         full_name: app.fullName,
-        date_of_birth: app.dateOfBirth,
+        dob: validDob,
         mobile_number: app.mobileNumber,
         email_address: app.emailAddress,
         company_name: app.companyName,
         designation: app.designation || null,
         gst_number: app.gstNumber || null,
-        business_type: app.businessType,
-        experience: app.experience,
+        business_type: app.businessType || 'Solar EPC Integrator',
+        experience: app.experience || '1 - 3 Years',
         district: app.district,
         office_address: app.officeAddress,
         pincode: app.pincode,
-        photo_url: app.photoUrl,
+        photo_url: app.photoUrl || null,
         utr_number: app.utrNumber,
-        payment_date: app.paymentDate,
-        valid_until: calculatedValidUntil,
-        amount_paid: app.amountPaid,
+        payment_date: app.paymentDate || new Date().toISOString().slice(0, 10),
+        amount_paid: app.amountPaid || '₹ 2,000.00',
         payment_screenshot_url: app.paymentScreenshotUrl || null,
-        submission_date: app.submissionDate,
-        application_type: app.applicationType || 'New Member',
-        status: app.status,
+        submission_date: app.submissionDate || new Date().toLocaleDateString('en-IN', { month: 'short', day: '2-digit', year: 'numeric' }),
+        status: app.status || 'Pending Verification',
       });
 
       if (appError) {
-        console.warn('membership_applications upsert notice:', appError.message);
-      }
-
-      // Also record payment in dedicated payments table if new application
-      if (app.applicationType !== 'Existing Member') {
-        const { error: payError } = await supabase.from('payments').upsert(
-          {
-            application_id: app.id,
-            user_id: userId || undefined,
-            utr_number: app.utrNumber,
-            amount: 2000.0,
-            currency: 'INR',
-            original_fee: 5000.0,
-            discount_percentage: 60.0,
-            offer_title: 'Solar Expo Inaugural Offer (60% OFF)',
-            payment_mode: 'UPI / Direct Bank Transfer',
-            payment_date: app.paymentDate,
-            screenshot_url: app.paymentScreenshotUrl || null,
-            verification_status: app.status === 'Approved' ? 'Verified' : 'Pending',
-          },
-          { onConflict: 'application_id' }
-        );
-
-        if (payError) {
-          console.warn('payments table upsert notice:', payError.message);
-        }
+        console.error('membership_applications upsert error:', appError.message);
+        return { success: false, error: appError.message };
       }
 
       return { success: true, error: null };
     } catch (err: any) {
-      console.warn('Supabase save error:', err.message);
-      return { success: true, error: null };
+      console.error('Supabase save error:', err);
+      return { success: false, error: err?.message || 'Save failed' };
     }
   }
 
@@ -416,7 +398,7 @@ export async function fetchUserApplications(userEmail?: string): Promise<Members
       const mapped: MembershipApplication[] = data.map((item: any) => ({
         id: item.id,
         fullName: item.full_name || item.fullName || 'Member',
-        dateOfBirth: item.date_of_birth || item.dateOfBirth || item.dob || '',
+        dateOfBirth: item.dob || item.date_of_birth || item.dateOfBirth || '',
         mobileNumber: item.mobile_number || item.mobileNumber || '',
         emailAddress: item.email_address || item.emailAddress || '',
         companyName: item.company_name || item.companyName || '',
@@ -433,9 +415,9 @@ export async function fetchUserApplications(userEmail?: string): Promise<Members
         amountPaid: item.amount_paid || item.amountPaid || '₹ 2,000.00',
         paymentScreenshotUrl: item.payment_screenshot_url || item.paymentScreenshotUrl || undefined,
         submissionDate: item.submission_date || item.submissionDate || new Date().toISOString().slice(0, 10),
-        applicationType: item.application_type || item.applicationType || 'New Member',
-        status: item.status || 'Approved',
-        validUntil: item.valid_until || item.validUntil || calculateValidityDate(item.payment_date || item.created_at),
+        applicationType: (item.utr_number && (item.utr_number.startsWith('ONSPOT') || item.amount_paid?.includes('0.00'))) ? 'Existing Member' : 'New Member',
+        status: item.status || 'Pending Verification',
+        validUntil: item.valid_until || calculateValidityDate(item.payment_date || item.created_at),
       }));
 
       try {
@@ -470,25 +452,26 @@ export async function updateApplicationDetails(app: MembershipApplication): Prom
 
   if (isSupabaseConfigured()) {
     try {
+      const validDob = (app.dateOfBirth && app.dateOfBirth.trim() !== '' && app.dateOfBirth !== 'N/A') ? app.dateOfBirth : null;
+
       const { error } = await supabase.from('membership_applications').upsert({
         id: app.id,
         full_name: app.fullName,
-        date_of_birth: app.dateOfBirth,
+        dob: validDob,
         mobile_number: app.mobileNumber,
         email_address: app.emailAddress,
         company_name: app.companyName,
         designation: app.designation || null,
         gst_number: app.gstNumber || null,
-        business_type: app.businessType,
-        experience: app.experience,
+        business_type: app.businessType || 'Solar EPC Integrator',
+        experience: app.experience || '1 - 3 Years',
         district: app.district,
         office_address: app.officeAddress,
         pincode: app.pincode,
-        photo_url: app.photoUrl,
+        photo_url: app.photoUrl || null,
         utr_number: app.utrNumber,
         payment_date: app.paymentDate,
         amount_paid: app.amountPaid,
-        application_type: app.applicationType || 'New Member',
         status: app.status,
       });
       return { success: !error, error: error ? error.message : null };

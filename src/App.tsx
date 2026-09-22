@@ -63,7 +63,8 @@ export function App() {
 
   // Reload applications helper
   const handleRefreshApplications = async () => {
-    const apps = await fetchUserApplications(currentUser?.email);
+    const emailToFilter = (isAdminUser(currentUser?.email) || currentUser?.role === 'admin') ? undefined : currentUser?.email;
+    const apps = await fetchUserApplications(emailToFilter);
     if (apps) {
       setApplications(apps);
     }
@@ -157,7 +158,7 @@ export function App() {
           'postgres_changes',
           { event: '*', schema: 'public', table: 'membership_applications' },
           () => {
-            fetchUserApplications(currentUser?.email).then((apps) => {
+            fetchUserApplications().then((apps) => {
               if (apps) setApplications(apps);
             });
           }

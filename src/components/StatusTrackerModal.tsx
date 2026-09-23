@@ -121,9 +121,21 @@ export const StatusTrackerModal: React.FC<StatusTrackerModalProps> = ({
 
                 <div className="pt-2 border-t border-[#e0e3e6] flex items-center justify-between">
                   <span className="text-[12px] text-[#434752]">Verification Status:</span>
-                  <span className="px-2.5 py-0.5 rounded-full bg-[#8bf69d]/30 text-[#006e2e] text-[11px] font-bold flex items-center gap-1">
-                    <span className="w-2 h-2 rounded-full bg-[#006e2e] animate-pulse"></span>
-                    {matchedApp.status}
+                  <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold flex items-center gap-1.5 ${
+                    matchedApp.status === 'Active' || matchedApp.status === 'Approved'
+                      ? 'bg-[#8bf69d]/30 text-[#006e2e] border border-[#006e2e]/20'
+                      : matchedApp.status === 'Inactive'
+                        ? 'bg-[#ffdad6] text-[#ba1a1a] border border-[#ba1a1a]/20'
+                        : 'bg-[#ffbe3b]/30 text-[#00285e] border border-[#ffbe3b]/30'
+                  }`}>
+                    <span className={`w-2 h-2 rounded-full ${
+                      matchedApp.status === 'Active' || matchedApp.status === 'Approved'
+                        ? 'bg-[#006e2e] animate-pulse'
+                        : matchedApp.status === 'Inactive'
+                          ? 'bg-[#ba1a1a]'
+                          : 'bg-[#ffbe3b]'
+                    }`}></span>
+                    {matchedApp.status === 'Approved' ? 'Active' : matchedApp.status}
                   </span>
                 </div>
               </div>

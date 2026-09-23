@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { NavTab, GalleryItem, MembershipApplication, UserProfile, WebsiteSettings } from './types';
 import { GALLERY_ITEMS } from './data/mockData';
 import { Header } from './components/Header';
@@ -20,22 +20,36 @@ import {
   isSupabaseConfigured,
   fetchUserApplications,
   fetchWebsiteSettings,
+  fetchWebsiteSettingsAsync,
   saveWebsiteSettings,
   DEFAULT_WEBSITE_SETTINGS,
-  ADMIN_EMAILS,
+  isAdminUser,
+  deleteApplication,
   calculateValidityDate
 } from './lib/supabase';
+
+// Helper to determine active tab from URL hash for browser Back/Forward button history
+function getTabFromHash(): NavTab {
+  try {
+    const hash = window.location.hash.replace('#', '').trim().toLowerCase();
+    const validTabs: NavTab[] = ['home', 'gallery', 'membership', 'payment', 'about', 'contact', 'auth', 'profile', 'admin'];
+    if (validTabs.includes(hash as NavTab)) {
+      return hash as NavTab;
+    }
+  } catch {}
+  return 'home';
+}
 
 export function App() {
   // Splash Screen State (2 seconds duration)
   const [showSplash, setShowSplash] = useState(true);
 
-  // Active Navigation Tab
-  const [currentTab, setCurrentTab] = useState<NavTab>('home');
+  // Active Navigation Tab initialized from URL hash (enables full browser back/forward & bookmarking)
+  const [currentTab, setCurrentTab] = useState<NavTab>(() => getTabFromHash());
   const [selectedGalleryItem, setSelectedGalleryItem] = useState<GalleryItem | null>(null);
   const [isTrackerOpen, setIsTrackerOpen] = useState(false);
 
-  // Dynamic Website Settings (Fees, QR code, bank info, secretariat contacts)
+  // Dynamic Website Settings (Fees, QR code, bank info, secretariat contacts, gallery items)
   const [websiteSettings, setWebsiteSettings] = useState<WebsiteSettings>(() => fetchWebsiteSettings());
 
   // Current Admin / Active Session State
@@ -60,6 +74,38 @@ export function App() {
       return [];
     }
   });
+
+  // Synchronized Navigation Handler (Updates browser URL hash & history)
+  const handleNavigate = useCallback((tab: NavTab) => {
+    setCurrentTab(tab);
+    const targetHash = `#${tab}`;
+    if (window.location.hash !== targetHash) {
+      window.history.pushState(null, '', targetHash);
+    }
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, []);
+
+  // Listen to browser Back/Forward buttons (popstate & hashchange)
+  useEffect(() => {
+    const handleUrlChange = () => {
+      const tab = getTabFromHash();
+      setCurrentTab(tab);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    };
+
+    window.addEventListener('hashchange', handleUrlChange);
+    window.addEventListener('popstate', handleUrlChange);
+
+    // Initial hash sync if empty
+    if (!window.location.hash) {
+      window.history.replaceState(null, '', '#home');
+    }
+
+    return () => {
+      window.removeEventListener('hashchange', handleUrlChange);
+      window.removeEventListener('popstate', handleUrlChange);
+    };
+  }, []);
 
   // Reload applications helper
   const handleRefreshApplications = async () => {
@@ -107,17 +153,21 @@ export function App() {
     handleRefreshApplications();
   };
 
-  // Update website settings in realtime
+  // Update website settings in realtime & sync
   const handleUpdateWebsiteSettings = (newSettings: WebsiteSettings) => {
     setWebsiteSettings(newSettings);
+    saveWebsiteSettings(newSettings);
   };
 
-  // Check active Supabase session on startup & listen to auth changes (for Admin users)
-  // Check active Supabase session on startup & listen to auth changes & Realtime DB changes
+  // Check active Supabase session & fetch live settings & applications
   useEffect(() => {
-    // Initial fetch on mount
+    // Initial fetch of applications and global settings
     fetchUserApplications(currentUser?.email).then((apps) => {
       if (apps) setApplications(apps);
+    });
+
+    fetchWebsiteSettingsAsync().then((settings) => {
+      if (settings) setWebsiteSettings(settings);
     });
 
     if (isSupabaseConfigured()) {
@@ -152,7 +202,7 @@ export function App() {
       });
 
       // Realtime subscription on membership_applications table
-      const realtimeChannel = supabase
+      const appChannel = supabase
         .channel('public:membership_applications')
         .on(
           'postgres_changes',
@@ -165,9 +215,24 @@ export function App() {
         )
         .subscribe();
 
+      // Realtime subscription on website_settings table
+      const settingsChannel = supabase
+        .channel('public:website_settings')
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'website_settings' },
+          () => {
+            fetchWebsiteSettingsAsync().then((settings) => {
+              if (settings) setWebsiteSettings(settings);
+            });
+          }
+        )
+        .subscribe();
+
       return () => {
         subscription.unsubscribe();
-        supabase.removeChannel(realtimeChannel);
+        supabase.removeChannel(appChannel);
+        supabase.removeChannel(settingsChannel);
       };
     }
   }, []);
@@ -194,8 +259,7 @@ export function App() {
   // Handle Proceed from Membership Page to Payment Page
   const handleProceedToPayment = (formData: Partial<MembershipApplication>) => {
     setPendingApplicationData(formData);
-    setCurrentTab('payment');
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    handleNavigate('payment');
   };
 
   // Handle Existing Member Instant Web Onboarding (No payment required)
@@ -223,13 +287,12 @@ export function App() {
       joinedDate: '2026'
     };
     handleUpdateUser(updatedUser);
-    setCurrentTab('profile');
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    handleNavigate('profile');
   };
 
   // Handle Payment Complete
   const handlePaymentSuccess = (newApp: MembershipApplication) => {
-    setApplications((prev) => [newApp, ...prev]);
+    setApplications((prev) => [newApp, ...prev.filter((a) => a.id !== newApp.id)]);
     if (currentUser) {
       const calculatedValidUntil = newApp.validUntil || calculateValidityDate(newApp.paymentDate);
       const updatedUser: UserProfile = {
@@ -244,10 +307,9 @@ export function App() {
     }
   };
 
-  // Scroll to top on tab change
-  useEffect(() => {
-    window.scrollTo(0, 0);
-  }, [currentTab]);
+  const activeGalleryItems = (websiteSettings.galleryItems && websiteSettings.galleryItems.length > 0)
+    ? websiteSettings.galleryItems
+    : GALLERY_ITEMS;
 
   return (
     <div className="min-h-screen flex flex-col bg-[#f7f9fc] text-[#191c1e] font-sans antialiased">
@@ -260,7 +322,7 @@ export function App() {
           {/* Sticky Header with First Line (Logo + Become Member + Admin Portal) & Second Line (Navigation) */}
           <Header
             currentTab={currentTab}
-            onNavigate={(tab) => setCurrentTab(tab)}
+            onNavigate={handleNavigate}
             onOpenStatusTracker={() => setIsTrackerOpen(true)}
             applicationCount={applications.length}
             currentUser={currentUser}
@@ -272,15 +334,16 @@ export function App() {
           <main className="flex-1 pt-28 sm:pt-32">
             {currentTab === 'home' && (
               <HomeScreen
-                onNavigate={(tab) => setCurrentTab(tab)}
+                onNavigate={handleNavigate}
                 onOpenLightbox={(item) => setSelectedGalleryItem(item)}
-                galleryItems={GALLERY_ITEMS}
+                galleryItems={activeGalleryItems}
+                websiteSettings={websiteSettings}
               />
             )}
 
             {currentTab === 'gallery' && (
               <GalleryScreen
-                galleryItems={GALLERY_ITEMS}
+                galleryItems={activeGalleryItems}
                 onOpenLightbox={(item) => setSelectedGalleryItem(item)}
               />
             )}
@@ -291,8 +354,8 @@ export function App() {
                 websiteSettings={websiteSettings}
                 onProceedToPayment={handleProceedToPayment}
                 onExistingMemberRegistered={handleExistingMemberRegistered}
-                onNavigateProfile={() => setCurrentTab('profile')}
-                onNavigateHome={() => setCurrentTab('home')}
+                onNavigateProfile={() => handleNavigate('profile')}
+                onNavigateHome={() => handleNavigate('home')}
               />
             )}
 
@@ -302,8 +365,8 @@ export function App() {
                 currentUser={currentUser}
                 websiteSettings={websiteSettings}
                 onPaymentSuccess={handlePaymentSuccess}
-                onBackToMembership={() => setCurrentTab('membership')}
-                onNavigateProfile={() => setCurrentTab('profile')}
+                onBackToMembership={() => handleNavigate('membership')}
+                onNavigateProfile={() => handleNavigate('profile')}
               />
             )}
 
@@ -312,7 +375,8 @@ export function App() {
                 user={currentUser}
                 onUpdateUser={handleUpdateUser}
                 applications={applications}
-                onNavigateMembership={() => setCurrentTab('membership')}
+                onNavigateMembership={() => handleNavigate('membership')}
+                onNavigateHome={() => handleNavigate('home')}
               />
             )}
 
@@ -324,21 +388,21 @@ export function App() {
                 onDeleteApplication={handleDeleteApplication}
                 websiteSettings={websiteSettings}
                 onUpdateWebsiteSettings={handleUpdateWebsiteSettings}
-                onNavigateHome={() => setCurrentTab('home')}
+                onNavigateHome={() => handleNavigate('home')}
                 onSwitchToAdminUser={handleSwitchToAdminUser}
               />
             )}
 
-            {currentTab === 'about' && <AboutScreen onNavigate={(tab) => setCurrentTab(tab)} />}
+            {currentTab === 'about' && <AboutScreen onNavigate={handleNavigate} />}
           </main>
 
           {/* Global Footer */}
-          <Footer onNavigate={(tab) => setCurrentTab(tab)} />
+          <Footer onNavigate={handleNavigate} />
 
           {/* Fullscreen Interactive Lightbox Modal */}
           <GalleryLightbox
             item={selectedGalleryItem}
-            allItems={GALLERY_ITEMS}
+            allItems={activeGalleryItems}
             onClose={() => setSelectedGalleryItem(null)}
             onSelect={(item) => setSelectedGalleryItem(item)}
           />

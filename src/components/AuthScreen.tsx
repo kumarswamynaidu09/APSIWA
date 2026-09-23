@@ -159,6 +159,11 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
     setLoginPassword('DemoSolarPass2026');
   };
 
+  const handleAdminLogin = () => {
+    setLoginEmail('apsiwa2018@gmail.com');
+    setLoginPassword('association@123');
+  };
+
   const containerContent = (
     <div className="w-full max-w-md bg-white rounded-3xl p-7 sm:p-8 border border-[#e0e3e6] shadow-xl space-y-6">
       {/* Top Header */}
@@ -340,15 +345,25 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
             )}
           </button>
 
-          {/* Quick Demo Helper */}
+          {/* Quick Demo / Admin Helper */}
           <div className="pt-2 border-t border-[#e0e3e6] flex flex-col items-center gap-2">
-            <button
-              type="button"
-              onClick={handleDemoLogin}
-              className="text-[12px] text-[#003477] hover:underline font-semibold cursor-pointer"
-            >
-              Fill Demo Credentials
-            </button>
+            <div className="flex items-center gap-3 text-[11.5px]">
+              <button
+                type="button"
+                onClick={handleAdminLogin}
+                className="text-[#003477] font-bold hover:underline cursor-pointer flex items-center gap-1 bg-[#f2f4f7] px-2.5 py-1 rounded-lg border border-[#c4c6cf]/50"
+              >
+                <ShieldCheck size={13} className="text-[#003477]" />
+                <span>Admin Login</span>
+              </button>
+              <button
+                type="button"
+                onClick={handleDemoLogin}
+                className="text-[#737783] hover:text-[#003477] font-medium hover:underline cursor-pointer px-2 py-1"
+              >
+                Member Demo
+              </button>
+            </div>
             <p className="text-[11px] text-[#737783] text-center">
               Don't have an account?{' '}
               <button

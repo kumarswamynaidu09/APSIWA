@@ -1,4 +1,4 @@
-import { GalleryItem, DirectoryMember } from '../types';
+import { GalleryItem, DirectoryMember, AssociationEvent } from '../types';
 
 export const AP_DISTRICTS = [
   'Vijayawada / NTR',
@@ -212,3 +212,65 @@ export const INITIAL_MEMBERS: DirectoryMember[] = [
     capacityInstalled: '14.5 MW'
   }
 ];
+
+export const DEFAULT_EVENTS: AssociationEvent[] = [
+  {
+    id: 'evt-2026-01',
+    title: 'Andhra Pradesh Solar Expo & Conclave 2026',
+    description: 'Premier solar technology showcase, state policy dialogues, Tier-1 module distributor networking, and PM-Surya Ghar subsidy facilitation.',
+    date: '2026-10-15',
+    time: '09:30 AM - 05:30 PM',
+    endDate: '2026-10-16',
+    expiresAt: '2026-10-16T23:59:59',
+    location: 'Vijayawada',
+    venue: 'A-Plus Convention Centre, MG Road, Vijayawada',
+    category: 'Expo',
+    bannerUrl: 'https://lh3.googleusercontent.com/aida-public/AB6AXuBUPiMpgphb5uiyHX0JrShc3o7QpcQF063-MZA2MAakcIUQAjOLKgYkFKfTvDgdctoTdSbyXqCc_aqTXI6etkdVimL63rPw7CEZVaCygRR6_sk6DS9mzBbebocZdGeZ_pOnIf_L26bonPcrHZqcrVTZ6OK3u7M8vXut50MZp0rTzp5v-HrhFHRezPbKwY9EUNxFov5O16LW4SArpqRHQjO28uxL6B8V2Di7XP6sc0LkSy1YfXneEAqloA',
+    registrationLink: '#membership',
+    autoRemoveOnExpiry: true,
+    status: 'Upcoming',
+    featured: true,
+    organizer: 'APSIWA State Council',
+    contactPhone: '+91 866 248 9000',
+    createdAt: '2026-09-01'
+  },
+  {
+    id: 'evt-2026-02',
+    title: 'Rooftop Solar EPC Best Practices & Grid Safety Workshop',
+    description: 'Technical masterclass on DISCOM bi-directional net-metering synchronization, DC isolator protocols, and CEA safety compliance.',
+    date: '2026-11-05',
+    time: '10:00 AM - 04:00 PM',
+    expiresAt: '2026-11-05T20:00:00',
+    location: 'Visakhapatnam',
+    venue: 'Novotel Varun Beach Convention Hall, Vizag',
+    category: 'Workshop',
+    bannerUrl: 'https://lh3.googleusercontent.com/aida-public/AB6AXuCoQdfUzyfDoAg3eBpKxB13AN802rUDKb8yQR-wETcm_wHsIaOi9nVkBvP9ahW6iLXbU5m78EGnStNfPtMYsKq3aBg2OVcNRe50304-CvazpqJ4xYb_5ZC7ojlq1-ovajjYrKIM_5AnOcIruhPV4WLBEMlc1A07kH-l-0tZHlUAq0aTBLeNSI3FDng9O6tJv_kffZ4Qb94JqXRiP_yd5y_DF50WSslWuRxUQu5LDz_LLcmQT6S7T3W1mA',
+    registrationLink: '#membership',
+    autoRemoveOnExpiry: true,
+    status: 'Upcoming',
+    featured: false,
+    organizer: 'APSIWA Technical Committee',
+    contactPhone: '+91 891 270 4500',
+    createdAt: '2026-09-10'
+  },
+  {
+    id: 'evt-2026-03',
+    title: 'DISCOM & APERC Clean Energy Regulatory Dialogue',
+    description: 'High-level round table addressing open access tariff rationalization, grid stability for MW rooftops, and standardizing inspection turnarounds.',
+    date: '2026-12-08',
+    time: '11:00 AM - 03:30 PM',
+    expiresAt: '2026-12-08T18:00:00',
+    location: 'Amaravati',
+    venue: 'AP Secretariat Conference Hall, Amaravati',
+    category: 'Conference',
+    bannerUrl: 'https://lh3.googleusercontent.com/aida-public/AB6AXuA3N0t85peVWsF-V4vfBJAXCbrAgV5To7PK52XjgrNM0X4IEFObBFlkNxjlybe2WdJGYdEaE8EuQLt-ZSBoStGd0tSvM_zHfct-fKu4owemRdknd0S2h7XmOw7edBm3CJv390fjcS9J6jLbEaHWFh2zv1yV3K64UDw2Fs37B_MzgJiPN_731L6zNKkFLld0nXC1uMPEJDrEO04QMneydTqqzdEIl5QlVFqb0s1EC9TWDn6Lx_UdTVHSmg',
+    registrationLink: '#contact',
+    autoRemoveOnExpiry: true,
+    status: 'Upcoming',
+    featured: true,
+    organizer: 'APSIWA Secretariat',
+    contactPhone: '+91 866 248 9000',
+    createdAt: '2026-09-15'
+  }
+];
+

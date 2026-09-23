@@ -1,5 +1,6 @@
 import React from 'react';
-import { NavTab, GalleryItem } from '../types';
+import { NavTab, GalleryItem, WebsiteSettings, AssociationEvent } from '../types';
+import { filterActivePublicEvents } from '../lib/supabase';
 import {
   Calendar,
   MapPin,
@@ -28,65 +29,35 @@ import {
   GraduationCap,
   Images,
   ExternalLink,
-  Check
+  Check,
+  Clock
 } from 'lucide-react';
 
 interface HomeScreenProps {
   onNavigate: (tab: NavTab) => void;
   onOpenLightbox: (item: GalleryItem) => void;
   galleryItems: GalleryItem[];
+  websiteSettings?: WebsiteSettings;
 }
 
 export const HomeScreen: React.FC<HomeScreenProps> = ({
   onNavigate,
   onOpenLightbox,
-  galleryItems
+  galleryItems,
+  websiteSettings
 }) => {
-  // 6 preview items matching Image 6
-  const previewItems = [
-    {
-      tag: 'State Conference',
-      title: 'APSIWA Annual Leadership Convention',
-      desc: 'Executive delegates reviewing policy resolutions and DISCOM coordination timelines at Vijayawada.',
-      img: 'https://lh3.googleusercontent.com/aida-public/AB6AXuBx4UyKdcEaZMKk0HO3CMv6JAQSk9YSrIsxhTp36fo-a4qRH7r28WRiR3IYTKfKtn5yxR7TjfH9d-EurY5SOlIouj6GyCbhwC3KGFtVDNItvAVxrCJy7vGKBiUNwkFmRqgXQrkcf_pmaSoctpcWTolucqkrOe_0DHFoD2PuHrGaWQUEmFSF2C7PzA0UUsmhqjdubznnQ1_ypkEblbEkNbrikbp1J1bykw0085s8Bv6XX4zjO-zBZ2M9Lw',
-      galleryMatchIndex: 0
-    },
-    {
-      tag: 'Site Inspection',
-      title: 'On-Field Commercial Quality Auditing',
-      desc: 'Technical field validation team assessing string inverter efficiency and DC grounding systems.',
-      img: 'https://lh3.googleusercontent.com/aida-public/AB6AXuCoQdfUzyfDoAg3eBpKxB13AN802rUDKb8yQR-wETcm_wHsIaOi9nVkBvP9ahW6iLXbU5m78EGnStNfPtMYsKq3aBg2OVcNRe50304-CvazpqJ4xYb_5ZC7ojlq1-ovajjYrKIM_5AnOcIruhPV4WLBEMlc1A07kH-l-0tZHlUAq0aTBLeNSI3FDng9O6tJv_kffZ4Qb94JqXRiP_yd5y_DF50WSslWuRxUQu5LDz_LLcmQT6S7T3W1mA',
-      galleryMatchIndex: 1
-    },
-    {
-      tag: 'Rooftop Installation',
-      title: 'High-Capacity Commercial Commissioning',
-      desc: 'Completed 850 kW rooftop solar deployment engineered by an accredited APSIWA integration firm.',
-      img: 'https://lh3.googleusercontent.com/aida-public/AB6AXuAGuV8SVQ04vtH-1i-S3x9K-GsePS9bGY1WlhdJMagJjKwLdolrJaD2TC_fIX3P4RScc_M0dY_L4wAO6OCWDRtuWUD3hqGlp_lhuMgIKBzWIDExkGmh6Ho9muxB5DI_p1w4TTXcu-YjVTcRXK-T4cXkHnNLBokptjfdRP4ZpGdvcW8DNsfjkerPK9_i8viZs8i7-EYD-M2FgKSVi0igPgg95y7xkNTYwTQTqw3P2i7UaUhBd_2gLvMmsw',
-      galleryMatchIndex: 2
-    },
-    {
-      tag: 'Technical Seminar',
-      title: 'Net-Metering & Telemetry Workshop',
-      desc: 'State-wide workshop covering APERC grid-tied bi-directional meter integration protocols.',
-      img: 'https://lh3.googleusercontent.com/aida-public/AB6AXuBx2ISA0IWuL6lHo1ONn1ZrsdEVRHQEDpMh1241_SYkph6apZ0AhrjD-NuMXKuKXa9RJhEEZR5agtApZBaKESYFsbCf2vX4CX-fCrU7p0gcWMV8Hl2guB0isrTuLKRs6X5Zgz4EI3_FAXkjMQaT0Cxq2JZmYritje421R3NWygnrloDNsPpCkRiZs01e9zhq9uW4a64aPJ_wrAHHHMeTDniAeSJDTLcfOWLyuxaaLmwWmLO7hR7i_nXuw',
-      galleryMatchIndex: 4
-    },
-    {
-      tag: 'General Body Meeting',
-      title: 'District Committee Representative Forum',
-      desc: 'Resolutions adopted regarding expedited central subsidy releases and unified vendor standards.',
-      img: 'https://lh3.googleusercontent.com/aida-public/AB6AXuBE486hLYOuROnwIS0xCZvdj8cPnOryRKq4GJzTE5hmomIQaYMArvEd5GqvOpXCl698RqP0iyCVr9UYYg3-LyQwlulvS6QzgUXDPAlD-_Ws827dk06KPXjrO7fTmyWHS3saEukakk2JQgDrnSjYZBv3hQsVcNWqr6OsoTAHtOTXSdUU7v35e-NADXgNfbQCJWtvN_IIwmgh834a1t2SB19vkQ4XGz_KoCXaslBnHW2n59qGWb6BE1rDTg',
-      galleryMatchIndex: 5
-    },
-    {
-      tag: 'Safety Drill',
-      title: 'State Solar Technician Safety Program',
-      desc: 'Practical certification on rooftop anchor points, harness standards, and anti-islanding verification.',
-      img: 'https://lh3.googleusercontent.com/aida-public/AB6AXuBBWAb6TEgjipFldq7ydh1pJsZ7-FUS5aQ09UgAXFeSh6qbWuGjM2N7rkrMZ93TFZWkwbeUWdbJ8RA81cjjMOnbE58lWJacbykk__m-XvtmnYHo8ZwUzcinAD-I_icOec6TZmQpxE3I1OPUIUdKw7GgRiov_LRZ1q4olW4SQyEnIAcngeu5F5La6IngEUDizHEQs6om-Apt5hKBYm4Zd9P6I6r5OmThFIqwhrhHJXc8Ttn4q7pSMRRmdg',
-      galleryMatchIndex: 6
-    }
-  ];
+  // Dynamic active events (filtered automatically if expired and autoRemoveOnExpiry is true)
+  const activeEvents = filterActivePublicEvents(websiteSettings?.events);
+
+  // Dynamic preview items from actual gallery items
+  const previewItems = (galleryItems && galleryItems.length > 0 ? galleryItems.slice(0, 6) : []).map((item, idx) => ({
+    tag: item.category || 'Solar Event',
+    title: item.title,
+    desc: item.desc,
+    img: item.src,
+    galleryMatchIndex: idx,
+    rawItem: item
+  }));
 
   return (
     <div className="flex flex-col w-full">
@@ -392,6 +363,148 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
           </div>
         </div>
       </section>
+
+      {/* ========================================================================= */}
+      {/* UPCOMING SOLAR SUMMITS, WORKSHOPS & OFFICIAL EVENTS SECTION */}
+      {/* ========================================================================= */}
+      {activeEvents.length > 0 && (
+        <section className="w-full py-12 sm:py-16 bg-white border-b border-[#e0e3e6]">
+          <div className="max-w-7xl mx-auto px-margin">
+            {/* Section Header */}
+            <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-8">
+              <div className="space-y-1.5">
+                <div className="flex items-center gap-2">
+                  <span className="h-0.5 w-6 bg-[#006e2e]"></span>
+                  <span className="text-[11px] text-[#006e2e] uppercase font-bold tracking-widest">
+                    Official Events Calendar
+                  </span>
+                </div>
+                <h2 className="font-headline-lg text-[#003477] tracking-tight font-black">
+                  Upcoming Solar Summits &amp; Industry Conclaves
+                </h2>
+                <p className="text-xs sm:text-sm text-[#737783] max-w-2xl">
+                  Connect with state policymakers, DISCOM executives, OEM distributors, and fellow certified solar EPC integrators.
+                </p>
+              </div>
+
+              <button
+                onClick={() => {
+                  onNavigate('gallery');
+                  window.scrollTo({ top: 0, behavior: 'smooth' });
+                }}
+                className="inline-flex items-center gap-1.5 text-xs font-bold text-[#003477] hover:underline cursor-pointer shrink-0"
+              >
+                <span>View Past Event Photos</span>
+                <ChevronRight size={16} />
+              </button>
+            </div>
+
+            {/* Events Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {activeEvents.map((evt) => {
+                const eventDate = new Date(evt.date);
+                const monthName = isNaN(eventDate.getTime())
+                  ? 'OCT'
+                  : eventDate.toLocaleString('en-US', { month: 'short' }).toUpperCase();
+                const dayNumber = isNaN(eventDate.getTime())
+                  ? '15'
+                  : eventDate.getDate();
+
+                return (
+                  <div
+                    key={evt.id}
+                    className="bg-[#f7f9fc] rounded-3xl overflow-hidden border border-[#e0e3e6] shadow-xs hover:shadow-xl transition-all duration-300 flex flex-col group hover:-translate-y-1"
+                  >
+                    {/* Banner Image Container */}
+                    <div className="relative h-48 bg-slate-900 overflow-hidden">
+                      <img
+                        src={evt.bannerUrl || 'https://lh3.googleusercontent.com/aida-public/AB6AXuBUPiMpgphb5uiyHX0JrShc3o7QpcQF063-MZA2MAakcIUQAjOLKgYkFKfTvDgdctoTdSbyXqCc_aqTXI6etkdVimL63rPw7CEZVaCygRR6_sk6DS9mzBbebocZdGeZ_pOnIf_L26bonPcrHZqcrVTZ6OK3u7M8vXut50MZp0rTzp5v-HrhFHRezPbKwY9EUNxFov5O16LW4SArpqRHQjO28uxL6B8V2Di7XP6sc0LkSy1YfXneEAqloA'}
+                        alt={evt.title}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/25 to-transparent" />
+
+                      {/* Category Tag */}
+                      <div className="absolute top-3.5 left-3.5 flex items-center gap-1.5">
+                        <span className="px-3 py-1 rounded-full bg-[#003477]/90 backdrop-blur-xs text-white text-[11px] font-black uppercase tracking-wider shadow-sm">
+                          {evt.category}
+                        </span>
+                        {evt.featured && (
+                          <span className="px-2.5 py-1 rounded-full bg-[#ffbe3b] text-[#00285e] text-[10.5px] font-black uppercase tracking-wider flex items-center gap-1 shadow-sm">
+                            <Sparkles size={11} /> Featured
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Date Badge overlay */}
+                      <div className="absolute bottom-3 left-3 flex items-center gap-2 bg-white/95 backdrop-blur-xs px-3 py-1.5 rounded-2xl shadow-md border border-white/40">
+                        <div className="text-center pr-2 border-r border-[#e0e3e6]">
+                          <span className="text-[10px] font-black text-[#006e2e] block leading-none">{monthName}</span>
+                          <span className="text-base font-black text-[#191c1e] block leading-none">{dayNumber}</span>
+                        </div>
+                        <div className="text-[11px] font-bold text-[#003477] leading-tight">
+                          <span>{evt.date}</span>
+                          {evt.endDate && <span className="block text-[10px] text-[#737783]">to {evt.endDate}</span>}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Card Content */}
+                    <div className="p-6 flex-1 flex flex-col justify-between space-y-4">
+                      <div className="space-y-2.5">
+                        <h3 className="font-extrabold text-[#191c1e] text-base leading-snug group-hover:text-[#003477] transition-colors line-clamp-2">
+                          {evt.title}
+                        </h3>
+
+                        {/* Venue & Timing */}
+                        <div className="space-y-1.5 text-xs text-[#434752]">
+                          <div className="flex items-start gap-1.5 font-semibold">
+                            <MapPin size={15} className="text-[#006e2e] shrink-0 mt-0.5" />
+                            <span className="line-clamp-1">{evt.venue || evt.location}</span>
+                          </div>
+                          {evt.time && (
+                            <div className="flex items-center gap-1.5 text-[#737783] pl-5">
+                              <Clock size={13} className="shrink-0" />
+                              <span>{evt.time}</span>
+                            </div>
+                          )}
+                        </div>
+
+                        <p className="text-xs text-[#737783] leading-relaxed line-clamp-2 pt-1">
+                          {evt.description}
+                        </p>
+                      </div>
+
+                      {/* CTA Action Row */}
+                      <div className="pt-3 border-t border-[#e0e3e6] flex items-center justify-between gap-3">
+                        <span className="text-[11px] font-semibold text-[#006e2e] inline-flex items-center gap-1">
+                          <CheckCircle2 size={13} />
+                          APSIWA Delegate Access
+                        </span>
+
+                        <button
+                          onClick={() => {
+                            if (evt.registrationLink && evt.registrationLink.startsWith('http')) {
+                              window.open(evt.registrationLink, '_blank');
+                            } else {
+                              onNavigate('membership');
+                              window.scrollTo({ top: 0, behavior: 'smooth' });
+                            }
+                          }}
+                          className="inline-flex items-center gap-1 px-4 py-2 rounded-xl bg-[#003477] hover:bg-[#024aa3] text-white text-xs font-bold transition-all shadow-2xs hover:shadow-xs cursor-pointer active:scale-95"
+                        >
+                          <span>Participate</span>
+                          <ArrowRight size={13} />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* ABOUT PREVIEW SECTION */}
       <section className="w-full py-12 sm:py-16 bg-[#f7f9fc]">

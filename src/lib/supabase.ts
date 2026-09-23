@@ -1,5 +1,6 @@
 import { createClient, SupabaseClient, User } from '@supabase/supabase-js';
-import { UserProfile, MembershipApplication, WebsiteSettings } from '../types';
+import { UserProfile, MembershipApplication, WebsiteSettings, GalleryItem, AssociationEvent } from '../types';
+import { GALLERY_ITEMS, DEFAULT_EVENTS } from '../data/mockData';
 
 export const ADMIN_EMAILS = [
   'kumarswamynaidu0906@gmail.com',
@@ -249,9 +250,9 @@ function localFallbackLogin(email: string, _password: string) {
       }
     : {
         id: `usr_${Date.now()}`,
-        name: email.split('@')[0].replace(/[._-]/g, ' '),
+        name: email.trim().toLowerCase() === 'apsiwa2018@gmail.com' ? 'APSIWA Secretariat Admin' : email.split('@')[0].replace(/[._-]/g, ' '),
         email: email.trim(),
-        membershipId: 'APSIWA-MEM-2026',
+        membershipId: email.trim().toLowerCase() === 'apsiwa2018@gmail.com' ? 'APSIWA-ADM-001' : 'APSIWA-MEM-2026',
         joinedDate: new Date().toLocaleDateString('en-IN', {
           month: 'short',
           year: 'numeric',
@@ -484,6 +485,21 @@ export async function updateApplicationDetails(app: MembershipApplication): Prom
 }
 
 /**
+ * Toggle Active / Inactive Status for an existing member
+ */
+export async function toggleMemberActiveStatus(
+  app: MembershipApplication,
+  newStatus: 'Active' | 'Inactive' | 'Approved' | 'Pending Verification' | 'Rejected'
+): Promise<{ success: boolean; error: string | null; updatedApp: MembershipApplication }> {
+  const updatedApp: MembershipApplication = {
+    ...app,
+    status: newStatus
+  };
+  const res = await updateApplicationDetails(updatedApp);
+  return { success: res.success, error: res.error, updatedApp };
+}
+
+/**
  * Delete an application (Admin action)
  */
 export async function deleteApplication(id: string): Promise<{ success: boolean; error?: string | null }> {
@@ -538,37 +554,130 @@ export const DEFAULT_WEBSITE_SETTINGS: WebsiteSettings = {
   announcementText: 'Official institutional registrations are now open with exclusive 60% Solar Expo inaugural fee.',
   resendApiKey: '',
   resendFromEmail: 'APSIWA Secretariat <onboarding@resend.dev>',
+  galleryItems: GALLERY_ITEMS,
+  events: DEFAULT_EVENTS,
 };
 
 /**
- * Fetch Website Settings (Realtime)
+ * Checks if an event is past its date or expiry time
+ */
+export function isEventExpired(event: AssociationEvent): boolean {
+  try {
+    const now = new Date();
+    if (event.expiresAt) {
+      return new Date(event.expiresAt).getTime() < now.getTime();
+    }
+    if (event.endDate) {
+      const end = new Date(`${event.endDate}T23:59:59`);
+      return end.getTime() < now.getTime();
+    }
+    if (event.date) {
+      const start = new Date(`${event.date}T23:59:59`);
+      return start.getTime() < now.getTime();
+    }
+  } catch {}
+  return false;
+}
+
+/**
+ * Filter active public events (automatically excluding expired events if autoRemoveOnExpiry is true)
+ */
+export function filterActivePublicEvents(events?: AssociationEvent[]): AssociationEvent[] {
+  if (!events || events.length === 0) return DEFAULT_EVENTS;
+  return events.filter((evt) => {
+    if (evt.autoRemoveOnExpiry && isEventExpired(evt)) {
+      return false;
+    }
+    return true;
+  });
+}
+
+/**
+ * Purge or cleanup expired events from settings
+ */
+export function cleanupExpiredEvents(settings: WebsiteSettings): WebsiteSettings {
+  const currentEvents = settings.events || DEFAULT_EVENTS;
+  const filtered = currentEvents.filter((evt) => !isEventExpired(evt));
+  return {
+    ...settings,
+    events: filtered
+  };
+}
+
+/**
+ * Fetch Website Settings (Sync from localStorage fallback)
  */
 export function fetchWebsiteSettings(): WebsiteSettings {
   try {
     const raw = localStorage.getItem('apsiwa_website_settings');
     if (raw) {
-      return { ...DEFAULT_WEBSITE_SETTINGS, ...JSON.parse(raw) };
+      const parsed = JSON.parse(raw);
+      return {
+        ...DEFAULT_WEBSITE_SETTINGS,
+        ...parsed,
+        galleryItems: parsed.galleryItems?.length ? parsed.galleryItems : GALLERY_ITEMS,
+        events: parsed.events?.length ? parsed.events : DEFAULT_EVENTS
+      };
     }
   } catch {}
   return DEFAULT_WEBSITE_SETTINGS;
 }
 
 /**
- * Save Website Settings (Realtime)
+ * Fetch Website Settings from Supabase Realtime DB
  */
-export async function saveWebsiteSettings(settings: WebsiteSettings): Promise<{ success: boolean }> {
+export async function fetchWebsiteSettingsAsync(): Promise<WebsiteSettings> {
+  const local = fetchWebsiteSettings();
+  if (!isSupabaseConfigured()) return local;
+
+  try {
+    const { data, error } = await supabase
+      .from('website_settings')
+      .select('settings_json')
+      .eq('id', 'global_config')
+      .maybeSingle();
+
+    if (!error && data?.settings_json) {
+      const merged = {
+        ...DEFAULT_WEBSITE_SETTINGS,
+        ...data.settings_json,
+        galleryItems: data.settings_json.galleryItems?.length ? data.settings_json.galleryItems : GALLERY_ITEMS,
+        events: data.settings_json.events?.length ? data.settings_json.events : DEFAULT_EVENTS
+      };
+      try {
+        localStorage.setItem('apsiwa_website_settings', JSON.stringify(merged));
+      } catch {}
+      return merged;
+    }
+  } catch (err) {
+    console.warn('Supabase fetchWebsiteSettingsAsync note:', err);
+  }
+  return local;
+}
+
+/**
+ * Save Website Settings (Realtime Supabase + LocalStorage)
+ */
+export async function saveWebsiteSettings(settings: WebsiteSettings): Promise<{ success: boolean; error?: string | null }> {
   try {
     localStorage.setItem('apsiwa_website_settings', JSON.stringify(settings));
   } catch {}
 
   if (isSupabaseConfigured()) {
     try {
-      await supabase.from('website_settings').upsert({
+      const { error } = await supabase.from('website_settings').upsert({
         id: 'global_config',
         settings_json: settings,
         updated_at: new Date().toISOString(),
       });
-    } catch {}
+      if (error) {
+        console.warn('Supabase save website_settings error:', error.message);
+        return { success: false, error: error.message };
+      }
+    } catch (err: any) {
+      console.warn('Supabase save website_settings exception:', err);
+      return { success: true, error: err?.message };
+    }
   }
 
   return { success: true };

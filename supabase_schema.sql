@@ -219,6 +219,30 @@ ON storage.objects FOR INSERT
 WITH CHECK (bucket_id = 'apsiwa_assets');
 
 -- ==============================================================================
+-- TABLE: website_settings
+-- Stores global dynamic configurations (pricing, QR codes, bank details, contacts, gallery)
+-- ==============================================================================
+CREATE TABLE IF NOT EXISTS public.website_settings (
+  id TEXT PRIMARY KEY DEFAULT 'global_config',
+  settings_json JSONB NOT NULL,
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE public.website_settings ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Allow public select for website_settings" 
+  ON public.website_settings FOR SELECT 
+  USING (true);
+
+CREATE POLICY "Allow authenticated/admin insert or update website_settings" 
+  ON public.website_settings FOR ALL 
+  USING (true) 
+  WITH CHECK (true);
+
+-- Enable realtime for website_settings
+ALTER PUBLICATION supabase_realtime ADD TABLE public.website_settings;
+
+-- ==============================================================================
 -- 7. SUPABASE EDGE FUNCTION & RESEND EMAIL INTEGRATION GUIDE
 -- ==============================================================================
 -- To enable Supabase Edge Functions with Resend, deploy the following function:
@@ -252,4 +276,5 @@ WITH CHECK (bucket_id = 'apsiwa_assets');
 --   });
 -- });
 -- ```
+
 

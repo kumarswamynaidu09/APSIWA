@@ -18,6 +18,29 @@ export interface WebsiteSettings {
   announcementText: string;
   resendApiKey?: string;
   resendFromEmail?: string;
+  galleryItems?: GalleryItem[];
+  events?: AssociationEvent[];
+}
+
+export interface AssociationEvent {
+  id: string;
+  title: string;
+  description: string;
+  date: string; // YYYY-MM-DD
+  time?: string; // e.g. "09:30 AM - 05:00 PM"
+  endDate?: string; // YYYY-MM-DD
+  expiresAt?: string; // ISO string or YYYY-MM-DDTHH:mm
+  location: string;
+  venue?: string;
+  category: 'Conference' | 'Expo' | 'Workshop' | 'Meeting' | 'Solar Summit' | 'General Body' | 'Training';
+  bannerUrl?: string;
+  registrationLink?: string;
+  autoRemoveOnExpiry: boolean; // Auto-remove from website after event date/time expires
+  status?: 'Upcoming' | 'Ongoing' | 'Completed' | 'Expired';
+  featured?: boolean;
+  organizer?: string;
+  contactPhone?: string;
+  createdAt?: string;
 }
 
 export interface UserProfile {
@@ -40,7 +63,7 @@ export interface UserProfile {
   pincode?: string;
   validUntil?: string;
   membershipTier?: string;
-  membershipStatus?: 'Active' | 'Pending Verification' | 'In Review' | 'Expired';
+  membershipStatus?: 'Active' | 'Inactive' | 'Pending Verification' | 'In Review' | 'Expired';
   role?: 'admin' | 'member';
 }
 
@@ -78,7 +101,7 @@ export interface MembershipApplication {
   submissionDate: string;
   validUntil?: string; // Valid for 1 year from payment day (DD-MMM-YYYY)
   applicationType?: 'New Member' | 'Existing Member' | 'Renewal';
-  status: 'Pending Verification' | 'Approved' | 'In Review' | 'Rejected';
+  status: 'Pending Verification' | 'Approved' | 'Active' | 'Inactive' | 'In Review' | 'Rejected';
 }
 
 export interface DirectoryMember {

@@ -30,7 +30,9 @@ import {
   FileCheck,
   RotateCcw,
   Check,
-  Eye
+  Eye,
+  ArrowLeft,
+  Power
 } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
@@ -41,6 +43,7 @@ interface ProfileScreenProps {
   onUpdateUser: (updated: UserProfile) => void;
   applications: MembershipApplication[];
   onNavigateMembership: () => void;
+  onNavigateHome?: () => void;
   onOpenAuth?: () => void;
 }
 
@@ -48,7 +51,8 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
   user,
   onUpdateUser,
   applications,
-  onNavigateMembership
+  onNavigateMembership,
+  onNavigateHome
 }) => {
   // Search query state for Membership Number (Clean without pre-filled mock data)
   const initialId = user?.membershipId || '';
@@ -197,7 +201,8 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
 
   // Download Card as High-Resolution PNG Image
   const handleDownloadImage = async () => {
-    if (!isPhoneVerified || matchedRecord?.status !== 'Approved') return;
+    const isRecordActive = matchedRecord?.status === 'Approved' || matchedRecord?.status === 'Active';
+    if (!isPhoneVerified || !isRecordActive) return;
     setDownloadingFormat('image');
     try {
       const targetElement = a4DocumentRef.current;
@@ -224,7 +229,8 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
 
   // Download Card as PDF (A4 Portrait Print Ready)
   const handleDownloadPDF = async () => {
-    if (!isPhoneVerified || matchedRecord?.status !== 'Approved') return;
+    const isRecordActive = matchedRecord?.status === 'Approved' || matchedRecord?.status === 'Active';
+    if (!isPhoneVerified || !isRecordActive) return;
     setDownloadingFormat('pdf');
     try {
       const targetElement = a4DocumentRef.current;
@@ -264,7 +270,8 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
 
   // Direct Browser Print
   const handlePrint = () => {
-    if (!isPhoneVerified || matchedRecord?.status !== 'Approved') return;
+    const isRecordActive = matchedRecord?.status === 'Approved' || matchedRecord?.status === 'Active';
+    if (!isPhoneVerified || !isRecordActive) return;
     window.print();
   };
 

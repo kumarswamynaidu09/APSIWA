@@ -44,12 +44,12 @@ export const PaymentScreen: React.FC<PaymentScreenProps> = ({
   const activeFee = websiteSettings.isExpoActive ? websiteSettings.expoFee : websiteSettings.regularFee;
   const regularFee = websiteSettings.regularFee;
   const discountPct = websiteSettings.expoDiscountPercentage;
-  const upiId = websiteSettings.upiId || 'apsiwa.welfare@sbi';
-  const accountNumber = websiteSettings.accountNumber || '394801002934';
-  const ifscCode = websiteSettings.ifscCode || 'SBIN0012849';
-  const qrCodeUrl = websiteSettings.qrCodeUrl || 'https://lh3.googleusercontent.com/aida-public/AB6AXuDKQoPqerF6MxsFeWOQEuqjZRMOpmIHXD4ubJsjC-HLBkb6H8aH9E9q4bIuwFwOaQ9HK3Sl8Oi7yGFQsqhG4gzs4IAJR6F5Q4YqVeAWJmOkjit-g7lwqdHivjTfhp8-bLHcRqeadCaE1t74t3t6gYv7azrvqiE2k6DlgVUwMN8KJCsNkOaLr8bg1e3HlnPyaCfMTDN4U0wMK5fgZI_vn5mcEVrdfVRypfOrTx3_NkRqVrmFLkSMKtwx4A';
-  const bankName = websiteSettings.bankName || 'State Bank of India';
-  const bankBranch = websiteSettings.bankBranch || 'Amaravati Secretariat';
+  const upiId = websiteSettings.upiId || 'andhrapradeshsolarintegratorswelfareassociation@idbi';
+  const accountNumber = websiteSettings.accountNumber || '1018102000010052';
+  const ifscCode = websiteSettings.ifscCode || 'IBKL0001018';
+  const qrCodeUrl = websiteSettings.qrCodeUrl || '/payment-qr.png';
+  const bankName = websiteSettings.bankName || 'IDBI BANK';
+  const bankBranch = websiteSettings.bankBranch || 'Seethamadhara Branch';
 
   // Realtime state - clean and empty for user's actual UTR & date
   const [utrNumber, setUtrNumber] = useState(applicationData?.utrNumber || '');
@@ -72,7 +72,7 @@ export const PaymentScreen: React.FC<PaymentScreenProps> = ({
 
   // Representative & Firm summary details from actual user / form
   const repName = applicationData?.fullName || currentUser?.name || 'Applicant';
-  const repDob = applicationData?.dateOfBirth || currentUser?.dateOfBirth || '1990-01-01';
+  const repDob = applicationData?.dateOfBirth || currentUser?.dateOfBirth || '';
   const repPhoto = applicationData?.photoUrl || currentUser?.avatarUrl || '';
   const repEmail = applicationData?.emailAddress || currentUser?.email || '';
   const repPhone = applicationData?.mobileNumber || currentUser?.phoneNumber || '';
@@ -317,7 +317,7 @@ export const PaymentScreen: React.FC<PaymentScreenProps> = ({
                 <p className="text-xs text-white/80 font-medium flex items-center gap-2 flex-wrap">
                   <span>{repCompany}</span>
                   <span className="text-white/40">•</span>
-                  <span>DOB: <strong className="text-white">{repDob}</strong></span>
+                  <span>DOB: <strong className="text-white">{repDob || 'N/A'}</strong></span>
                   <span className="text-white/40">•</span>
                   <span className="text-[#ffbe3b] font-semibold">{repDistrict}</span>
                 </p>

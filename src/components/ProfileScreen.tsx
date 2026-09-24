@@ -458,7 +458,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                     ID: {matchedRecord.id}
                   </span>
                   <span>•</span>
-                  <span>DOB: {matchedRecord.dateOfBirth}</span>
+                  <span>DOB: {matchedRecord.dateOfBirth || 'N/A'}</span>
                   <span>•</span>
                   <span>{matchedRecord.district}, AP</span>
                 </div>
@@ -744,7 +744,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                             </tr>
                             <tr>
                               <td className="py-1 text-[#64748b]">Date of Birth:</td>
-                              <td className="py-1 font-bold text-[#0f172a] font-mono">{matchedRecord.dateOfBirth}</td>
+                              <td className="py-1 font-bold text-[#0f172a] font-mono">{matchedRecord.dateOfBirth || 'N/A'}</td>
                             </tr>
                             <tr>
                               <td className="py-1 text-[#64748b]">Mobile No:</td>
@@ -884,7 +884,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                             </div>
                             <div>
                               <span className="text-white/60 block text-[7.5px]">DOB:</span>
-                              <span className="font-mono font-bold text-white">{matchedRecord.dateOfBirth}</span>
+                              <span className="font-mono font-bold text-white">{matchedRecord.dateOfBirth || 'N/A'}</span>
                             </div>
                             <div>
                               <span className="text-white/60 block text-[7.5px]">DISTRICT:</span>

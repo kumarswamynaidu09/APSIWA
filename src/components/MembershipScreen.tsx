@@ -218,11 +218,6 @@ export const MembershipScreen: React.FC<MembershipScreenProps> = ({
       return;
     }
 
-    if (!dateOfBirth.trim()) {
-      setErrorMsg('Date of Birth is compulsory. Please provide your Date of Birth.');
-      return;
-    }
-
     if (!memberPhotoUrl.trim()) {
       setErrorMsg('Passport size portrait photograph is compulsory. Please upload a photo for your official Smart ID Card.');
       return;
@@ -250,7 +245,7 @@ export const MembershipScreen: React.FC<MembershipScreenProps> = ({
 
     const applicationPayload: Partial<MembershipApplication> = {
       fullName: fullName.trim(),
-      dateOfBirth: dateOfBirth.trim(),
+      dateOfBirth: dateOfBirth.trim() || undefined,
       mobileNumber: mobileNumber.trim(),
       emailAddress: emailAddress.trim(),
       companyName: companyName.trim(),
@@ -277,11 +272,6 @@ export const MembershipScreen: React.FC<MembershipScreenProps> = ({
 
     if (!existingFullName.trim()) {
       setExistingErrorMsg('Please enter the Authorized Representative Full Name.');
-      return;
-    }
-
-    if (!existingDateOfBirth.trim()) {
-      setExistingErrorMsg('Date of Birth is compulsory for official registration.');
       return;
     }
 
@@ -317,7 +307,7 @@ export const MembershipScreen: React.FC<MembershipScreenProps> = ({
     const existingApp: MembershipApplication = {
       id: generatedMemberId,
       fullName: existingFullName.trim(),
-      dateOfBirth: existingDateOfBirth.trim(),
+      dateOfBirth: existingDateOfBirth.trim() || undefined,
       mobileNumber: existingMobile.trim(),
       emailAddress: existingEmail.trim(),
       companyName: existingCompanyName.trim(),
@@ -559,13 +549,12 @@ export const MembershipScreen: React.FC<MembershipScreenProps> = ({
 
                     <div>
                       <label className="block text-xs font-bold text-[#191c1e] mb-1">
-                        Date of Birth <span className="text-[#ba1a1a] font-extrabold">* (Compulsory)</span>
+                        Date of Birth <span className="text-[#737783] text-[10px] font-normal">(Optional)</span>
                       </label>
                       <div className="relative">
                         <Calendar className="absolute left-3.5 top-3 text-[#737783]" size={15} />
                         <input
                           type="date"
-                          required
                           value={dateOfBirth}
                           max={new Date().toISOString().split('T')[0]}
                           onChange={(e) => setDateOfBirth(e.target.value)}
@@ -937,7 +926,7 @@ export const MembershipScreen: React.FC<MembershipScreenProps> = ({
               )}
 
               <form onSubmit={handleSubmitExistingMember} className="p-6 sm:p-8 space-y-8">
-                {/* SECTION 1: AUTHORIZED REPRESENTATIVE DETAILS & COMPULSORY DOB */}
+                {/* SECTION 1: AUTHORIZED REPRESENTATIVE DETAILS */}
                 <div className="space-y-4">
                   <div className="flex items-center gap-2 pb-2 border-b border-[#e0e3e6]">
                     <div className="w-7 h-7 rounded-lg bg-[#003477] text-white flex items-center justify-center font-bold text-xs">
@@ -968,13 +957,12 @@ export const MembershipScreen: React.FC<MembershipScreenProps> = ({
 
                     <div>
                       <label className="block text-xs font-bold text-[#191c1e] mb-1">
-                        Date of Birth <span className="text-[#ba1a1a] font-extrabold">* (Compulsory)</span>
+                        Date of Birth <span className="text-[#737783] text-[10px] font-normal">(Optional)</span>
                       </label>
                       <div className="relative">
                         <Calendar className="absolute left-3.5 top-3 text-[#737783]" size={15} />
                         <input
                           type="date"
-                          required
                           value={existingDateOfBirth}
                           max={new Date().toISOString().split('T')[0]}
                           onChange={(e) => setExistingDateOfBirth(e.target.value)}

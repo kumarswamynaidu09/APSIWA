@@ -464,8 +464,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   // Handle On-Spot Registration Submission (Zero Payment / Instant DB Persistence)
   const handleSpotRegistration = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!spotForm.fullName.trim() || !spotForm.dateOfBirth || !spotForm.mobileNumber.trim()) {
-      alert('Please enter Representative Full Name, Date of Birth, and Mobile Number.');
+    if (!spotForm.fullName.trim() || !spotForm.mobileNumber.trim()) {
+      alert('Please enter Representative Full Name and Mobile Number.');
       return;
     }
 
@@ -570,8 +570,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   // Handle Manual Member Creation Submission
   const handleCreateMember = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newMemberForm.fullName || !newMemberForm.dateOfBirth || !newMemberForm.mobileNumber) {
-      alert('Please enter Name, Date of Birth, and Mobile Number.');
+    if (!newMemberForm.fullName || !newMemberForm.mobileNumber) {
+      alert('Please enter Name and Mobile Number.');
       return;
     }
 
@@ -596,7 +596,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
       utrNumber: newMemberForm.utrNumber,
       amountPaid: newMemberForm.applicationType === 'Existing Member' ? '₹ 0.00' : newMemberForm.amountPaid,
       paymentScreenshotUrl: undefined,
-      photoUrl: newMemberForm.photoUrl || undefined,
+      photoUrl: newMemberForm.photoUrl || '',
       status: newMemberForm.status as any,
       validUntil: validUntilDate,
       paymentDate: new Date().toISOString(),
@@ -1788,13 +1788,12 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
                     <div>
                       <label className="block text-xs font-bold text-[#191c1e] mb-1">
-                        Date of Birth <span className="text-[#ba1a1a] font-extrabold">* (Compulsory)</span>
+                        Date of Birth <span className="text-[#737783] font-normal text-xs">(Optional)</span>
                       </label>
                       <div className="relative">
                         <Calendar className="absolute left-3.5 top-3 text-[#737783]" size={15} />
                         <input
                           type="date"
-                          required
                           value={spotForm.dateOfBirth}
                           max={new Date().toISOString().split('T')[0]}
                           onChange={(e) => setSpotForm({ ...spotForm, dateOfBirth: e.target.value })}
@@ -3609,12 +3608,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                   </div>
 
                   <div>
-                    <label className="block font-bold text-[#191c1e] mb-1">Date of Birth * (Compulsory)</label>
+                    <label className="block font-bold text-[#191c1e] mb-1">Date of Birth <span className="text-[#737783] font-normal text-xs">(Optional)</span></label>
                     <div className="relative">
                       <Calendar className="absolute left-3 top-2.5 text-[#737783]" size={14} />
                       <input
                         type="date"
-                        required
                         max={new Date().toISOString().split('T')[0]}
                         value={newMemberForm.dateOfBirth}
                         onChange={(e) => setNewMemberForm({ ...newMemberForm, dateOfBirth: e.target.value })}

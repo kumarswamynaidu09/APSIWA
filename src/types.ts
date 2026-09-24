@@ -82,7 +82,7 @@ export interface GalleryItem {
 export interface MembershipApplication {
   id: string;
   fullName: string;
-  dateOfBirth: string; // Compulsory: YYYY-MM-DD
+  dateOfBirth?: string;
   mobileNumber: string;
   emailAddress: string;
   companyName?: string;

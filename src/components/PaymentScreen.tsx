@@ -68,6 +68,8 @@ export const PaymentScreen: React.FC<PaymentScreenProps> = ({
   const [isApproved, setIsApproved] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
 
+  const [downloadingQr, setDownloadingQr] = useState(false);
+
   // Representative & Firm summary details from actual user / form
   const repName = applicationData?.fullName || currentUser?.name || 'Applicant';
   const repDob = applicationData?.dateOfBirth || currentUser?.dateOfBirth || '1990-01-01';
@@ -81,6 +83,68 @@ export const PaymentScreen: React.FC<PaymentScreenProps> = ({
     navigator.clipboard.writeText(text);
     setCopiedField(fieldName);
     setTimeout(() => setCopiedField(null), 2000);
+  };
+
+  const handleDownloadQr = async () => {
+    setDownloadingQr(true);
+    try {
+      if (qrCodeUrl.startsWith('data:')) {
+        const link = document.createElement('a');
+        link.href = qrCodeUrl;
+        link.download = 'APSIWA-Official-Payment-QR.png';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        setDownloadingQr(false);
+        return;
+      }
+
+      const response = await fetch(qrCodeUrl, { mode: 'cors' });
+      if (response.ok) {
+        const blob = await response.blob();
+        const blobUrl = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = blobUrl;
+        link.download = 'APSIWA-Official-Payment-QR.png';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(blobUrl);
+        setDownloadingQr(false);
+        return;
+      }
+      throw new Error('Direct fetch failed');
+    } catch {
+      // Fallback via Image object + canvas or new window
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+      img.onload = () => {
+        try {
+          const canvas = document.createElement('canvas');
+          canvas.width = img.naturalWidth || 400;
+          canvas.height = img.naturalHeight || 400;
+          const ctx = canvas.getContext('2d');
+          if (ctx) {
+            ctx.drawImage(img, 0, 0);
+            const dataUrl = canvas.toDataURL('image/png');
+            const link = document.createElement('a');
+            link.href = dataUrl;
+            link.download = 'APSIWA-Official-Payment-QR.png';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+          }
+        } catch {
+          window.open(qrCodeUrl, '_blank');
+        }
+        setDownloadingQr(false);
+      };
+      img.onerror = () => {
+        window.open(qrCodeUrl, '_blank');
+        setDownloadingQr(false);
+      };
+      img.src = qrCodeUrl;
+    }
   };
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -295,65 +359,107 @@ export const PaymentScreen: React.FC<PaymentScreenProps> = ({
                   <img
                     src={qrCodeUrl}
                     alt="APSIWA Official UPI QR Code"
-                    className="w-44 h-44 object-contain rounded-lg border border-[#e0e3e6]"
+                    className="w-44 h-44 sm:w-48 sm:h-48 object-contain rounded-lg border border-[#e0e3e6] p-1 bg-white"
                   />
-                  <div className="mt-3 flex items-center gap-2 text-[11px] text-[#434752] font-semibold">
-                    <span className="px-1.5 py-0.5 bg-[#f2f4f7] rounded border">PhonePe</span>
-                    <span className="px-1.5 py-0.5 bg-[#f2f4f7] rounded border">Google Pay</span>
-                    <span className="px-1.5 py-0.5 bg-[#f2f4f7] rounded border">Paytm</span>
-                    <span className="px-1.5 py-0.5 bg-[#f2f4f7] rounded border">BHIM</span>
+                  <div className="mt-3 flex items-center justify-center gap-1.5 sm:gap-2 text-[10px] sm:text-[11px] text-[#434752] font-semibold flex-wrap">
+                    <span className="px-1.5 py-0.5 bg-[#f2f4f7] rounded border border-[#e0e3e6]">PhonePe</span>
+                    <span className="px-1.5 py-0.5 bg-[#f2f4f7] rounded border border-[#e0e3e6]">Google Pay</span>
+                    <span className="px-1.5 py-0.5 bg-[#f2f4f7] rounded border border-[#e0e3e6]">Paytm</span>
+                    <span className="px-1.5 py-0.5 bg-[#f2f4f7] rounded border border-[#e0e3e6]">BHIM / Any UPI</span>
                   </div>
+
+                  {/* QR Code Download Button */}
+                  <button
+                    type="button"
+                    onClick={handleDownloadQr}
+                    disabled={downloadingQr}
+                    className="w-full mt-3 inline-flex items-center justify-center gap-2 px-3.5 py-2.5 rounded-xl bg-[#003477] hover:bg-[#024aa3] text-white text-xs font-bold shadow-xs transition-all cursor-pointer active:scale-98 disabled:opacity-75"
+                  >
+                    {downloadingQr ? (
+                      <>
+                        <span className="material-symbols-outlined text-base animate-spin">refresh</span>
+                        <span>Preparing QR Image...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Download size={14} />
+                        <span>Download QR Code Image</span>
+                      </>
+                    )}
+                  </button>
                 </div>
 
-                {/* UPI ID Row */}
-                <div className="flex items-center justify-between p-3 rounded-xl bg-white border border-[#e0e3e6]">
-                  <div>
-                    <span className="text-[10px] text-[#737783] uppercase block font-bold">APSIWA Official UPI ID</span>
-                    <span className="text-xs font-mono font-bold text-[#003477]">{upiId}</span>
+                {/* UPI ID Row - Perfectly Aligned & Safe for Mobile */}
+                <div className="flex items-center justify-between gap-2.5 p-3 sm:p-3.5 rounded-xl bg-white border border-[#e0e3e6] shadow-xs">
+                  <div className="min-w-0 flex-1">
+                    <span className="text-[10px] text-[#737783] uppercase block font-bold tracking-wider mb-0.5">
+                      APSIWA Official UPI ID
+                    </span>
+                    <div className="text-xs sm:text-sm font-mono font-bold text-[#003477] break-all select-all leading-snug">
+                      {upiId}
+                    </div>
                   </div>
                   <button
                     type="button"
                     onClick={() => handleCopy(upiId, 'upi')}
-                    className="p-1.5 rounded-lg bg-[#f2f4f7] hover:bg-[#e0e3e6] text-[#003477] transition-colors cursor-pointer"
+                    className="inline-flex items-center gap-1.5 px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-lg bg-[#f0f4fa] hover:bg-[#e0e8f5] text-[#003477] text-xs font-bold transition-all shrink-0 cursor-pointer active:scale-95 border border-[#d0dbe9]"
                     title="Copy UPI ID"
                   >
-                    {copiedField === 'upi' ? <Check size={14} className="text-[#006e2e]" /> : <Copy size={14} />}
+                    {copiedField === 'upi' ? (
+                      <>
+                        <Check size={14} className="text-[#006e2e]" />
+                        <span className="text-[#006e2e] text-[11px] font-bold">Copied!</span>
+                      </>
+                    ) : (
+                      <>
+                        <Copy size={14} />
+                        <span className="text-[11px]">Copy</span>
+                      </>
+                    )}
                   </button>
                 </div>
 
                 {/* Bank Account Details */}
                 <div className="space-y-2 text-xs">
-                  <div className="p-3 rounded-xl bg-white border border-[#e0e3e6] space-y-1.5">
-                    <span className="text-[10px] font-bold text-[#737783] uppercase block">Direct NEFT / RTGS Details</span>
-                    <div className="flex justify-between items-center">
-                      <span className="text-[#434752]">Account Number:</span>
-                      <div className="flex items-center gap-1.5">
-                        <span className="font-mono font-bold text-[#191c1e]">{accountNumber}</span>
+                  <div className="p-3 sm:p-3.5 rounded-xl bg-white border border-[#e0e3e6] space-y-2 shadow-xs">
+                    <span className="text-[10px] font-bold text-[#737783] uppercase block tracking-wider">
+                      Direct NEFT / RTGS Details
+                    </span>
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-[#434752] shrink-0">Account No:</span>
+                      <div className="flex items-center gap-1.5 min-w-0 justify-end">
+                        <span className="font-mono font-bold text-[#191c1e] text-xs sm:text-sm break-all select-all">
+                          {accountNumber}
+                        </span>
                         <button
                           type="button"
                           onClick={() => handleCopy(accountNumber, 'acc')}
-                          className="text-[#003477] hover:text-[#024aa3] cursor-pointer"
+                          className="p-1 rounded text-[#003477] hover:bg-[#f0f4fa] cursor-pointer shrink-0 transition-colors"
+                          title="Copy Account Number"
                         >
-                          {copiedField === 'acc' ? <Check size={12} className="text-[#006e2e]" /> : <Copy size={12} />}
+                          {copiedField === 'acc' ? <Check size={13} className="text-[#006e2e]" /> : <Copy size={13} />}
                         </button>
                       </div>
                     </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-[#434752]">IFSC Code:</span>
-                      <div className="flex items-center gap-1.5">
-                        <span className="font-mono font-bold text-[#191c1e]">{ifscCode}</span>
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-[#434752] shrink-0">IFSC Code:</span>
+                      <div className="flex items-center gap-1.5 min-w-0 justify-end">
+                        <span className="font-mono font-bold text-[#191c1e] text-xs sm:text-sm break-all select-all">
+                          {ifscCode}
+                        </span>
                         <button
                           type="button"
                           onClick={() => handleCopy(ifscCode, 'ifsc')}
-                          className="text-[#003477] hover:text-[#024aa3] cursor-pointer"
+                          className="p-1 rounded text-[#003477] hover:bg-[#f0f4fa] cursor-pointer shrink-0 transition-colors"
+                          title="Copy IFSC Code"
                         >
-                          {copiedField === 'ifsc' ? <Check size={12} className="text-[#006e2e]" /> : <Copy size={12} />}
+                          {copiedField === 'ifsc' ? <Check size={13} className="text-[#006e2e]" /> : <Copy size={13} />}
                         </button>
                       </div>
                     </div>
-                    <div className="flex justify-between text-[11px] text-[#737783] pt-1 border-t border-[#e0e3e6]">
-                      <span>Bank: {bankName}</span>
-                      <span>Branch: {bankBranch}</span>
+                    <div className="flex flex-col sm:flex-row sm:justify-between text-[11px] text-[#737783] pt-1.5 border-t border-[#e0e3e6] gap-1">
+                      <span>Bank: <strong className="text-[#434752]">{bankName}</strong></span>
+                      <span>Branch: <strong className="text-[#434752]">{bankBranch}</strong></span>
                     </div>
                   </div>
                 </div>

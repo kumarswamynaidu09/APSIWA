@@ -1,17 +1,19 @@
 import React, { useState } from 'react';
 import { MembershipApplication } from '../types';
-import { ShieldCheck, X, CheckCircle2, Clock, Circle, SearchX } from 'lucide-react';
+import { ShieldCheck, X, CheckCircle2, Clock, Circle, SearchX, Download } from 'lucide-react';
 
 interface StatusTrackerModalProps {
   isOpen: boolean;
   onClose: () => void;
   applications: MembershipApplication[];
+  onNavigateProfile?: (applicationId?: string) => void;
 }
 
 export const StatusTrackerModal: React.FC<StatusTrackerModalProps> = ({
   isOpen,
   onClose,
-  applications
+  applications,
+  onNavigateProfile
 }) => {
   const [query, setQuery] = useState('');
   const [searched, setSearched] = useState(false);
@@ -198,7 +200,18 @@ export const StatusTrackerModal: React.FC<StatusTrackerModalProps> = ({
         </div>
 
         {/* Footer */}
-        <div className="p-4 bg-[#f2f4f7] border-t border-[#e0e3e6] flex justify-end">
+        <div className="p-4 bg-[#f2f4f7] border-t border-[#e0e3e6] flex items-center justify-between gap-3">
+          {matchedApp && (matchedApp.status === 'Active' || matchedApp.status === 'Approved') && onNavigateProfile ? (
+            <button
+              onClick={() => onNavigateProfile(matchedApp.id)}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-[#006e2e] hover:bg-[#005322] text-white text-[13px] font-bold shadow-sm transition-all cursor-pointer"
+            >
+              <Download size={15} />
+              <span>Download ID Card &amp; Certificate</span>
+            </button>
+          ) : (
+            <div />
+          )}
           <button
             onClick={onClose}
             className="px-4 py-2 rounded-xl bg-white hover:bg-[#eceef1] text-[#191c1e] text-[13px] font-semibold border border-[#e0e3e6] cursor-pointer"

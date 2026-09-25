@@ -549,7 +549,7 @@ export const DEFAULT_WEBSITE_SETTINGS: WebsiteSettings = {
   bankBranch: 'Seethamadhara Branch',
   qrCodeUrl: '/payment-qr.png',
   secretariatAddress: 'Association Secretariat, Visakhapatnam, Andhra Pradesh, India',
-  secretariatPhone: '+91 866 248 9000',
+  secretariatPhone: '+91 9866194904 / +91 9440316267',
   secretariatEmail: 'apsiwa2018@gmail.com',
   announcementText: 'Official institutional registrations are now open with exclusive 60% Solar Expo inaugural fee.',
   resendApiKey: '',

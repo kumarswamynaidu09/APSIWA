@@ -9,29 +9,29 @@ export const AboutScreen: React.FC<AboutScreenProps> = ({ onNavigate }) => {
   const leadership = [
     {
       role: 'President',
-      name: 'Er. K. Ramesh Varma',
-      tenure: 'Executive Board 2024-2027',
-      firm: 'SolarTech EPC Solutions, Vijayawada',
-      bio: 'Over 18 years of pioneering renewable energy experience in utility-scale and rooftop solar distribution across Andhra Pradesh.'
+      name: 'B Viswa Prasad',
+      tenure: 'Executive Board',
+      firm: 'Solar EPC Enterprises, Andhra Pradesh',
+      bio: 'Pioneering renewable energy leadership, statewide DISCOM advocacy, and championing the welfare and statutory accreditation of solar integrators across Andhra Pradesh.'
     },
     {
-      role: 'General Secretary',
-      name: 'M. Sreenivasa Rao',
-      tenure: 'Executive Board 2024-2027',
-      firm: 'GreenRay Infra Projects, Visakhapatnam',
-      bio: 'Leading statewide DISCOM policy advocacy and liaison with APERC on tariff and distributed generation frameworks.'
+      role: 'Organising Secretary',
+      name: 'Ch Satish Kumar',
+      tenure: 'Executive Board',
+      firm: 'CleanGrid Energy Systems, Andhra Pradesh',
+      bio: 'Steering statewide institutional networking, district coordination, and member welfare programs.'
     },
     {
       role: 'Vice President (Rayalaseema)',
       name: 'C. Harish Reddy',
-      tenure: 'Executive Board 2024-2027',
+      tenure: 'Executive Board',
       firm: 'Rayalaseema CleanGrid Systems, Tirupati',
       bio: 'Championing rural solar microgrids, agricultural pump solarization, and regional installer skill clinics.'
     },
     {
       role: 'Treasurer',
       name: 'P. Nageswara Rao',
-      tenure: 'Executive Board 2024-2027',
+      tenure: 'Executive Board',
       firm: 'Amaravati SunWorks Pvt Ltd, Guntur',
       bio: 'Chartered financial and solar compliance specialist steering transparent welfare funds and member benefit schemes.'
     }

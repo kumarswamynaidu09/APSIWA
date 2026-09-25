@@ -24,7 +24,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
       <div className="max-w-7xl mx-auto px-margin py-10">
         <div className="grid grid-cols-1 md:grid-cols-12 gap-8">
           {/* Column 1: Organization Bio */}
-          <div className="md:col-span-5 space-y-4">
+          <div className="md:col-span-4 lg:col-span-4 space-y-4">
             <div className="flex items-center gap-2">
               <img
                 alt="APSIWA Official Logo"
@@ -48,7 +48,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
           </div>
 
           {/* Column 2: Quick Links */}
-          <div className="md:col-span-3 space-y-3">
+          <div className="md:col-span-3 lg:col-span-3 space-y-3">
             <p className="text-[14px] font-bold text-[#191c1e]">Portal Navigation</p>
             <ul className="space-y-2 text-[13px] text-[#434752]">
               <li>
@@ -126,29 +126,74 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
             </ul>
           </div>
 
-          {/* Column 3: Contact Details */}
-          <div className="md:col-span-4 space-y-3">
-            <p className="text-[14px] font-bold text-[#191c1e]">Contact Details</p>
-            <div className="space-y-2.5 text-[13px] text-[#434752]">
+          {/* Column 3: Contact Details & Key Officials */}
+          <div className="md:col-span-5 lg:col-span-5 space-y-3">
+            <p className="text-[14px] font-bold text-[#191c1e]">Contact &amp; Key Officials</p>
+            <div className="space-y-3 text-[13px] text-[#434752]">
+              {/* Secretariat Address */}
               <div className="flex items-start gap-2.5">
-                <MapPin size={18} className="text-[#003477] shrink-0 mt-0.5" />
-                <span>Association Secretariat, Visakhapatnam, Andhra Pradesh, India</span>
+                <div className="w-7 h-7 rounded-lg bg-[#f0f4fa] text-[#003477] flex items-center justify-center shrink-0 mt-0.5">
+                  <MapPin size={15} />
+                </div>
+                <span className="leading-snug">Association Secretariat, Visakhapatnam, Andhra Pradesh, India</span>
               </div>
+
+              {/* Official Email */}
               <div className="flex items-center gap-2.5">
-                <Mail size={18} className="text-[#003477] shrink-0" />
-                <a className="hover:text-[#003477] transition-colors underline" href="mailto:apsiwa2018@gmail.com">
+                <div className="w-7 h-7 rounded-lg bg-[#f0f4fa] text-[#003477] flex items-center justify-center shrink-0">
+                  <Mail size={15} />
+                </div>
+                <a className="hover:text-[#003477] transition-colors font-medium underline" href="mailto:apsiwa2018@gmail.com">
                   apsiwa2018@gmail.com
                 </a>
               </div>
-              <div className="flex items-center gap-2.5">
-                <Phone size={18} className="text-[#003477] shrink-0" />
-                <a className="hover:text-[#003477] transition-colors" href="tel:+918662450000">
-                  +91 866 245 XXXX
-                </a>
+
+              {/* President */}
+              <div className="flex items-start gap-2.5">
+                <div className="w-7 h-7 rounded-lg bg-[#f0f4fa] text-[#003477] flex items-center justify-center shrink-0 mt-0.5">
+                  <Phone size={15} />
+                </div>
+                <div className="space-y-0.5">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <a className="font-mono font-bold text-[#003477] hover:underline" href="tel:+919866194904">
+                      +91 9866194904
+                    </a>
+                    <span className="px-2 py-0.5 rounded-md bg-[#e8f5e9] text-[#006e2e] text-[11px] font-bold">
+                      President
+                    </span>
+                  </div>
+                  <div className="text-xs font-semibold text-[#191c1e]">
+                    B Viswa Prasad
+                  </div>
+                </div>
               </div>
-              <div className="flex items-center gap-2.5">
-                <Clock size={18} className="text-[#003477] shrink-0" />
-                <span>Mon - Fri: 09:30 AM - 05:30 PM IST</span>
+
+              {/* Organising Secretary */}
+              <div className="flex items-start gap-2.5">
+                <div className="w-7 h-7 rounded-lg bg-[#f0f4fa] text-[#003477] flex items-center justify-center shrink-0 mt-0.5">
+                  <Phone size={15} />
+                </div>
+                <div className="space-y-0.5">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <a className="font-mono font-bold text-[#003477] hover:underline" href="tel:+919440316267">
+                      +91 9440316267
+                    </a>
+                    <span className="px-2 py-0.5 rounded-md bg-[#d8e2ff] text-[#003477] text-[11px] font-bold">
+                      Organising Secretary
+                    </span>
+                  </div>
+                  <div className="text-xs font-semibold text-[#191c1e]">
+                    Ch Satish Kumar
+                  </div>
+                </div>
+              </div>
+
+              {/* Working Hours */}
+              <div className="flex items-center gap-2.5 pt-0.5">
+                <div className="w-7 h-7 rounded-lg bg-[#f0f4fa] text-[#003477] flex items-center justify-center shrink-0">
+                  <Clock size={15} />
+                </div>
+                <span className="text-xs text-[#737783]">Mon – Sat: 09:30 AM – 06:00 PM IST</span>
               </div>
             </div>
           </div>

@@ -156,6 +156,7 @@ export const PaymentScreen: React.FC<PaymentScreenProps> = ({
         return;
       }
       try {
+        setErrorMsg('');
         setScreenshotFileName(file.name);
         const { dataUrl } = await compressImage(file, {
           maxWidth: 900,
@@ -176,6 +177,11 @@ export const PaymentScreen: React.FC<PaymentScreenProps> = ({
 
     if (!utrNumber.trim() || utrNumber.trim().length < 6) {
       setErrorMsg('Please enter a valid Bank UTR / UPI Transaction Reference Number.');
+      return;
+    }
+
+    if (!screenshotUrl || !screenshotUrl.trim()) {
+      setErrorMsg('Payment receipt screenshot is compulsory. Please upload a screenshot of your payment receipt before submitting.');
       return;
     }
 
@@ -536,32 +542,53 @@ export const PaymentScreen: React.FC<PaymentScreenProps> = ({
                   </div>
                 </div>
 
-                {/* Payment Screenshot Upload */}
+                {/* Payment Screenshot Upload (Compulsory) */}
                 <div>
-                  <label className="block text-xs font-bold text-[#191c1e] mb-1.5">
-                    Payment Receipt / Screenshot (Optional)
-                  </label>
-                  <div className="flex items-center gap-4 p-3.5 rounded-xl bg-[#f2f4f7] border border-[#e0e3e6]">
-                    <div className="w-14 h-14 rounded-lg bg-white border border-[#e0e3e6] overflow-hidden flex items-center justify-center shrink-0">
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="block text-xs font-bold text-[#191c1e]">
+                      Payment Receipt / Screenshot <span className="text-[#ba1a1a]">*</span>
+                    </label>
+                    <span className="px-2 py-0.5 rounded-full bg-[#ffdad6] text-[#ba1a1a] text-[10px] font-extrabold uppercase tracking-wider">
+                      Compulsory *
+                    </span>
+                  </div>
+                  <div
+                    className={`flex items-center gap-4 p-3.5 rounded-xl transition-all ${
+                      screenshotUrl
+                        ? 'bg-[#f0f9f4] border border-[#006e2e]/40 shadow-xs'
+                        : 'bg-[#f2f4f7] border-2 border-dashed border-[#ccd0d5] hover:border-[#003477]'
+                    }`}
+                  >
+                    <div className="w-14 h-14 rounded-lg bg-white border border-[#e0e3e6] overflow-hidden flex items-center justify-center shrink-0 shadow-2xs">
                       {screenshotUrl ? (
                         <img src={screenshotUrl} alt="Receipt" className="w-full h-full object-cover" />
                       ) : (
-                        <Upload size={20} className="text-[#737783]" />
+                        <Upload size={22} className="text-[#003477]" />
                       )}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <span className="text-xs font-bold text-[#191c1e] truncate block">
-                        {screenshotFileName || (screenshotUrl ? 'Receipt Uploaded' : 'Upload Receipt Screenshot')}
+                      <span className={`text-xs font-bold truncate block ${screenshotUrl ? 'text-[#006e2e]' : 'text-[#191c1e]'}`}>
+                        {screenshotFileName || (screenshotUrl ? '✓ Receipt Screenshot Attached' : 'Upload Payment Receipt Screenshot *')}
                       </span>
                       <span className="text-[10.5px] text-[#737783] block">
-                        PNG, JPG or PDF receipt from bank app
+                        {screenshotUrl ? 'Screenshot verified & attached' : 'PNG, JPG or PDF receipt from UPI / Bank app (Required)'}
                       </span>
                     </div>
-                    <label className="px-3 py-1.5 rounded-lg bg-white border border-[#e0e3e6] text-xs font-bold text-[#003477] hover:bg-[#eceef1] cursor-pointer transition-colors shrink-0">
-                      <span>{screenshotUrl ? 'Change' : 'Upload'}</span>
+                    <label className={`px-3.5 py-1.5 rounded-lg text-xs font-bold cursor-pointer transition-all shrink-0 shadow-2xs ${
+                      screenshotUrl
+                        ? 'bg-white border border-[#006e2e]/30 text-[#006e2e] hover:bg-[#e8f5e9]'
+                        : 'bg-[#003477] text-white hover:bg-[#024aa3]'
+                    }`}>
+                      <span>{screenshotUrl ? 'Change' : 'Browse File *'}</span>
                       <input type="file" accept="image/*" onChange={handleFileUpload} className="hidden" />
                     </label>
                   </div>
+                  {!screenshotUrl && (
+                    <span className="text-[10.5px] text-[#ba1a1a] font-semibold mt-1 flex items-center gap-1">
+                      <AlertCircle size={12} className="shrink-0" />
+                      <span>Please attach a screenshot of your successful transaction receipt before submitting.</span>
+                    </span>
+                  )}
                 </div>
 
                 {/* Action Buttons */}

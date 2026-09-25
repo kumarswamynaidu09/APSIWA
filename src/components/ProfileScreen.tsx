@@ -558,61 +558,27 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
               </div>
             </div>
 
-            {/* Status Pill & Action Buttons on Right */}
-            <div className="flex flex-col items-start md:items-end gap-3 shrink-0">
-              <div className="flex items-center gap-2">
-                <span className="text-[11px] font-bold text-[#737783] uppercase tracking-wider">
-                  Accreditation:
-                </span>
-                <span
-                  className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-black shadow-2xs ${
-                    matchedRecord.status === 'Approved' || matchedRecord.status === 'Active'
-                      ? 'bg-[#8ef9a0]/30 text-[#006e2e] border border-[#006e2e]/30'
-                      : matchedRecord.status === 'In Review'
-                      ? 'bg-[#d8e2ff] text-[#001a42] border border-[#003477]/20'
-                      : 'bg-[#ffbe3b]/25 text-[#00285e] border border-[#ffbe3b]/40'
-                  }`}
-                >
-                  {matchedRecord.status === 'Approved' || matchedRecord.status === 'Active' ? (
-                    <CheckCircle2 size={15} />
-                  ) : (
-                    <Clock size={15} />
-                  )}
-                  <span>{matchedRecord.status}</span>
-                </span>
-              </div>
-
-              {/* Quick Action Download Buttons on Overview Card */}
-              {(matchedRecord.status === 'Approved' || matchedRecord.status === 'Active') && (
-                <div className="flex items-center gap-2 flex-wrap">
-                  <button
-                    type="button"
-                    onClick={handleDownloadPDF}
-                    disabled={downloadingFormat !== null}
-                    className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[#006e2e] hover:bg-[#005322] text-white font-bold text-xs shadow-xs cursor-pointer active:scale-98 disabled:opacity-60 transition-all"
-                  >
-                    <FileText size={14} />
-                    <span>{downloadingFormat === 'pdf' ? 'Generating PDF...' : 'Download PDF'}</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleDownloadCardOnly}
-                    disabled={downloadingFormat !== null}
-                    className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[#003477] hover:bg-[#024aa3] text-white font-bold text-xs shadow-xs cursor-pointer active:scale-98 disabled:opacity-60 transition-all"
-                  >
-                    <CreditCard size={14} />
-                    <span>{downloadingFormat === 'card' ? 'Exporting...' : 'ID Card (PNG)'}</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handlePrint}
-                    className="p-2 rounded-xl bg-[#f2f4f7] hover:bg-[#e0e3e6] text-[#003477] border border-[#e0e3e6] cursor-pointer transition-all"
-                    title="Print Document"
-                  >
-                    <Printer size={15} />
-                  </button>
-                </div>
-              )}
+            {/* Status Pill on Right */}
+            <div className="flex flex-col items-start md:items-end gap-1.5 shrink-0">
+              <span className="text-[11px] font-bold text-[#737783] uppercase tracking-wider">
+                Accreditation Status
+              </span>
+              <span
+                className={`inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full text-xs font-black shadow-2xs ${
+                  matchedRecord.status === 'Approved' || matchedRecord.status === 'Active'
+                    ? 'bg-[#8ef9a0]/30 text-[#006e2e] border border-[#006e2e]/30'
+                    : matchedRecord.status === 'In Review'
+                    ? 'bg-[#d8e2ff] text-[#001a42] border border-[#003477]/20'
+                    : 'bg-[#ffbe3b]/25 text-[#00285e] border border-[#ffbe3b]/40'
+                }`}
+              >
+                {matchedRecord.status === 'Approved' || matchedRecord.status === 'Active' ? (
+                  <CheckCircle2 size={15} />
+                ) : (
+                  <Clock size={15} />
+                )}
+                <span>{matchedRecord.status}</span>
+              </span>
             </div>
           </div>
 
@@ -744,49 +710,32 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
           {/* ===================================================================== */}
           {(matchedRecord.status === 'Approved' || matchedRecord.status === 'Active') && isPhoneVerified && (
             <div className="space-y-6 animate-in zoom-in-95 duration-200">
-              {/* Unlocked banner & Export Controls */}
+              {/* Unlocked banner & 1-Click Mobile-Friendly Export Controls */}
               <div className="bg-[#e8f5e9] border border-[#006e2e]/30 rounded-2xl p-4 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs shadow-xs">
                 <div className="flex items-center gap-2 text-[#004d1c] font-bold">
                   <ShieldCheck size={18} className="text-[#006e2e]" />
                   <span>
-                    Official A4 Membership Certificate &amp; Detachable ID Card Ready
+                    Official Membership Certificate &amp; ID Card Ready
                   </span>
                 </div>
-                <div className="flex items-center gap-2 flex-wrap justify-end">
+                <div className="flex items-center gap-3 w-full sm:w-auto">
                   <button
                     type="button"
                     onClick={handleDownloadPDF}
                     disabled={downloadingFormat !== null}
-                    className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#006e2e] hover:bg-[#005322] text-white font-bold text-xs shadow-xs cursor-pointer active:scale-98 disabled:opacity-70 transition-all"
+                    className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-[#006e2e] hover:bg-[#005322] text-white font-bold text-xs sm:text-sm shadow-sm cursor-pointer active:scale-98 disabled:opacity-70 transition-all"
                   >
-                    <FileText size={14} />
-                    <span>{downloadingFormat === 'pdf' ? 'Generating PDF...' : 'Download PDF (A4 Sheet)'}</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleDownloadCardOnly}
-                    disabled={downloadingFormat !== null}
-                    className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#003477] hover:bg-[#024aa3] text-white font-bold text-xs shadow-xs cursor-pointer active:scale-98 disabled:opacity-70 transition-all"
-                  >
-                    <CreditCard size={14} />
-                    <span>{downloadingFormat === 'card' ? 'Exporting...' : 'Download ID Card (PNG)'}</span>
+                    <FileText size={16} />
+                    <span>{downloadingFormat === 'pdf' ? 'Generating PDF...' : 'Download PDF'}</span>
                   </button>
                   <button
                     type="button"
                     onClick={handleDownloadImage}
                     disabled={downloadingFormat !== null}
-                    className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#434752] hover:bg-[#2e313a] text-white font-bold text-xs shadow-xs cursor-pointer active:scale-98 disabled:opacity-70 transition-all"
+                    className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-[#003477] hover:bg-[#024aa3] text-white font-bold text-xs sm:text-sm shadow-sm cursor-pointer active:scale-98 disabled:opacity-70 transition-all"
                   >
-                    <Download size={14} />
-                    <span>{downloadingFormat === 'image' ? 'Exporting...' : 'Download Full Sheet (PNG)'}</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handlePrint}
-                    className="p-2 rounded-xl bg-white border border-[#e0e3e6] text-[#003477] hover:bg-[#f2f4f7] cursor-pointer transition-all"
-                    title="Print Document"
-                  >
-                    <Printer size={16} />
+                    <Download size={16} />
+                    <span>{downloadingFormat === 'image' ? 'Exporting PNG...' : 'Download PNG'}</span>
                   </button>
                 </div>
               </div>
@@ -1053,17 +1002,6 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                         <span className="font-bold text-[#8ef9a0]">Authorized Bearer Credential</span>
                       </div>
                     </div>
-
-                    {/* Direct Wallet ID Card Download Button */}
-                    <button
-                      type="button"
-                      onClick={handleDownloadCardOnly}
-                      disabled={downloadingFormat !== null}
-                      className="inline-flex items-center gap-2 px-5 py-2 rounded-xl bg-[#003477] hover:bg-[#024aa3] text-white font-bold text-xs shadow-sm cursor-pointer active:scale-98 disabled:opacity-60 transition-all border border-[#003477]/30"
-                    >
-                      <CreditCard size={14} />
-                      <span>{downloadingFormat === 'card' ? 'Exporting ID Card...' : 'Download This Wallet ID Card (PNG)'}</span>
-                    </button>
                   </div>
                 </div>
               </div>

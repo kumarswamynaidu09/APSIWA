@@ -130,6 +130,7 @@ interface AdminDashboardProps {
   currentUser: UserProfile | null;
   applications: MembershipApplication[];
   onRefreshApplications: () => void;
+  onUpdateApplication?: (updated: MembershipApplication) => void;
   onDeleteApplication?: (id: string) => Promise<void>;
   websiteSettings: WebsiteSettings;
   onUpdateWebsiteSettings: (newSettings: WebsiteSettings) => void;
@@ -142,6 +143,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   currentUser,
   applications,
   onRefreshApplications,
+  onUpdateApplication,
   onDeleteApplication,
   websiteSettings,
   onUpdateWebsiteSettings,
@@ -326,6 +328,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
       status: 'Approved',
       validUntil: validUntilDate
     };
+    if (onUpdateApplication) {
+      onUpdateApplication(updated);
+    }
     await updateApplicationDetails(updated);
     if (viewingApp?.id === app.id) {
       setViewingApp(updated);
@@ -366,6 +371,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
       status: newStatus,
       validUntil: newStatus === 'Active' ? (app.validUntil || calculateValidityDate(app.paymentDate)) : app.validUntil
     };
+    if (onUpdateApplication) {
+      onUpdateApplication(updated);
+    }
     await updateApplicationDetails(updated);
     if (viewingApp?.id === app.id) {
       setViewingApp(updated);
@@ -386,6 +394,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
         ...app,
         photoUrl: compressed.dataUrl
       };
+      if (onUpdateApplication) {
+        onUpdateApplication(updated);
+      }
       await updateApplicationDetails(updated);
       if (viewingApp?.id === app.id) {
         setViewingApp(updated);
@@ -528,6 +539,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
       status: 'Active',
     };
 
+    if (onUpdateApplication) {
+      onUpdateApplication(newSpotApp);
+    }
     const saveResult = await saveMembershipApplication(newSpotApp);
     setIsSubmittingSpot(false);
 
@@ -619,6 +633,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
       submissionDate: new Date().toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' })
     };
 
+    if (onUpdateApplication) {
+      onUpdateApplication(newApp);
+    }
     await saveMembershipApplication(newApp);
     setIsAddingMember(false);
     setActionSuccessMsg(`Member ${newApp.fullName} (${newApp.id}) added and registered!`);
@@ -631,6 +648,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     e.preventDefault();
     if (!editingApp) return;
 
+    if (onUpdateApplication) {
+      onUpdateApplication(editingApp);
+    }
     await updateApplicationDetails(editingApp);
     setActionSuccessMsg(`Application ${editingApp.id} updated successfully!`);
     setEditingApp(null);

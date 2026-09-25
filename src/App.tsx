@@ -107,11 +107,53 @@ export function App() {
     };
   }, []);
 
-  // Reload applications helper
+  // Realtime optimistic application update & automatic user profile status synchronization
+  const handleUpdateApplication = useCallback((updated: MembershipApplication) => {
+    setApplications((prev) => {
+      const exists = prev.some((a) => a.id === updated.id);
+      const nextList = exists
+        ? prev.map((a) => (a.id === updated.id ? updated : a))
+        : [updated, ...prev];
+      try {
+        localStorage.setItem('apsiwa_membership_applications', JSON.stringify(nextList));
+      } catch {}
+      return nextList;
+    });
+
+    // If current logged-in user matches the approved/updated application, synchronize user state immediately
+    setCurrentUser((prevUser) => {
+      if (!prevUser) return prevUser;
+      const userPhoneClean = (prevUser.phoneNumber || '').replace(/\D/g, '');
+      const appPhoneClean = (updated.mobileNumber || '').replace(/\D/g, '');
+      const isPhoneMatch = userPhoneClean.length >= 4 && appPhoneClean.length >= 4 && (userPhoneClean.endsWith(appPhoneClean.slice(-10)) || appPhoneClean.endsWith(userPhoneClean.slice(-10)));
+      const isEmailMatch = Boolean(updated.emailAddress && prevUser.email && prevUser.email.toLowerCase() === updated.emailAddress.toLowerCase());
+      const isIdMatch = Boolean(updated.id && prevUser.membershipId && prevUser.membershipId.toLowerCase() === updated.id.toLowerCase());
+
+      if (isEmailMatch || isPhoneMatch || isIdMatch) {
+        const calculatedValidUntil = updated.validUntil || calculateValidityDate(updated.paymentDate || updated.submissionDate);
+        const isActive = updated.status === 'Approved' || updated.status === 'Active';
+        const updatedProfile: UserProfile = {
+          ...prevUser,
+          membershipId: updated.id,
+          companyName: updated.companyName || prevUser.companyName,
+          district: updated.district || prevUser.district,
+          validUntil: calculatedValidUntil,
+          membershipStatus: isActive ? 'Active' : (updated.status as any),
+          avatarUrl: updated.photoUrl || prevUser.avatarUrl,
+        };
+        try {
+          localStorage.setItem('apsiwa_current_user', JSON.stringify(updatedProfile));
+        } catch {}
+        return updatedProfile;
+      }
+      return prevUser;
+    });
+  }, []);
+
+  // Reload applications helper (Fetches global registry for live verification & downloading)
   const handleRefreshApplications = async () => {
-    const emailToFilter = (isAdminUser(currentUser?.email) || currentUser?.role === 'admin') ? undefined : currentUser?.email;
-    const apps = await fetchUserApplications(emailToFilter);
-    if (apps) {
+    const apps = await fetchUserApplications();
+    if (apps && apps.length > 0) {
       setApplications(apps);
     }
   };
@@ -120,7 +162,7 @@ export function App() {
   const handleDeleteApplication = async (id: string) => {
     setApplications((prev) => prev.filter((a) => a.id !== id));
     await deleteApplication(id);
-    const updated = await fetchUserApplications(currentUser?.email);
+    const updated = await fetchUserApplications();
     if (updated) {
       setApplications(updated);
     }
@@ -375,6 +417,7 @@ export function App() {
                 user={currentUser}
                 onUpdateUser={handleUpdateUser}
                 applications={applications}
+                onRefreshApplications={handleRefreshApplications}
                 onNavigateMembership={() => handleNavigate('membership')}
                 onNavigateHome={() => handleNavigate('home')}
               />
@@ -385,6 +428,7 @@ export function App() {
                 currentUser={currentUser}
                 applications={applications}
                 onRefreshApplications={handleRefreshApplications}
+                onUpdateApplication={handleUpdateApplication}
                 onDeleteApplication={handleDeleteApplication}
                 websiteSettings={websiteSettings}
                 onUpdateWebsiteSettings={handleUpdateWebsiteSettings}
@@ -412,6 +456,10 @@ export function App() {
             isOpen={isTrackerOpen}
             onClose={() => setIsTrackerOpen(false)}
             applications={applications}
+            onNavigateProfile={() => {
+              setIsTrackerOpen(false);
+              handleNavigate('profile');
+            }}
           />
         </>
       )}

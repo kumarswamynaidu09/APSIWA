@@ -455,11 +455,13 @@ export async function updateApplicationDetails(app: MembershipApplication): Prom
     try {
       const validDob = (app.dateOfBirth && app.dateOfBirth.trim() !== '' && app.dateOfBirth !== 'N/A') ? app.dateOfBirth : null;
       const dbStatus = (app.status === 'Active' || app.status === 'Approved') ? 'Approved' : app.status;
+      const calculatedValidUntil = app.validUntil || calculateValidityDate(app.paymentDate || app.submissionDate);
 
       const { error } = await supabase.from('membership_applications').upsert({
         id: app.id,
         full_name: app.fullName,
         dob: validDob,
+        date_of_birth: validDob,
         mobile_number: app.mobileNumber,
         email_address: app.emailAddress,
         company_name: app.companyName,
@@ -472,14 +474,30 @@ export async function updateApplicationDetails(app: MembershipApplication): Prom
         pincode: app.pincode,
         photo_url: app.photoUrl || null,
         utr_number: app.utrNumber,
-        payment_date: app.paymentDate,
-        amount_paid: app.amountPaid,
+        payment_date: app.paymentDate || new Date().toISOString().slice(0, 10),
+        amount_paid: app.amountPaid || '₹ 2,000.00',
         payment_screenshot_url: app.paymentScreenshotUrl || null,
-        submission_date: app.submissionDate || new Date().toISOString().slice(0, 10),
+        submission_date: app.submissionDate || new Date().toLocaleDateString('en-IN', { month: 'short', day: '2-digit', year: 'numeric' }),
         application_type: app.applicationType || 'New Member',
         status: dbStatus,
+        valid_until: calculatedValidUntil,
         updated_at: new Date().toISOString()
       });
+
+      // Synchronize public.profiles table if user exists
+      try {
+        if (app.emailAddress) {
+          await supabase.from('profiles').update({
+            membership_id: app.id,
+            membership_status: 'Active',
+            company_name: app.companyName,
+            district: app.district,
+            valid_until: calculatedValidUntil,
+            updated_at: new Date().toISOString()
+          }).eq('email', app.emailAddress.trim());
+        }
+      } catch {}
+
       return { success: !error, error: error ? error.message : null };
     } catch (err: any) {
       return { success: false, error: err.message };

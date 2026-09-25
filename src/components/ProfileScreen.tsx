@@ -37,6 +37,7 @@ import {
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
 import { calculateValidityDate, fetchUserApplications } from '../lib/supabase';
+import { downloadCertificatePDFDirect, downloadCertificatePNGDirect } from '../lib/certificateGenerator';
 
 interface ProfileScreenProps {
   user: UserProfile | null;
@@ -257,78 +258,27 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
     }, 300);
   };
 
-  // Download Card as High-Resolution PNG Image
+  // 1-Click Direct Download as High-Resolution PNG Image
   const handleDownloadImage = async () => {
     if (!matchedRecord) return;
     setDownloadingFormat('image');
     try {
-      const targetElement = a4DocumentRef.current;
-      if (!targetElement) {
-        window.print();
-        return;
-      }
-
-      const canvas = await html2canvas(targetElement, {
-        scale: 2,
-        useCORS: true,
-        allowTaint: false,
-        backgroundColor: '#ffffff',
-        logging: false,
-        scrollX: 0,
-        scrollY: 0
-      });
-
-      const image = canvas.toDataURL('image/png', 1.0);
-      triggerDownload(image, `APSIWA-Membership-Sheet-${matchedRecord.id}.png`);
+      await downloadCertificatePNGDirect(matchedRecord);
     } catch (err) {
-      console.error('Error generating sheet image:', err);
-      window.print();
+      console.error('Error downloading PNG:', err);
     } finally {
       setDownloadingFormat(null);
     }
   };
 
-  // Download Card as PDF (A4 Portrait Print Ready)
+  // 1-Click Direct Download as Official PDF (A4 Certificate + Detachable ID Card)
   const handleDownloadPDF = async () => {
     if (!matchedRecord) return;
     setDownloadingFormat('pdf');
     try {
-      const targetElement = a4DocumentRef.current;
-      if (!targetElement) {
-        window.print();
-        return;
-      }
-
-      const canvas = await html2canvas(targetElement, {
-        scale: 2,
-        useCORS: true,
-        allowTaint: false,
-        backgroundColor: '#ffffff',
-        logging: false,
-        scrollX: 0,
-        scrollY: 0
-      });
-
-      const imgData = canvas.toDataURL('image/png', 1.0);
-      const pdf = new jsPDF({
-        orientation: 'portrait',
-        unit: 'mm',
-        format: 'a4'
-      });
-
-      const pageWidth = pdf.internal.pageSize.getWidth();
-      const pageHeight = pdf.internal.pageSize.getHeight();
-
-      // Fit calculation for standard A4 portrait (210mm x 297mm)
-      const margin = 8;
-      const printWidth = pageWidth - margin * 2;
-      const printHeight = (canvas.height * printWidth) / canvas.width;
-
-      pdf.addImage(imgData, 'PNG', margin, margin, printWidth, Math.min(printHeight, pageHeight - margin * 2));
-      pdf.save(`APSIWA-Membership-Certificate-${matchedRecord.id}.pdf`);
+      await downloadCertificatePDFDirect(matchedRecord);
     } catch (err) {
-      console.error('Error generating PDF:', err);
-      window.print();
+      console.error('Error downloading PDF:', err);
     } finally {
       setDownloadingFormat(null);
     }

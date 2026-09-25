@@ -74,12 +74,13 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
 
   // Card view & export states
   const [cardSide, setCardSide] = useState<'front' | 'back' | 'both'>('front');
-  const [downloadingFormat, setDownloadingFormat] = useState<'image' | 'pdf' | null>(null);
+  const [downloadingFormat, setDownloadingFormat] = useState<'image' | 'pdf' | 'card' | null>(null);
   const [copiedId, setCopiedId] = useState(false);
   const [activeTab, setActiveTab] = useState<'card' | 'details' | 'timeline'>('card');
 
   // References for capturing DOM elements
   const a4DocumentRef = useRef<HTMLDivElement>(null);
+  const idCardRef = useRef<HTMLDivElement>(null);
 
   // Fetch live applications on component mount
   useEffect(() => {
@@ -176,26 +177,17 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
 
   const matchedRecord = findMembershipRecord(activeSearchedId);
 
-  // Auto-verify if current user matches the searched ID / Phone
+  // Auto-verify / unlock card whenever matched record is Approved or Active
   useEffect(() => {
-    if (user && matchedRecord) {
-      const userPhoneClean = (user.phoneNumber || '').replace(/\D/g, '');
-      const recordPhoneClean = (matchedRecord.mobileNumber || '').replace(/\D/g, '');
-      const isSameUser =
-        (user.membershipId && user.membershipId.toLowerCase() === matchedRecord.id.toLowerCase()) ||
-        (user.email && user.email.toLowerCase() === matchedRecord.emailAddress.toLowerCase()) ||
-        (userPhoneClean.length >= 10 && recordPhoneClean.length >= 10 && userPhoneClean.slice(-10) === recordPhoneClean.slice(-10));
-
-      if (isSameUser) {
-        setIsPhoneVerified(true);
-        return;
-      }
+    if (matchedRecord && (matchedRecord.status === 'Approved' || matchedRecord.status === 'Active')) {
+      setIsPhoneVerified(true);
+    } else {
+      setIsPhoneVerified(false);
     }
-    setIsPhoneVerified(false);
     setPhoneLast4Input('');
     setVerificationError('');
     setVerificationSuccess(false);
-  }, [activeSearchedId, user, matchedRecord?.id]);
+  }, [activeSearchedId, user, matchedRecord?.id, matchedRecord?.status]);
 
   // Handle Search Submission with Live DB Refresh
   const handleSearchSubmit = async (e: React.FormEvent) => {
@@ -203,9 +195,6 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
     if (!searchQuery.trim()) return;
     const clean = searchQuery.trim();
     setActiveSearchedId(clean);
-    setIsPhoneVerified(false);
-    setVerificationError('');
-    setVerificationSuccess(false);
 
     try {
       const live = await fetchUserApplications();
@@ -218,7 +207,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
     } catch {}
   };
 
-  // Handle Last 4 Digits Phone Verification
+  // Handle Last 4 Digits Phone Verification (Manual fallback if needed)
   const handleVerifyPhone = (e: React.FormEvent) => {
     e.preventDefault();
     setVerificationError('');
@@ -254,29 +243,46 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
     setTimeout(() => setCopiedId(false), 2000);
   };
 
+  // Helper to safely trigger browser file download
+  const triggerDownload = (dataUrl: string, filename: string) => {
+    const link = document.createElement('a');
+    link.href = dataUrl;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    setTimeout(() => {
+      if (document.body.contains(link)) {
+        document.body.removeChild(link);
+      }
+    }, 300);
+  };
+
   // Download Card as High-Resolution PNG Image
   const handleDownloadImage = async () => {
-    const isRecordActive = matchedRecord?.status === 'Approved' || matchedRecord?.status === 'Active';
-    if (!isPhoneVerified || !isRecordActive) return;
+    if (!matchedRecord) return;
     setDownloadingFormat('image');
     try {
       const targetElement = a4DocumentRef.current;
-      if (!targetElement) return;
+      if (!targetElement) {
+        window.print();
+        return;
+      }
 
       const canvas = await html2canvas(targetElement, {
-        scale: 3,
+        scale: 2,
         useCORS: true,
+        allowTaint: false,
         backgroundColor: '#ffffff',
-        logging: false
+        logging: false,
+        scrollX: 0,
+        scrollY: 0
       });
 
       const image = canvas.toDataURL('image/png', 1.0);
-      const link = document.createElement('a');
-      link.href = image;
-      link.download = `APSIWA-Membership-Sheet-${matchedRecord.id}.png`;
-      link.click();
+      triggerDownload(image, `APSIWA-Membership-Sheet-${matchedRecord.id}.png`);
     } catch (err) {
       console.error('Error generating sheet image:', err);
+      window.print();
     } finally {
       setDownloadingFormat(null);
     }
@@ -284,21 +290,26 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
 
   // Download Card as PDF (A4 Portrait Print Ready)
   const handleDownloadPDF = async () => {
-    const isRecordActive = matchedRecord?.status === 'Approved' || matchedRecord?.status === 'Active';
-    if (!isPhoneVerified || !isRecordActive) return;
+    if (!matchedRecord) return;
     setDownloadingFormat('pdf');
     try {
       const targetElement = a4DocumentRef.current;
-      if (!targetElement) return;
+      if (!targetElement) {
+        window.print();
+        return;
+      }
 
       const canvas = await html2canvas(targetElement, {
-        scale: 3,
+        scale: 2,
         useCORS: true,
+        allowTaint: false,
         backgroundColor: '#ffffff',
-        logging: false
+        logging: false,
+        scrollX: 0,
+        scrollY: 0
       });
 
-      const imgData = canvas.toDataURL('image/png');
+      const imgData = canvas.toDataURL('image/png', 1.0);
       const pdf = new jsPDF({
         orientation: 'portrait',
         unit: 'mm',
@@ -309,15 +320,44 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
       const pageHeight = pdf.internal.pageSize.getHeight();
 
       // Fit calculation for standard A4 portrait (210mm x 297mm)
-      const margin = 10;
+      const margin = 8;
       const printWidth = pageWidth - margin * 2;
       const printHeight = (canvas.height * printWidth) / canvas.width;
 
       pdf.addImage(imgData, 'PNG', margin, margin, printWidth, Math.min(printHeight, pageHeight - margin * 2));
-
       pdf.save(`APSIWA-Membership-Certificate-${matchedRecord.id}.pdf`);
     } catch (err) {
       console.error('Error generating PDF:', err);
+      window.print();
+    } finally {
+      setDownloadingFormat(null);
+    }
+  };
+
+  // Download Detachable Wallet ID Card Only (PNG)
+  const handleDownloadCardOnly = async () => {
+    if (!matchedRecord) return;
+    setDownloadingFormat('card');
+    try {
+      const targetElement = idCardRef.current;
+      if (!targetElement) {
+        await handleDownloadImage();
+        return;
+      }
+
+      const canvas = await html2canvas(targetElement, {
+        scale: 3,
+        useCORS: true,
+        allowTaint: false,
+        backgroundColor: '#001d4a',
+        logging: false
+      });
+
+      const image = canvas.toDataURL('image/png', 1.0);
+      triggerDownload(image, `APSIWA-ID-Card-${matchedRecord.id}.png`);
+    } catch (err) {
+      console.error('Error generating ID card image:', err);
+      window.print();
     } finally {
       setDownloadingFormat(null);
     }
@@ -325,8 +365,6 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
 
   // Direct Browser Print
   const handlePrint = () => {
-    const isRecordActive = matchedRecord?.status === 'Approved' || matchedRecord?.status === 'Active';
-    if (!isPhoneVerified || !isRecordActive) return;
     window.print();
   };
 
@@ -520,27 +558,61 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
               </div>
             </div>
 
-            {/* Status Pill on Right */}
-            <div className="flex flex-col items-start md:items-end gap-2 shrink-0">
-              <span className="text-[11px] font-bold text-[#737783] uppercase tracking-wider">
-                Accreditation Status
-              </span>
-              <span
-                className={`inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full text-xs font-black shadow-2xs ${
-                  matchedRecord.status === 'Approved'
-                    ? 'bg-[#8ef9a0]/30 text-[#006e2e] border border-[#006e2e]/30'
-                    : matchedRecord.status === 'In Review'
-                    ? 'bg-[#d8e2ff] text-[#001a42] border border-[#003477]/20'
-                    : 'bg-[#ffbe3b]/25 text-[#00285e] border border-[#ffbe3b]/40'
-                }`}
-              >
-                {matchedRecord.status === 'Approved' ? (
-                  <CheckCircle2 size={15} />
-                ) : (
-                  <Clock size={15} />
-                )}
-                <span>{matchedRecord.status}</span>
-              </span>
+            {/* Status Pill & Action Buttons on Right */}
+            <div className="flex flex-col items-start md:items-end gap-3 shrink-0">
+              <div className="flex items-center gap-2">
+                <span className="text-[11px] font-bold text-[#737783] uppercase tracking-wider">
+                  Accreditation:
+                </span>
+                <span
+                  className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-black shadow-2xs ${
+                    matchedRecord.status === 'Approved' || matchedRecord.status === 'Active'
+                      ? 'bg-[#8ef9a0]/30 text-[#006e2e] border border-[#006e2e]/30'
+                      : matchedRecord.status === 'In Review'
+                      ? 'bg-[#d8e2ff] text-[#001a42] border border-[#003477]/20'
+                      : 'bg-[#ffbe3b]/25 text-[#00285e] border border-[#ffbe3b]/40'
+                  }`}
+                >
+                  {matchedRecord.status === 'Approved' || matchedRecord.status === 'Active' ? (
+                    <CheckCircle2 size={15} />
+                  ) : (
+                    <Clock size={15} />
+                  )}
+                  <span>{matchedRecord.status}</span>
+                </span>
+              </div>
+
+              {/* Quick Action Download Buttons on Overview Card */}
+              {(matchedRecord.status === 'Approved' || matchedRecord.status === 'Active') && (
+                <div className="flex items-center gap-2 flex-wrap">
+                  <button
+                    type="button"
+                    onClick={handleDownloadPDF}
+                    disabled={downloadingFormat !== null}
+                    className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[#006e2e] hover:bg-[#005322] text-white font-bold text-xs shadow-xs cursor-pointer active:scale-98 disabled:opacity-60 transition-all"
+                  >
+                    <FileText size={14} />
+                    <span>{downloadingFormat === 'pdf' ? 'Generating PDF...' : 'Download PDF'}</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleDownloadCardOnly}
+                    disabled={downloadingFormat !== null}
+                    className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[#003477] hover:bg-[#024aa3] text-white font-bold text-xs shadow-xs cursor-pointer active:scale-98 disabled:opacity-60 transition-all"
+                  >
+                    <CreditCard size={14} />
+                    <span>{downloadingFormat === 'card' ? 'Exporting...' : 'ID Card (PNG)'}</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handlePrint}
+                    className="p-2 rounded-xl bg-[#f2f4f7] hover:bg-[#e0e3e6] text-[#003477] border border-[#e0e3e6] cursor-pointer transition-all"
+                    title="Print Document"
+                  >
+                    <Printer size={15} />
+                  </button>
+                </div>
+              )}
             </div>
           </div>
 
@@ -685,24 +757,33 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                     type="button"
                     onClick={handleDownloadPDF}
                     disabled={downloadingFormat !== null}
-                    className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#006e2e] hover:bg-[#005322] text-white font-bold text-xs shadow-xs cursor-pointer active:scale-98 disabled:opacity-70"
+                    className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#006e2e] hover:bg-[#005322] text-white font-bold text-xs shadow-xs cursor-pointer active:scale-98 disabled:opacity-70 transition-all"
                   >
                     <FileText size={14} />
                     <span>{downloadingFormat === 'pdf' ? 'Generating PDF...' : 'Download PDF (A4 Sheet)'}</span>
                   </button>
                   <button
                     type="button"
+                    onClick={handleDownloadCardOnly}
+                    disabled={downloadingFormat !== null}
+                    className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#003477] hover:bg-[#024aa3] text-white font-bold text-xs shadow-xs cursor-pointer active:scale-98 disabled:opacity-70 transition-all"
+                  >
+                    <CreditCard size={14} />
+                    <span>{downloadingFormat === 'card' ? 'Exporting...' : 'Download ID Card (PNG)'}</span>
+                  </button>
+                  <button
+                    type="button"
                     onClick={handleDownloadImage}
                     disabled={downloadingFormat !== null}
-                    className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#003477] hover:bg-[#024aa3] text-white font-bold text-xs shadow-xs cursor-pointer active:scale-98 disabled:opacity-70"
+                    className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#434752] hover:bg-[#2e313a] text-white font-bold text-xs shadow-xs cursor-pointer active:scale-98 disabled:opacity-70 transition-all"
                   >
                     <Download size={14} />
-                    <span>{downloadingFormat === 'image' ? 'Exporting...' : 'Download Image'}</span>
+                    <span>{downloadingFormat === 'image' ? 'Exporting...' : 'Download Full Sheet (PNG)'}</span>
                   </button>
                   <button
                     type="button"
                     onClick={handlePrint}
-                    className="p-2 rounded-xl bg-white border border-[#e0e3e6] text-[#003477] hover:bg-[#f2f4f7] cursor-pointer"
+                    className="p-2 rounded-xl bg-white border border-[#e0e3e6] text-[#003477] hover:bg-[#f2f4f7] cursor-pointer transition-all"
                     title="Print Document"
                   >
                     <Printer size={16} />
@@ -728,6 +809,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                         <img
                           src="/logo.png"
                           alt="APSIWA"
+                          crossOrigin="anonymous"
                           className="h-14 w-auto object-contain bg-white rounded-lg p-1 border border-[#003477]/20 shadow-2xs"
                         />
                         <div>
@@ -875,14 +957,18 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                   {/* =========================================================== */}
                   {/* BOTTOM 25%: DETACHABLE WALLET-SIZED FRONT ID CARD (NO QR) */}
                   {/* =========================================================== */}
-                  <div className="pt-1 flex justify-center">
-                    <div className="w-full max-w-[530px] h-[190px] rounded-xl bg-gradient-to-r from-[#001d4a] via-[#003477] to-[#00285e] border-2 border-[#ffbe3b] shadow-lg text-white overflow-hidden flex flex-col justify-between">
+                  <div className="pt-1 flex flex-col items-center gap-3">
+                    <div
+                      ref={idCardRef}
+                      className="w-full max-w-[530px] h-[190px] rounded-xl bg-gradient-to-r from-[#001d4a] via-[#003477] to-[#00285e] border-2 border-[#ffbe3b] shadow-lg text-white overflow-hidden flex flex-col justify-between"
+                    >
                       {/* Card Header */}
                       <div className="bg-[#002255] px-3.5 py-1.5 border-b border-[#ffbe3b] flex items-center justify-between">
                         <div className="flex items-center gap-2">
                           <img
                             src="/logo.png"
                             alt="APSIWA"
+                            crossOrigin="anonymous"
                             className="h-6 w-auto object-contain bg-white rounded-sm p-0.5"
                           />
                           <div>
@@ -908,6 +994,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                               <img
                                 src={matchedRecord.photoUrl}
                                 alt={matchedRecord.fullName}
+                                crossOrigin="anonymous"
                                 className="w-full h-full object-cover"
                               />
                             ) : (
@@ -966,6 +1053,17 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                         <span className="font-bold text-[#8ef9a0]">Authorized Bearer Credential</span>
                       </div>
                     </div>
+
+                    {/* Direct Wallet ID Card Download Button */}
+                    <button
+                      type="button"
+                      onClick={handleDownloadCardOnly}
+                      disabled={downloadingFormat !== null}
+                      className="inline-flex items-center gap-2 px-5 py-2 rounded-xl bg-[#003477] hover:bg-[#024aa3] text-white font-bold text-xs shadow-sm cursor-pointer active:scale-98 disabled:opacity-60 transition-all border border-[#003477]/30"
+                    >
+                      <CreditCard size={14} />
+                      <span>{downloadingFormat === 'card' ? 'Exporting ID Card...' : 'Download This Wallet ID Card (PNG)'}</span>
+                    </button>
                   </div>
                 </div>
               </div>

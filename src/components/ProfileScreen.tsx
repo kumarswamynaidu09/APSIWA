@@ -36,12 +36,13 @@ import {
 } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
-import { calculateValidityDate } from '../lib/supabase';
+import { calculateValidityDate, fetchUserApplications } from '../lib/supabase';
 
 interface ProfileScreenProps {
   user: UserProfile | null;
   onUpdateUser: (updated: UserProfile) => void;
   applications: MembershipApplication[];
+  onRefreshApplications?: () => void;
   onNavigateMembership: () => void;
   onNavigateHome?: () => void;
   onOpenAuth?: () => void;
@@ -51,6 +52,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
   user,
   onUpdateUser,
   applications,
+  onRefreshApplications,
   onNavigateMembership,
   onNavigateHome
 }) => {
@@ -58,6 +60,11 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
   const initialId = user?.membershipId || '';
   const [searchQuery, setSearchQuery] = useState(initialId);
   const [activeSearchedId, setActiveSearchedId] = useState(initialId);
+  const [localApps, setLocalApps] = useState<MembershipApplication[]>(applications);
+
+  useEffect(() => {
+    setLocalApps(applications);
+  }, [applications]);
 
   // Phone verification state for downloading approved card
   const [phoneLast4Input, setPhoneLast4Input] = useState('');
@@ -74,17 +81,37 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
   // References for capturing DOM elements
   const a4DocumentRef = useRef<HTMLDivElement>(null);
 
+  // Fetch live applications on component mount
+  useEffect(() => {
+    fetchUserApplications().then((live) => {
+      if (live && live.length > 0) {
+        setLocalApps(live);
+      }
+    });
+  }, []);
+
   // Find matching application or user profile (Only genuine submitted applications, zero mock data)
   const findMembershipRecord = (queryId: string) => {
     if (!queryId.trim()) return null;
     const cleanQuery = queryId.trim().toLowerCase();
+    const queryDigits = cleanQuery.replace(/\D/g, '');
 
-    // 1. Check in real-time submitted applications
-    const foundApp = applications.find(
-      (app) =>
-        (app.id && app.id.toLowerCase() === cleanQuery) ||
-        (app.mobileNumber && app.mobileNumber.toLowerCase().includes(cleanQuery))
-    );
+    // Combine localApps and applications to prevent missing records
+    const combinedApps = [...localApps, ...applications];
+    const uniqueApps = Array.from(new Map(combinedApps.map((a) => [a.id, a])).values());
+
+    // 1. Check in real-time submitted applications (Match ID, Email, or Mobile Number)
+    const foundApp = uniqueApps.find((app) => {
+      if (!app) return false;
+      if (app.id && app.id.toLowerCase() === cleanQuery) return true;
+      if (app.emailAddress && app.emailAddress.toLowerCase() === cleanQuery) return true;
+      if (queryDigits.length >= 4) {
+        const appDigits = (app.mobileNumber || '').replace(/\D/g, '');
+        if (appDigits.endsWith(queryDigits) || appDigits.includes(queryDigits)) return true;
+      }
+      return false;
+    });
+
     if (foundApp) {
       const validUntil = foundApp.validUntil || calculateValidityDate(foundApp.paymentDate || foundApp.submissionDate);
       return {
@@ -111,29 +138,37 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
     }
 
     // 2. Check current logged-in user
-    if (user && (user.membershipId?.toLowerCase() === cleanQuery || user.phoneNumber?.includes(cleanQuery))) {
-      const validUntil = user.validUntil || calculateValidityDate(user.joinedDate);
-      return {
-        id: user.membershipId || queryId.toUpperCase(),
-        fullName: user.name,
-        emailAddress: user.email,
-        mobileNumber: user.phoneNumber || '',
-        dateOfBirth: user.dateOfBirth || '',
-        companyName: user.companyName || '',
-        designation: user.designation || 'Solar EPC Lead',
-        district: user.district || 'Visakhapatnam',
-        businessType: user.businessType || 'Solar EPC Enterprise',
-        gstNumber: user.gstNumber || '',
-        officeAddress: user.address || 'Visakhapatnam, Andhra Pradesh',
-        pincode: user.pincode || '',
-        photoUrl: user.avatarUrl,
-        applicationType: 'New Member' as const,
-        status: (user.membershipStatus === 'Active' ? 'Approved' : user.membershipStatus || 'Approved') as any,
-        submissionDate: user.joinedDate || '2026',
-        validUntil,
-        amountPaid: '₹ 2,000.00',
-        utrNumber: 'VERIFIED-MEMBER'
-      };
+    if (user) {
+      const userPhoneClean = (user.phoneNumber || '').replace(/\D/g, '');
+      const isMatch =
+        (user.membershipId && user.membershipId.toLowerCase() === cleanQuery) ||
+        (user.email && user.email.toLowerCase() === cleanQuery) ||
+        (queryDigits.length >= 4 && userPhoneClean.length >= 4 && (userPhoneClean.endsWith(queryDigits) || userPhoneClean.includes(queryDigits)));
+
+      if (isMatch) {
+        const validUntil = user.validUntil || calculateValidityDate(user.joinedDate);
+        return {
+          id: user.membershipId || queryId.toUpperCase(),
+          fullName: user.name,
+          emailAddress: user.email,
+          mobileNumber: user.phoneNumber || '',
+          dateOfBirth: user.dateOfBirth || '',
+          companyName: user.companyName || '',
+          designation: user.designation || 'Solar EPC Lead',
+          district: user.district || 'Visakhapatnam',
+          businessType: user.businessType || 'Solar EPC Enterprise',
+          gstNumber: user.gstNumber || '',
+          officeAddress: user.address || 'Visakhapatnam, Andhra Pradesh',
+          pincode: user.pincode || '',
+          photoUrl: user.avatarUrl,
+          applicationType: 'New Member' as const,
+          status: (user.membershipStatus === 'Active' ? 'Approved' : user.membershipStatus || 'Approved') as any,
+          submissionDate: user.joinedDate || '2026',
+          validUntil,
+          amountPaid: '₹ 2,000.00',
+          utrNumber: 'VERIFIED-MEMBER'
+        };
+      }
     }
 
     return null;
@@ -141,26 +176,46 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
 
   const matchedRecord = findMembershipRecord(activeSearchedId);
 
-  // Auto-verify if current user matches the searched ID
+  // Auto-verify if current user matches the searched ID / Phone
   useEffect(() => {
-    if (user && matchedRecord && user.membershipId === matchedRecord.id) {
-      setIsPhoneVerified(true);
-    } else {
-      setIsPhoneVerified(false);
-      setPhoneLast4Input('');
-      setVerificationError('');
-      setVerificationSuccess(false);
-    }
-  }, [activeSearchedId, user]);
+    if (user && matchedRecord) {
+      const userPhoneClean = (user.phoneNumber || '').replace(/\D/g, '');
+      const recordPhoneClean = (matchedRecord.mobileNumber || '').replace(/\D/g, '');
+      const isSameUser =
+        (user.membershipId && user.membershipId.toLowerCase() === matchedRecord.id.toLowerCase()) ||
+        (user.email && user.email.toLowerCase() === matchedRecord.emailAddress.toLowerCase()) ||
+        (userPhoneClean.length >= 10 && recordPhoneClean.length >= 10 && userPhoneClean.slice(-10) === recordPhoneClean.slice(-10));
 
-  // Handle Search Submission
-  const handleSearchSubmit = (e: React.FormEvent) => {
+      if (isSameUser) {
+        setIsPhoneVerified(true);
+        return;
+      }
+    }
+    setIsPhoneVerified(false);
+    setPhoneLast4Input('');
+    setVerificationError('');
+    setVerificationSuccess(false);
+  }, [activeSearchedId, user, matchedRecord?.id]);
+
+  // Handle Search Submission with Live DB Refresh
+  const handleSearchSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!searchQuery.trim()) return;
-    setActiveSearchedId(searchQuery.trim());
+    const clean = searchQuery.trim();
+    setActiveSearchedId(clean);
     setIsPhoneVerified(false);
     setVerificationError('');
     setVerificationSuccess(false);
+
+    try {
+      const live = await fetchUserApplications();
+      if (live && live.length > 0) {
+        setLocalApps(live);
+        if (onRefreshApplications) {
+          onRefreshApplications();
+        }
+      }
+    } catch {}
   };
 
   // Handle Last 4 Digits Phone Verification

@@ -487,6 +487,7 @@ export async function sendApprovalConfirmationEmail(
 
   const validUntil = app.validUntil || calculateValidityDate(app.paymentDate || new Date().toISOString());
   const emailHtml = generateApprovalEmailHtml(app, settings);
+  const emailText = generateApprovalEmailPlainText(app, settings);
   const emailSubject = `Official Membership Approval Confirmation - ${app.fullName} (${app.id})`;
 
   // Determine Resend API Key from settings or environment
@@ -495,12 +496,56 @@ export async function sendApprovalConfirmationEmail(
     (import.meta.env.VITE_RESEND_API_KEY as string | undefined)?.trim() ||
     '';
 
-  const fromAddress =
+  let fromAddress =
     settings?.resendFromEmail?.trim() ||
     (import.meta.env.VITE_RESEND_FROM_EMAIL as string | undefined)?.trim() ||
-    'AP SIWA Secretariat <onboarding@resend.dev>';
+    'APSIWA Secretariat <onboarding@resend.dev>';
 
-  // 1. Try Supabase Edge Function if Supabase is configured
+  // Normalize sender: Resend rejects external domains like @gmail.com without verified domain
+  if (fromAddress.includes('@gmail.com') || fromAddress.includes('@yahoo.com') || fromAddress.includes('@outlook.com') || !fromAddress.includes('@')) {
+    fromAddress = 'APSIWA Secretariat <onboarding@resend.dev>';
+  }
+
+  // 1. Try internal /api/send-email serverless function endpoint first
+  try {
+    const srvRes = await fetch('/api/send-email', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        to: recipientEmail,
+        subject: emailSubject,
+        html: emailHtml,
+        text: emailText,
+        from: fromAddress,
+        apiKey: resendApiKey,
+      }),
+    });
+
+    const contentType = srvRes.headers.get('content-type') || '';
+    if (contentType.includes('application/json')) {
+      const srvData = await srvRes.json();
+      if (srvRes.ok && (srvData?.id || srvData?.data?.id)) {
+        return {
+          success: true,
+          messageId: srvData.id || srvData?.data?.id,
+          simulated: false,
+        };
+      } else if (srvData?.error || srvData?.message) {
+        const errMsg = srvData?.error || srvData?.message;
+        // Check for test restriction
+        if (errMsg.toLowerCase().includes('testing emails') || errMsg.toLowerCase().includes('verify a domain')) {
+          return {
+            success: false,
+            error: `Resend Test Mode: Free API keys can only deliver to your verified Resend account email. Use the 1-Click Gmail button below to send directly to ${recipientEmail}.`,
+          };
+        }
+      }
+    }
+  } catch {
+    // Continue to next fallback strategy
+  }
+
+  // 2. Try Supabase Edge Function if Supabase is configured
   if (isSupabaseConfigured()) {
     try {
       const { data, error } = await supabase.functions.invoke('send-approval-email', {
@@ -513,19 +558,19 @@ export async function sendApprovalConfirmationEmail(
         },
       });
 
-      if (!error && data?.id) {
+      if (!error && (data?.id || data?.data?.id)) {
         return {
           success: true,
-          messageId: data.id,
+          messageId: data.id || data?.data?.id,
           simulated: false,
         };
       }
     } catch (err) {
-      console.warn('Supabase Edge function invocation fallback to Resend API:', err);
+      console.warn('Supabase Edge function invocation note:', err);
     }
   }
 
-  // 2. Resend REST API invocation (uses proxy / direct / transparent fallback)
+  // 3. Resend REST API invocation via Vite proxy & direct gateways
   if (resendApiKey) {
     const endpoints = [
       '/api/resend/emails',
@@ -546,10 +591,10 @@ export async function sendApprovalConfirmationEmail(
             to: [recipientEmail],
             subject: emailSubject,
             html: emailHtml,
+            text: emailText,
           }),
         });
 
-        // Check if response is HTML (e.g. 404/SPA route fallback without proxy)
         const contentType = response.headers.get('content-type') || '';
         if (contentType.includes('text/html')) {
           continue;
@@ -558,12 +603,10 @@ export async function sendApprovalConfirmationEmail(
         let resData: any = {};
         try {
           resData = await response.json();
-        } catch {
-          // Non-JSON response
-        }
+        } catch {}
 
-        // If custom from domain is not verified yet in Resend, auto-retry with onboarding@resend.dev
-        if (!response.ok && fromAddress !== 'AP SIWA Secretariat <onboarding@resend.dev>') {
+        // If custom from address failed, retry with onboarding@resend.dev
+        if (!response.ok && fromAddress !== 'APSIWA Secretariat <onboarding@resend.dev>') {
           response = await fetch(endpoint, {
             method: 'POST',
             headers: {
@@ -571,10 +614,11 @@ export async function sendApprovalConfirmationEmail(
               Authorization: `Bearer ${resendApiKey}`,
             },
             body: JSON.stringify({
-              from: 'AP SIWA Secretariat <onboarding@resend.dev>',
+              from: 'APSIWA Secretariat <onboarding@resend.dev>',
               to: [recipientEmail],
               subject: emailSubject,
               html: emailHtml,
+              text: emailText,
             }),
           });
           try {
@@ -589,21 +633,27 @@ export async function sendApprovalConfirmationEmail(
             messageId: msgId,
             simulated: false,
           };
-        } else if (response.status !== 404 && resData?.message) {
-          const errorMsg = resData?.message || resData?.error || response.statusText || 'Delivery rejected';
+        } else if (resData?.message || resData?.error) {
+          const rawErr = resData?.message || resData?.error || response.statusText;
+          if (rawErr.toLowerCase().includes('testing emails') || rawErr.toLowerCase().includes('verify a domain')) {
+            return {
+              success: false,
+              error: `Resend Notice: Testing API key can only send to your account email. Use the 1-Click Gmail button below to send to ${recipientEmail}.`,
+            };
+          }
           return {
             success: false,
-            error: `Resend: ${errorMsg}`,
+            error: `Resend API: ${rawErr}`,
           };
         }
-      } catch (err: any) {
-        // Continue to next endpoint seamlessly
+      } catch {
+        // Try next fallback endpoint
       }
     }
   }
 
   return {
     success: false,
-    error: 'Could not deliver email. Please check your internet connection or verify Resend API key in settings.',
+    error: 'Email delivery via Resend API could not complete. Use the 1-Click Gmail Web button below to dispatch immediately.',
   };
 }

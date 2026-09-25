@@ -454,6 +454,7 @@ export async function updateApplicationDetails(app: MembershipApplication): Prom
   if (isSupabaseConfigured()) {
     try {
       const validDob = (app.dateOfBirth && app.dateOfBirth.trim() !== '' && app.dateOfBirth !== 'N/A') ? app.dateOfBirth : null;
+      const dbStatus = (app.status === 'Active' || app.status === 'Approved') ? 'Approved' : app.status;
 
       const { error } = await supabase.from('membership_applications').upsert({
         id: app.id,
@@ -473,7 +474,11 @@ export async function updateApplicationDetails(app: MembershipApplication): Prom
         utr_number: app.utrNumber,
         payment_date: app.paymentDate,
         amount_paid: app.amountPaid,
-        status: app.status,
+        payment_screenshot_url: app.paymentScreenshotUrl || null,
+        submission_date: app.submissionDate || new Date().toISOString().slice(0, 10),
+        application_type: app.applicationType || 'New Member',
+        status: dbStatus,
+        updated_at: new Date().toISOString()
       });
       return { success: !error, error: error ? error.message : null };
     } catch (err: any) {

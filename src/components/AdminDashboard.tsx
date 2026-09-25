@@ -285,26 +285,37 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     return matchesSearch && matchesStatus && matchesDistrict && matchesType;
   });
 
+  // Email Dispatch & Preview Modal State
+  const [emailModalApp, setEmailModalApp] = useState<MembershipApplication | null>(null);
+  const [sendingEmailId, setSendingEmailId] = useState<string | null>(null);
+  const [copiedEmailText, setCopiedEmailText] = useState(false);
+
   // Direct 1-Click Send Email Confirmation & Official A4 Digital Card via Resend
   const handleSendEmailConfirmation = async (app: MembershipApplication) => {
     if (!app.emailAddress) {
       alert('This member does not have an email address recorded.');
       return;
     }
-    setActionSuccessMsg(`Sending official A4 membership certificate & ID card email to ${app.emailAddress}...`);
+    setSendingEmailId(app.id);
+    setActionSuccessMsg(`Dispatching official A4 membership certificate & ID card email to ${app.emailAddress}...`);
     
-    const result = await sendApprovalConfirmationEmail(app, websiteSettings);
+    try {
+      const result = await sendApprovalConfirmationEmail(app, websiteSettings);
 
-    if (result.success) {
-      if (result.simulated) {
-        setActionSuccessMsg(`Email prepared for ${app.fullName} (${app.emailAddress}). Configure Resend API Key in Settings for live sending.`);
+      if (result.success) {
+        setActionSuccessMsg(`Official approval email & A4 digital ID card delivered to ${app.emailAddress} via Resend! (ID: ${result.messageId || 'Delivered'})`);
       } else {
-        setActionSuccessMsg(`Official approval email & A4 digital ID card sent to ${app.emailAddress} via Resend! (ID: ${result.messageId || 'Delivered'})`);
+        // Open the dispatch modal with 1-click Gmail Web and diagnostic details
+        setEmailModalApp(app);
+        setActionSuccessMsg(`Email Notice: ${result.error}`);
       }
-    } else {
-      setActionSuccessMsg(`Email notice: ${result.error}`);
+    } catch (err: any) {
+      setEmailModalApp(app);
+      setActionSuccessMsg(`Email Notice: ${err?.message || 'Please use Gmail 1-Click dispatch.'}`);
+    } finally {
+      setSendingEmailId(null);
+      setTimeout(() => setActionSuccessMsg(''), 7000);
     }
-    setTimeout(() => setActionSuccessMsg(''), 5500);
   };
 
   // 1-Click Approve Handler (Updates DB & automatically pushes Resend confirmation email)
@@ -312,7 +323,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     const validUntilDate = app.validUntil || calculateValidityDate(app.paymentDate || new Date().toISOString());
     const updated: MembershipApplication = {
       ...app,
-      status: 'Active',
+      status: 'Approved',
       validUntil: validUntilDate
     };
     await updateApplicationDetails(updated);
@@ -323,22 +334,27 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
     // Push email confirmation via Resend with membership card & credentials
     if (updated.emailAddress) {
+      setSendingEmailId(app.id);
       setActionSuccessMsg(`Approved ${app.id}! Dispatching confirmation email with digital card to ${updated.emailAddress}...`);
-      const emailResult = await sendApprovalConfirmationEmail(updated, websiteSettings);
-      if (emailResult.success) {
-        if (emailResult.simulated) {
-          setActionSuccessMsg(`Member ${app.fullName} (${app.id}) approved! Valid until ${validUntilDate}. (Email prepared for ${updated.emailAddress})`);
+      try {
+        const emailResult = await sendApprovalConfirmationEmail(updated, websiteSettings);
+        if (emailResult.success) {
+          setActionSuccessMsg(`Member ${app.fullName} approved and official confirmation email delivered to ${updated.emailAddress} via Resend!`);
         } else {
-          setActionSuccessMsg(`Member ${app.fullName} approved and official confirmation email sent to ${updated.emailAddress} via Resend!`);
+          setEmailModalApp(updated);
+          setActionSuccessMsg(`Member approved! ${emailResult.error}`);
         }
-      } else {
-        setActionSuccessMsg(`Member approved, email notice: ${emailResult.error}`);
+      } catch (err: any) {
+        setEmailModalApp(updated);
+        setActionSuccessMsg(`Member approved! Open Gmail to deliver certificate to ${updated.emailAddress}.`);
+      } finally {
+        setSendingEmailId(null);
       }
     } else {
       setActionSuccessMsg(`Application ${app.id} (${app.fullName}) approved! Membership is active & valid until ${validUntilDate}.`);
     }
 
-    setTimeout(() => setActionSuccessMsg(''), 5500);
+    setTimeout(() => setActionSuccessMsg(''), 7000);
   };
 
   // 1-Click Toggle Active / Inactive Status
@@ -1586,11 +1602,27 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                                 <button
                                   type="button"
                                   onClick={() => handleQuickApprove(app)}
-                                  className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-[#006e2e] hover:bg-[#005322] text-white text-[11px] font-bold transition-all cursor-pointer shadow-xs active:scale-95"
+                                  disabled={sendingEmailId === app.id}
+                                  className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-[#006e2e] hover:bg-[#005322] text-white text-[11px] font-bold transition-all cursor-pointer shadow-xs active:scale-95 disabled:opacity-75"
                                   title="1-Click Approve Application & Activate Live Card"
                                 >
-                                  <Check size={12} />
-                                  <span>Approve</span>
+                                  {sendingEmailId === app.id ? (
+                                    <RefreshCw size={12} className="animate-spin" />
+                                  ) : (
+                                    <Check size={12} />
+                                  )}
+                                  <span>{sendingEmailId === app.id ? 'Approving...' : 'Approve'}</span>
+                                </button>
+                              )}
+
+                              {app.emailAddress && (
+                                <button
+                                  type="button"
+                                  onClick={() => setEmailModalApp(app)}
+                                  className="p-1.5 rounded-xl bg-[#f0f4ff] hover:bg-[#d8e2ff] text-[#003477] border border-[#003477]/20 transition-colors cursor-pointer"
+                                  title="Open Email Dispatcher & Live Certificate Preview"
+                                >
+                                  <Send size={13} />
                                 </button>
                               )}
 
@@ -3251,7 +3283,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
       {/* ========================================================================= */}
       {/* MEMBER DOSSIER & PHOTO CONTROLS MODAL */}
       {/* ========================================================================= */}
-      {viewingApp && (
+      {viewingApp && (() => {
+        const isViewingAppActive = viewingApp.status === 'Active' || viewingApp.status === 'Approved';
+        return (
         <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-150 overflow-y-auto">
           <div className="bg-white rounded-3xl max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl border border-[#e0e3e6] p-6 sm:p-8 space-y-6 animate-in zoom-in-95 duration-200">
             {/* Modal Header */}
@@ -3339,27 +3373,49 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
             {/* Dossier Action Buttons */}
             <div className="pt-4 border-t border-[#e0e3e6] flex flex-wrap items-center justify-between gap-3">
               <div className="flex items-center gap-2 flex-wrap">
+                {(!isViewingAppActive && viewingApp.status !== 'Inactive') && (
+                  <button
+                    type="button"
+                    onClick={() => handleQuickApprove(viewingApp)}
+                    disabled={sendingEmailId === viewingApp.id}
+                    className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#006e2e] hover:bg-[#005322] text-white font-black text-xs cursor-pointer shadow-sm active:scale-95 disabled:opacity-75"
+                  >
+                    {sendingEmailId === viewingApp.id ? (
+                      <>
+                        <RefreshCw size={13} className="animate-spin" />
+                        <span>Approving &amp; Sending Email...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Check size={14} />
+                        <span>Approve &amp; Activate ID</span>
+                      </>
+                    )}
+                  </button>
+                )}
+
                 <button
                   type="button"
                   onClick={() => handleToggleActiveStatus(viewingApp)}
                   className={`inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold border transition-colors cursor-pointer ${
-                    viewingApp.status === 'Active' || viewingApp.status === 'Approved'
+                    isViewingAppActive
                       ? 'bg-[#fff0ed] text-[#ba1a1a] border-[#ffdad6] hover:bg-[#ffdad6]'
                       : 'bg-[#e8f5e9] text-[#006e2e] border-[#8ef9a0]/40 hover:bg-[#8ef9a0]/30'
                   }`}
                 >
                   <Power size={13} />
-                  <span>{viewingApp.status === 'Active' || viewingApp.status === 'Approved' ? 'Set Inactive' : 'Set Active'}</span>
+                  <span>{isViewingAppActive ? 'Set Inactive' : 'Set Active'}</span>
                 </button>
 
                 {viewingApp.emailAddress && (
                   <button
                     type="button"
-                    onClick={() => handleSendEmailConfirmation(viewingApp)}
-                    className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-[#f0f4ff] hover:bg-[#d8e2ff] text-[#003477] font-bold text-xs cursor-pointer border border-[#003477]/20"
+                    onClick={() => setEmailModalApp(viewingApp)}
+                    className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[#f0f4ff] hover:bg-[#d8e2ff] text-[#003477] font-bold text-xs cursor-pointer border border-[#003477]/30"
+                    title="Open Email Dispatch & Live Preview"
                   >
                     <Send size={13} />
-                    <span>Send ID Email</span>
+                    <span>Dispatch / Preview Email</span>
                   </button>
                 )}
 
@@ -3388,7 +3444,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
             </div>
           </div>
         </div>
-      )}
+        );
+      })()}
 
       {/* ========================================================================= */}
       {/* EDIT ANY APPLICATION FIELD MODAL */}
@@ -3851,10 +3908,143 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
             </div>
             <button
               onClick={() => setViewingReceiptUrl(null)}
-              className="w-full py-2.5 rounded-xl bg-[#003477] text-white text-xs font-bold"
+              className="w-full py-2.5 rounded-xl bg-[#003477] text-white text-xs font-bold cursor-pointer"
             >
               Close
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* EMAIL DISPATCH & LIVE PREVIEW MODAL */}
+      {emailModalApp && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-150 overflow-y-auto">
+          <div className="bg-white rounded-3xl max-w-3xl w-full max-h-[92vh] overflow-y-auto shadow-2xl border border-[#e0e3e6] p-6 sm:p-8 space-y-5 animate-in zoom-in-95 duration-200">
+            {/* Header */}
+            <div className="flex items-center justify-between pb-3.5 border-b border-[#e0e3e6]">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-[#003477] text-white flex items-center justify-center font-bold">
+                  <Mail size={20} />
+                </div>
+                <div>
+                  <h3 className="text-base sm:text-lg font-black text-[#191c1e]">
+                    Official Membership Certificate Email Dispatcher
+                  </h3>
+                  <p className="text-xs text-[#737783]">
+                    Recipient: <strong className="text-[#003477]">{emailModalApp.fullName}</strong> ({emailModalApp.emailAddress || 'No Email'})
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setEmailModalApp(null)}
+                className="p-1.5 rounded-full bg-[#f2f4f7] hover:bg-[#e0e3e6] text-[#434752] cursor-pointer"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            {/* Quick Dispatch Action Bar */}
+            <div className="bg-[#f0f7ff] border border-[#bcd7ff] rounded-2xl p-4 space-y-3">
+              <span className="text-xs font-bold text-[#003477] block">
+                Choose Dispatch Delivery Mode:
+              </span>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                {/* 1-Click Send via API (Resend) */}
+                <button
+                  type="button"
+                  onClick={() => handleSendEmailConfirmation(emailModalApp)}
+                  disabled={sendingEmailId === emailModalApp.id}
+                  className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-[#006e2e] hover:bg-[#005322] text-white font-extrabold text-xs shadow-xs cursor-pointer active:scale-98 disabled:opacity-75"
+                >
+                  {sendingEmailId === emailModalApp.id ? (
+                    <>
+                      <RefreshCw size={14} className="animate-spin" />
+                      <span>Sending via Resend...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Send size={14} />
+                      <span>Send via Resend API</span>
+                    </>
+                  )}
+                </button>
+
+                {/* 1-Click Gmail Web Compose */}
+                <a
+                  href={generateGmailWebLink(emailModalApp, websiteSettings)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-[#ea4335] hover:bg-[#d93025] text-white font-extrabold text-xs shadow-xs cursor-pointer active:scale-98 transition-all"
+                >
+                  <ExternalLink size={14} />
+                  <span>1-Click Gmail Web</span>
+                </a>
+
+                {/* Open in Mail Client */}
+                <a
+                  href={generateMailtoLink(emailModalApp, websiteSettings)}
+                  className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-[#003477] hover:bg-[#024aa3] text-white font-extrabold text-xs shadow-xs cursor-pointer active:scale-98 transition-all"
+                >
+                  <Mail size={14} />
+                  <span>System Mail App</span>
+                </a>
+              </div>
+
+              {/* Copy Plaintext Option */}
+              <div className="flex items-center justify-between pt-1 border-t border-[#bcd7ff] text-xs">
+                <span className="text-[11.5px] text-[#475569]">
+                  Need text for WhatsApp or SMS?
+                </span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const text = generateApprovalEmailPlainText(emailModalApp, websiteSettings);
+                    navigator.clipboard.writeText(text);
+                    setCopiedEmailText(true);
+                    setTimeout(() => setCopiedEmailText(false), 3000);
+                  }}
+                  className="text-xs font-bold text-[#003477] hover:underline cursor-pointer inline-flex items-center gap-1"
+                >
+                  {copiedEmailText ? (
+                    <>
+                      <Check size={13} className="text-[#006e2e]" />
+                      <span className="text-[#006e2e]">Copied to Clipboard!</span>
+                    </>
+                  ) : (
+                    <>
+                      <Copy size={13} />
+                      <span>Copy Dossier Text</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+
+            {/* Live HTML Email Preview Window */}
+            <div className="space-y-2">
+              <span className="text-xs font-bold text-[#191c1e] block">
+                Live Certificate Email Preview:
+              </span>
+              <div className="border border-[#e0e3e6] rounded-2xl overflow-hidden bg-[#e9ecef] shadow-inner">
+                <iframe
+                  title="Approval Email Preview"
+                  srcDoc={generateApprovalEmailHtml(emailModalApp, websiteSettings)}
+                  className="w-full h-[380px] border-none"
+                />
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="pt-2 flex justify-end">
+              <button
+                type="button"
+                onClick={() => setEmailModalApp(null)}
+                className="px-5 py-2 rounded-xl bg-[#f2f4f7] hover:bg-[#e0e3e6] text-[#434752] font-bold text-xs cursor-pointer"
+              >
+                Close
+              </button>
+            </div>
           </div>
         </div>
       )}

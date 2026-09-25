@@ -492,7 +492,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
           {/* ===================================================================== */}
           {/* 4. STATUS NOTICES: IF NOT APPROVED (PENDING OR IN REVIEW) */}
           {/* ===================================================================== */}
-          {matchedRecord.status !== 'Approved' && (
+          {!((matchedRecord.status === 'Approved' || matchedRecord.status === 'Active')) && (
             <div className="bg-gradient-to-br from-[#fff8e1] to-[#ffecb3]/40 rounded-3xl p-6 sm:p-8 border border-[#ffbe3b]/60 shadow-xs space-y-4">
               <div className="flex items-start gap-4">
                 <div className="w-12 h-12 rounded-2xl bg-[#ffbe3b] text-[#00285e] flex items-center justify-center shrink-0 shadow-sm">
@@ -533,7 +533,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
           {/* ===================================================================== */}
           {/* 5. IF APPROVED: PHONE VERIFICATION GATE (LAST 4 DIGITS) */}
           {/* ===================================================================== */}
-          {matchedRecord.status === 'Approved' && !isPhoneVerified && (
+          {(matchedRecord.status === 'Approved' || matchedRecord.status === 'Active') && !isPhoneVerified && (
             <div className="bg-white rounded-3xl p-6 sm:p-8 border-2 border-[#003477]/20 shadow-md space-y-6">
               <div className="flex items-start gap-4">
                 <div className="w-12 h-12 rounded-2xl bg-[#003477] text-white flex items-center justify-center shrink-0 shadow-sm">
@@ -615,7 +615,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
           {/* ===================================================================== */}
           {/* 6. FULL UNLOCKED STATE: A4 MEMBERSHIP SHEET & DOWNLOAD OPTIONS */}
           {/* ===================================================================== */}
-          {matchedRecord.status === 'Approved' && isPhoneVerified && (
+          {(matchedRecord.status === 'Approved' || matchedRecord.status === 'Active') && isPhoneVerified && (
             <div className="space-y-6 animate-in zoom-in-95 duration-200">
               {/* Unlocked banner & Export Controls */}
               <div className="bg-[#e8f5e9] border border-[#006e2e]/30 rounded-2xl p-4 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs shadow-xs">

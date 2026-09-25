@@ -145,24 +145,45 @@ export const StatusTrackerModal: React.FC<StatusTrackerModalProps> = ({
                 <p className="text-[11px] text-[#434752] font-semibold uppercase tracking-wider">
                   Accreditation Timeline
                 </p>
-                <div className="space-y-2 text-[12px]">
-                  <div className="flex items-center gap-2.5 text-[#006e2e]">
-                    <CheckCircle2 size={16} />
-                    <span className="font-medium">1. Application &amp; UPI Remittance Filed</span>
+                {matchedApp.status === 'Active' || matchedApp.status === 'Approved' ? (
+                  <div className="space-y-2 text-[12px]">
+                    <div className="flex items-center gap-2.5 text-[#006e2e]">
+                      <CheckCircle2 size={16} />
+                      <span className="font-semibold">1. Application &amp; UPI Remittance Filed (Verified)</span>
+                    </div>
+                    <div className="flex items-center gap-2.5 text-[#006e2e]">
+                      <CheckCircle2 size={16} />
+                      <span className="font-semibold">2. Secretariat Audit &amp; UTR Reconciliation (Verified)</span>
+                    </div>
+                    <div className="flex items-center gap-2.5 text-[#006e2e]">
+                      <CheckCircle2 size={16} />
+                      <span className="font-semibold">3. Executive Council Board Approval (Approved &amp; Active)</span>
+                    </div>
+                    <div className="flex items-center gap-2.5 text-[#006e2e]">
+                      <CheckCircle2 size={16} />
+                      <span className="font-semibold">4. Digital Certificate &amp; Smart ID Card Activated</span>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2.5 text-[#003477]">
-                    <Clock size={16} />
-                    <span className="font-medium">2. Secretariat Audit &amp; UTR Reconciliation (In Progress)</span>
+                ) : (
+                  <div className="space-y-2 text-[12px]">
+                    <div className="flex items-center gap-2.5 text-[#006e2e]">
+                      <CheckCircle2 size={16} />
+                      <span className="font-medium">1. Application &amp; UPI Remittance Filed</span>
+                    </div>
+                    <div className="flex items-center gap-2.5 text-[#003477]">
+                      <Clock size={16} />
+                      <span className="font-medium">2. Secretariat Audit &amp; UTR Reconciliation (In Progress)</span>
+                    </div>
+                    <div className="flex items-center gap-2.5 text-[#737783]">
+                      <Circle size={16} />
+                      <span>3. Executive Council Board Approval</span>
+                    </div>
+                    <div className="flex items-center gap-2.5 text-[#737783]">
+                      <Circle size={16} />
+                      <span>4. Digital Certificate &amp; Physical ID Card Dispatch</span>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2.5 text-[#737783]">
-                    <Circle size={16} />
-                    <span>3. Executive Council Board Approval</span>
-                  </div>
-                  <div className="flex items-center gap-2.5 text-[#737783]">
-                    <Circle size={16} />
-                    <span>4. Digital Certificate &amp; Physical ID Card Dispatch</span>
-                  </div>
-                </div>
+                )}
               </div>
             </div>
           ) : (

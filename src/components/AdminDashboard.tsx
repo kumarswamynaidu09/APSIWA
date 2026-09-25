@@ -245,21 +245,28 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
   const isAdmin = isAdminUser(currentUser?.email);
 
-  // Stats calculations
-  const totalApps = applications.length;
-  const newMemberApps = applications.filter((a) => a.applicationType !== 'Existing Member');
-  const existingMemberApps = applications.filter((a) => a.applicationType === 'Existing Member');
+  // Local applications state for instant zero-lag UI updates
+  const [localApplications, setLocalApplications] = useState<MembershipApplication[]>(applications);
 
-  const activeCount = applications.filter((a) => a.status === 'Active' || a.status === 'Approved').length;
-  const inactiveCount = applications.filter((a) => a.status === 'Inactive').length;
-  const pendingCount = applications.filter((a) => a.status === 'Pending Verification' || a.status === 'In Review').length;
-  const rejectedCount = applications.filter((a) => a.status === 'Rejected').length;
+  useEffect(() => {
+    setLocalApplications(applications);
+  }, [applications]);
+
+  // Stats calculations
+  const totalApps = localApplications.length;
+  const newMemberApps = localApplications.filter((a) => a.applicationType !== 'Existing Member');
+  const existingMemberApps = localApplications.filter((a) => a.applicationType === 'Existing Member');
+
+  const activeCount = localApplications.filter((a) => a.status === 'Active' || a.status === 'Approved').length;
+  const inactiveCount = localApplications.filter((a) => a.status === 'Inactive').length;
+  const pendingCount = localApplications.filter((a) => a.status === 'Pending Verification' || a.status === 'In Review').length;
+  const rejectedCount = localApplications.filter((a) => a.status === 'Rejected').length;
 
   const approvedNewCount = newMemberApps.filter((a) => a.status === 'Approved' || a.status === 'Active').length;
   const totalRevenue = approvedNewCount * (websiteSettings.isExpoActive ? websiteSettings.expoFee : websiteSettings.regularFee);
 
   // Filtered applications list
-  const filteredApps = applications.filter((app) => {
+  const filteredApps = localApplications.filter((app) => {
     const matchesSearch =
       (app.fullName || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
       (app.companyName || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -322,17 +329,26 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
       status: 'Approved',
       validUntil: validUntilDate
     };
+
+    // 1. Instant local UI update (zero delay)
+    setLocalApplications((prev) =>
+      prev.map((a) => (a.id?.toLowerCase() === app.id?.toLowerCase() ? updated : a))
+    );
+
+    // 2. Global state & localStorage update
     if (onUpdateApplication) {
       onUpdateApplication(updated);
     }
-    await updateApplicationDetails(updated);
+
     if (viewingApp?.id === app.id) {
       setViewingApp(updated);
     }
-    onRefreshApplications();
     setActionSuccessMsg(`✅ Member ${app.fullName} (${app.id}) Approved & Active!`);
 
-    // Push email confirmation directly
+    // 3. Database update
+    await updateApplicationDetails(updated);
+
+    // 4. Background email push
     if (updated.emailAddress) {
       setSendingEmailId(app.id);
       sendApprovalConfirmationEmail(updated, websiteSettings)
@@ -359,10 +375,17 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
       status: newStatus,
       validUntil: newStatus === 'Active' ? (app.validUntil || calculateValidityDate(app.paymentDate)) : app.validUntil
     };
+
+    // 1. Instant local UI update
+    setLocalApplications((prev) =>
+      prev.map((a) => (a.id?.toLowerCase() === app.id?.toLowerCase() ? updated : a))
+    );
+
+    // 2. Global state update
     if (onUpdateApplication) {
       onUpdateApplication(updated);
     }
-    await updateApplicationDetails(updated);
+
     if (viewingApp?.id === app.id) {
       setViewingApp(updated);
     }
@@ -370,7 +393,10 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
       setEditingApp(updated);
     }
     setActionSuccessMsg(`Membership ${app.id} (${app.fullName}) status updated to ${newStatus}!`);
-    onRefreshApplications();
+
+    // 3. Database update
+    await updateApplicationDetails(updated);
+
     setTimeout(() => setActionSuccessMsg(''), 4000);
   };
 
@@ -1626,11 +1652,12 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                               {app.emailAddress && (
                                 <button
                                   type="button"
-                                  onClick={() => setEmailModalApp(app)}
+                                  onClick={() => handleSendEmailConfirmation(app)}
+                                  disabled={sendingEmailId === app.id}
                                   className="p-1.5 rounded-xl bg-[#f0f4ff] hover:bg-[#d8e2ff] text-[#003477] border border-[#003477]/20 transition-colors cursor-pointer"
-                                  title="Open Email Dispatcher & Live Certificate Preview"
+                                  title="Push Official Approval Email to Member"
                                 >
-                                  <Send size={13} />
+                                  {sendingEmailId === app.id ? <RefreshCw size={13} className="animate-spin" /> : <Send size={13} />}
                                 </button>
                               )}
 
@@ -3418,12 +3445,13 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 {viewingApp.emailAddress && (
                   <button
                     type="button"
-                    onClick={() => setEmailModalApp(viewingApp)}
+                    onClick={() => handleSendEmailConfirmation(viewingApp)}
+                    disabled={sendingEmailId === viewingApp.id}
                     className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[#f0f4ff] hover:bg-[#d8e2ff] text-[#003477] font-bold text-xs cursor-pointer border border-[#003477]/30"
-                    title="Open Email Dispatch & Live Preview"
+                    title="Push Official Approval Email to Member"
                   >
-                    <Send size={13} />
-                    <span>Dispatch / Preview Email</span>
+                    {sendingEmailId === viewingApp.id ? <RefreshCw size={13} className="animate-spin" /> : <Send size={13} />}
+                    <span>{sendingEmailId === viewingApp.id ? 'Sending Email...' : 'Send Approval Email'}</span>
                   </button>
                 )}
 

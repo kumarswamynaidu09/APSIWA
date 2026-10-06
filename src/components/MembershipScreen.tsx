@@ -1319,7 +1319,7 @@ export const MembershipScreen: React.FC<MembershipScreenProps> = ({
                   <span>Broadcast Notification</span>
                 </div>
                 <p className="text-[11.5px] text-[#737783] leading-relaxed">
-                  Official SMS and email alerts with renewal windows and discounted rates will be dispatched to all registered members once activated.
+                  Official SMS and email alerts with renewal windows will be dispatched to all registered members once activated.
                 </p>
               </div>
             </div>

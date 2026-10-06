@@ -77,17 +77,14 @@ export const Header: React.FC<HeaderProps> = ({
 
           {/* Right: Become Member CTA & Profile Section */}
           <div className="flex items-center justify-end gap-2.5 sm:gap-3.5 shrink-0">
-            {/* Become a Member Button with 60% Expo Discount Badge */}
+            {/* Become a Member Button */}
             <button
               onClick={() => {
                 onNavigate('membership');
                 window.scrollTo({ top: 0, behavior: 'smooth' });
               }}
-              className="relative inline-flex items-center gap-1.5 sm:gap-2 px-3.5 sm:px-5 py-2 sm:py-2.5 bg-gradient-to-r from-[#006e2e] via-[#008738] to-[#006e2e] text-[#ffffff] text-[12.5px] sm:text-[13.5px] font-extrabold rounded-xl shadow-md hover:shadow-lg hover:scale-105 transition-all duration-200 cursor-pointer whitespace-nowrap active:scale-95 animate-pulse ring-2 ring-[#8ef9a0]/70"
+              className="inline-flex items-center gap-1.5 sm:gap-2 px-3.5 sm:px-5 py-2 sm:py-2.5 bg-gradient-to-r from-[#006e2e] via-[#008738] to-[#006e2e] text-[#ffffff] text-[12.5px] sm:text-[13.5px] font-extrabold rounded-xl shadow-md hover:shadow-lg hover:scale-105 transition-all duration-200 cursor-pointer whitespace-nowrap active:scale-95"
             >
-              <span className="absolute -top-2.5 -right-1 px-1.5 py-0.5 rounded-full bg-[#ffbe3b] text-[#00285e] text-[9px] font-black uppercase tracking-wider shadow-sm animate-bounce">
-                60% OFF
-              </span>
               <UserPlus size={18} className="shrink-0" />
               <span>Become a Member</span>
             </button>
@@ -208,7 +205,7 @@ export const Header: React.FC<HeaderProps> = ({
               className="w-full py-2.5 px-4 bg-gradient-to-r from-[#006e2e] via-[#008738] to-[#006e2e] text-white rounded-xl text-center font-extrabold text-[13px] flex items-center justify-center gap-2 shadow-md"
             >
               <UserPlus size={18} />
-              <span>Become a Member (60% Expo OFF)</span>
+              <span>Become a Member</span>
             </button>
 
             <button

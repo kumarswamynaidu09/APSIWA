@@ -560,10 +560,10 @@ export async function deleteApplication(id: string): Promise<{ success: boolean;
 // Default Website Settings
 export const DEFAULT_WEBSITE_SETTINGS: WebsiteSettings = {
   regularFee: 5000,
-  expoFee: 2000,
-  expoDiscountPercentage: 60,
-  expoOfferTitle: 'Special Solar Expo Inaugural Offer (60% OFF)',
-  isExpoActive: true,
+  expoFee: 5000,
+  expoDiscountPercentage: 0,
+  expoOfferTitle: 'Annual Membership Fee',
+  isExpoActive: false,
   upiId: 'andhrapradeshsolarintegratorswelfareassociation@idbi',
   accountNumber: '1018102000010052',
   ifscCode: 'IBKL0001018',
@@ -573,7 +573,7 @@ export const DEFAULT_WEBSITE_SETTINGS: WebsiteSettings = {
   secretariatAddress: 'Association Secretariat, Visakhapatnam, Andhra Pradesh, India',
   secretariatPhone: '+91 9866194904 / +91 9440316267',
   secretariatEmail: 'apsiwa2018@gmail.com',
-  announcementText: 'Official institutional registrations are now open with exclusive 60% Solar Expo inaugural fee.',
+  announcementText: 'Official institutional registrations are now open for APSIWA State Membership.',
   resendApiKey: '',
   resendFromEmail: 'APSIWA Secretariat <onboarding@resend.dev>',
   galleryItems: GALLERY_ITEMS,
@@ -634,6 +634,17 @@ export function fetchWebsiteSettings(): WebsiteSettings {
     const raw = localStorage.getItem('apsiwa_website_settings');
     if (raw) {
       const parsed = JSON.parse(raw);
+      // Automatically migrate old 2000 / 60% discount defaults to flat 5000 membership fee
+      if (parsed.expoFee === 2000 && (parsed.expoDiscountPercentage === 60 || parsed.isExpoActive)) {
+        parsed.expoFee = 5000;
+        parsed.regularFee = 5000;
+        parsed.expoDiscountPercentage = 0;
+        parsed.isExpoActive = false;
+        parsed.expoOfferTitle = 'Annual Membership Fee';
+        try {
+          localStorage.setItem('apsiwa_website_settings', JSON.stringify({ ...DEFAULT_WEBSITE_SETTINGS, ...parsed }));
+        } catch {}
+      }
       return {
         ...DEFAULT_WEBSITE_SETTINGS,
         ...parsed,

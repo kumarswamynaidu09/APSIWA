@@ -62,7 +62,9 @@ import {
   saveMembershipApplication,
   calculateValidityDate,
   isEventExpired,
-  cleanupExpiredEvents
+  cleanupExpiredEvents,
+  DEFAULT_MEMBERSHIP_BENEFITS,
+  DEFAULT_WEBSITE_SETTINGS
 } from '../lib/supabase';
 import {
   sendApprovalConfirmationEmail,
@@ -170,6 +172,10 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const [actionSuccessMsg, setActionSuccessMsg] = useState('');
   const [savingSettings, setSavingSettings] = useState(false);
   const [isRefreshingList, setIsRefreshingList] = useState(false);
+  const [autoSaveRealtime, setAutoSaveRealtime] = useState(true);
+  const [realtimeSaveStatus, setRealtimeSaveStatus] = useState<'synced' | 'saving' | 'saved'>('synced');
+  const [lastSavedTimestamp, setLastSavedTimestamp] = useState<string>('Live on Supabase DB');
+  const [newBenefitText, setNewBenefitText] = useState('');
 
   // Settings form state (Synchronized with websiteSettings prop)
   const [settingsForm, setSettingsForm] = useState<WebsiteSettings>(websiteSettings);
@@ -694,6 +700,147 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     }
   };
 
+  // Save specific settings immediately and sync to Supabase & localStorage in real-time
+  const handlePushSettingsRealtime = async (updated: WebsiteSettings, showToast = true) => {
+    setSettingsForm(updated);
+    onUpdateWebsiteSettings(updated);
+    setRealtimeSaveStatus('saving');
+    try {
+      await saveWebsiteSettings(updated);
+      setRealtimeSaveStatus('saved');
+      setLastSavedTimestamp(`Saved live at ${new Date().toLocaleTimeString('en-IN')}`);
+      if (showToast) {
+        setActionSuccessMsg('⚡ Pricing & Membership information updated live in real time!');
+        setTimeout(() => setActionSuccessMsg(''), 3500);
+      }
+    } catch (err) {
+      console.error('Realtime save error:', err);
+      setRealtimeSaveStatus('synced');
+    }
+  };
+
+  // Smart pricing field updater with automatic connected calculation
+  const handleUpdatePricing = (
+    changes: {
+      regularFee?: number;
+      expoFee?: number;
+      expoDiscountPercentage?: number;
+      expoOfferTitle?: string;
+      isExpoActive?: boolean;
+    },
+    autoSave = autoSaveRealtime
+  ) => {
+    let regular = changes.regularFee !== undefined ? changes.regularFee : settingsForm.regularFee;
+    let expo = changes.expoFee !== undefined ? changes.expoFee : settingsForm.expoFee;
+    let discount = changes.expoDiscountPercentage !== undefined ? changes.expoDiscountPercentage : settingsForm.expoDiscountPercentage;
+    let title = changes.expoOfferTitle !== undefined ? changes.expoOfferTitle : settingsForm.expoOfferTitle;
+    let active = changes.isExpoActive !== undefined ? changes.isExpoActive : settingsForm.isExpoActive;
+
+    // Connected field calculations:
+    if (changes.regularFee !== undefined && changes.expoFee === undefined && changes.expoDiscountPercentage === undefined) {
+      if (active && discount > 0) {
+        expo = Math.round(regular * (1 - discount / 100));
+      }
+    } else if (changes.expoFee !== undefined) {
+      discount = regular > 0 ? Math.max(0, Math.min(100, Math.round(((regular - expo) / regular) * 100))) : 0;
+    } else if (changes.expoDiscountPercentage !== undefined) {
+      expo = Math.max(0, Math.round(regular * (1 - discount / 100)));
+    }
+
+    const updated: WebsiteSettings = {
+      ...settingsForm,
+      regularFee: regular,
+      expoFee: expo,
+      expoDiscountPercentage: discount,
+      expoOfferTitle: title,
+      isExpoActive: active
+    };
+
+    setSettingsForm(updated);
+
+    if (autoSave) {
+      handlePushSettingsRealtime(updated, false);
+    }
+  };
+
+  // Quick Preset Handlers
+  const handleApplyPreset = (preset: {
+    regular: number;
+    expo: number;
+    discount: number;
+    title: string;
+    active: boolean;
+  }) => {
+    const updated: WebsiteSettings = {
+      ...settingsForm,
+      regularFee: preset.regular,
+      expoFee: preset.expo,
+      expoDiscountPercentage: preset.discount,
+      expoOfferTitle: preset.title,
+      isExpoActive: preset.active
+    };
+    handlePushSettingsRealtime(updated, true);
+  };
+
+  // Add new member benefit
+  const handleAddBenefit = () => {
+    if (!newBenefitText.trim()) return;
+    const currentBenefits = settingsForm.membershipBenefits && settingsForm.membershipBenefits.length > 0
+      ? settingsForm.membershipBenefits
+      : DEFAULT_MEMBERSHIP_BENEFITS;
+    const updatedBenefits = [...currentBenefits, newBenefitText.trim()];
+    const updated: WebsiteSettings = { ...settingsForm, membershipBenefits: updatedBenefits };
+    handlePushSettingsRealtime(updated, true);
+    setNewBenefitText('');
+  };
+
+  // Remove member benefit
+  const handleRemoveBenefit = (index: number) => {
+    const currentBenefits = settingsForm.membershipBenefits && settingsForm.membershipBenefits.length > 0
+      ? settingsForm.membershipBenefits
+      : DEFAULT_MEMBERSHIP_BENEFITS;
+    const updatedBenefits = currentBenefits.filter((_, i) => i !== index);
+    const updated: WebsiteSettings = { ...settingsForm, membershipBenefits: updatedBenefits };
+    handlePushSettingsRealtime(updated, true);
+  };
+
+  // Reset member benefits to association defaults
+  const handleResetBenefits = () => {
+    const updated: WebsiteSettings = { ...settingsForm, membershipBenefits: DEFAULT_MEMBERSHIP_BENEFITS };
+    handlePushSettingsRealtime(updated, true);
+  };
+
+  // Direct status dropdown change for applicant in real-time
+  const handleQuickStatusChange = async (app: MembershipApplication, newStatus: 'Active' | 'Approved' | 'Pending Verification' | 'In Review' | 'Inactive' | 'Rejected') => {
+    const validDate = (newStatus === 'Active' || newStatus === 'Approved')
+      ? (app.validUntil || calculateValidityDate(app.paymentDate))
+      : app.validUntil;
+
+    const updated: MembershipApplication = {
+      ...app,
+      status: newStatus,
+      validUntil: validDate
+    };
+
+    setLocalApplications((prev) =>
+      prev.map((a) => (a.id?.toLowerCase() === app.id?.toLowerCase() ? updated : a))
+    );
+
+    if (onUpdateApplication) {
+      onUpdateApplication(updated);
+    }
+    if (viewingApp?.id === app.id) {
+      setViewingApp(updated);
+    }
+    if (editingApp?.id === app.id) {
+      setEditingApp(updated);
+    }
+
+    setActionSuccessMsg(`⚡ Member ${app.fullName} (${app.id}) status set to ${newStatus}!`);
+    await updateApplicationDetails(updated);
+    setTimeout(() => setActionSuccessMsg(''), 3500);
+  };
+
   // Save Website Settings (Realtime DB & State)
   const handleSaveSettings = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -701,6 +848,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     await saveWebsiteSettings(settingsForm);
     onUpdateWebsiteSettings(settingsForm);
     setSavingSettings(false);
+    setRealtimeSaveStatus('saved');
+    setLastSavedTimestamp(`Saved live at ${new Date().toLocaleTimeString('en-IN')}`);
     setActionSuccessMsg('Global website settings, fees, QR code & photos updated in realtime!');
     setTimeout(() => setActionSuccessMsg(''), 4000);
   };
@@ -1578,39 +1727,32 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                             )}
                           </td>
 
-                          {/* Active / Inactive Status & Validity with 1-Click Toggle */}
+                          {/* Active / Inactive Status & Validity with Realtime Status Selector */}
                           <td className="py-3.5 px-4">
                             <div className="space-y-1.5">
-                              <div className="flex items-center gap-2">
-                                <span
-                                  className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full font-black text-[10.5px] ${isAppActive
-                                      ? 'bg-[#8ef9a0]/25 text-[#006e2e] border border-[#006e2e]/30'
-                                      : isAppInactive
-                                        ? 'bg-[#ffdad6] text-[#ba1a1a] border border-[#ba1a1a]/30'
-                                        : app.status === 'In Review'
-                                          ? 'bg-[#d8e2ff] text-[#001a42] border border-[#003477]/20'
-                                          : app.status === 'Rejected'
-                                            ? 'bg-[#ffdad6] text-[#ba1a1a] border border-[#ba1a1a]/30'
-                                            : 'bg-[#ffbe3b]/25 text-[#00285e] border border-[#ffbe3b]/40'
-                                    }`}
-                                >
-                                  {isAppActive ? <Check size={11} /> : isAppInactive ? <Power size={11} /> : <Clock size={11} />}
-                                  <span>{app.status === 'Approved' ? 'Active' : app.status}</span>
-                                </span>
-
-                                {/* 1-Click Active / Inactive Status Switch Button */}
-                                <button
-                                  type="button"
-                                  onClick={() => handleToggleActiveStatus(app)}
-                                  className={`px-2 py-0.5 rounded-md text-[9.5px] font-extrabold border transition-all cursor-pointer ${
+                              <div className="flex items-center gap-1.5 flex-wrap">
+                                <select
+                                  value={app.status === 'Approved' ? 'Active' : app.status}
+                                  onChange={(e) => handleQuickStatusChange(app, e.target.value as any)}
+                                  className={`px-2 py-1 rounded-lg text-[10.5px] font-black border cursor-pointer outline-none transition-colors ${
                                     isAppActive
-                                      ? 'bg-[#fff0ed] text-[#ba1a1a] border-[#ffdad6] hover:bg-[#ffdad6]'
-                                      : 'bg-[#e8f5e9] text-[#006e2e] border-[#8ef9a0]/40 hover:bg-[#8ef9a0]/30'
+                                      ? 'bg-[#e8f5e9] text-[#006e2e] border-[#8ef9a0]/60 focus:ring-1 focus:ring-[#006e2e]'
+                                      : isAppInactive
+                                        ? 'bg-[#ffdad6] text-[#ba1a1a] border-[#ffb4ab] focus:ring-1 focus:ring-[#ba1a1a]'
+                                        : app.status === 'In Review'
+                                          ? 'bg-[#d8e2ff] text-[#001a42] border-[#003477]/30 focus:ring-1 focus:ring-[#003477]'
+                                          : app.status === 'Rejected'
+                                            ? 'bg-[#ffdad6] text-[#ba1a1a] border-[#ffb4ab] focus:ring-1 focus:ring-[#ba1a1a]'
+                                            : 'bg-[#fff3d4] text-[#8a5d00] border-[#ffbe3b]/50 focus:ring-1 focus:ring-[#ffbe3b]'
                                   }`}
-                                  title={isAppActive ? 'Click to deactivate membership' : 'Click to activate membership'}
+                                  title="Change Member Status (Realtime Save)"
                                 >
-                                  {isAppActive ? 'Set Inactive' : 'Set Active'}
-                                </button>
+                                  <option value="Active">🟢 Active</option>
+                                  <option value="Pending Verification">🟡 Pending</option>
+                                  <option value="In Review">🔵 In Review</option>
+                                  <option value="Inactive">⚪ Inactive</option>
+                                  <option value="Rejected">🔴 Rejected</option>
+                                </select>
                               </div>
 
                               <span className="text-[10px] text-[#737783] block font-mono">
@@ -2227,178 +2369,161 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
       {/* ========================================================================= */}
       {activeTab === 'settings' && (
         <form onSubmit={handleSaveSettings} className="space-y-8">
-          {/* Top Bar for Settings */}
-          <div className="bg-white rounded-2xl p-4 border border-[#e0e3e6] shadow-xs flex items-center justify-between gap-4">
+          {/* Top Bar for Settings with Realtime Status Indicators */}
+          <div className="bg-white rounded-3xl p-5 sm:p-6 border border-[#e0e3e6] shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
-              <h3 className="font-extrabold text-[#191c1e] text-sm sm:text-base">Website Assets &amp; Global Pricing Configuration</h3>
-              <p className="text-xs text-[#737783]">Realtime controls for UPI QR Code, Membership Pricing, Expo Offers, and Website Photos.</p>
+              <div className="flex items-center gap-2.5 flex-wrap">
+                <h3 className="font-black text-[#191c1e] text-base sm:text-lg">
+                  Website Assets &amp; Global Pricing Configuration
+                </h3>
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#e8f5e9] text-[#006e2e] text-xs font-black border border-[#8ef9a0]/50">
+                  <span className="w-2 h-2 rounded-full bg-[#006e2e] animate-pulse"></span>
+                  <span>{realtimeSaveStatus === 'saving' ? 'Saving Realtime...' : lastSavedTimestamp}</span>
+                </span>
+              </div>
+              <p className="text-xs text-[#737783] mt-1">
+                Realtime controls for UPI QR Code, Membership Pricing, Expo Offers, and Membership Structure. Changes apply instantly across the live portal.
+              </p>
             </div>
-            <button
-              type="submit"
-              disabled={savingSettings}
-              className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-[#006e2e] hover:bg-[#005322] text-white text-xs sm:text-sm font-extrabold shadow-md transition-all cursor-pointer active:scale-98 disabled:opacity-75 shrink-0"
-            >
-              <Save size={16} />
-              <span>{savingSettings ? 'Saving Realtime...' : 'Save All Settings'}</span>
-            </button>
+
+            <div className="flex items-center gap-3 shrink-0">
+              <label className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-[#f2f4f7] border border-[#e0e3e6] text-xs font-bold text-[#191c1e] cursor-pointer hover:bg-[#e0e3e6] transition-colors">
+                <input
+                  type="checkbox"
+                  checked={autoSaveRealtime}
+                  onChange={(e) => setAutoSaveRealtime(e.target.checked)}
+                  className="w-4 h-4 rounded text-[#006e2e] focus:ring-[#006e2e]"
+                />
+                <span className="flex items-center gap-1">
+                  <Zap size={13} className="text-[#ffbe3b]" />
+                  <span>Realtime Auto-Save</span>
+                </span>
+              </label>
+
+              <button
+                type="submit"
+                disabled={savingSettings}
+                className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl bg-[#006e2e] hover:bg-[#005322] text-white text-xs sm:text-sm font-extrabold shadow-md transition-all cursor-pointer active:scale-98 disabled:opacity-75 shrink-0"
+              >
+                <Save size={16} />
+                <span>{savingSettings ? 'Saving Realtime...' : 'Save All Settings'}</span>
+              </button>
+            </div>
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-            {/* Left 6 cols: QR Code & Banking Assets */}
-            <div className="lg:col-span-6 bg-white rounded-3xl p-6 sm:p-7 border border-[#e0e3e6] shadow-xs space-y-6">
-              <div className="flex items-center gap-2 pb-3 border-b border-[#e0e3e6]">
-                <QrCode size={18} className="text-[#003477]" />
-                <h3 className="text-base font-extrabold text-[#191c1e]">
-                  Official UPI QR Code &amp; Bank Ledger Details
-                </h3>
-              </div>
-
-              {/* QR Code Upload & Preview */}
-              <div className="p-4 rounded-2xl bg-[#f7f9fc] border border-[#e0e3e6] flex flex-col sm:flex-row items-center gap-5">
-                <div className="w-28 h-28 rounded-xl bg-white border border-[#e0e3e6] p-1 flex items-center justify-center shrink-0 shadow-xs">
-                  {settingsForm.qrCodeUrl ? (
-                    <img src={settingsForm.qrCodeUrl} alt="UPI QR" className="w-full h-full object-contain" />
-                  ) : (
-                    <QrCode size={40} className="text-[#737783]" />
-                  )}
+            {/* Left 6 cols: QR Code & Secretariat Contacts */}
+            <div className="lg:col-span-6 space-y-6">
+              {/* QR Code & Banking Assets */}
+              <div className="bg-white rounded-3xl p-6 sm:p-7 border border-[#e0e3e6] shadow-xs space-y-6">
+                <div className="flex items-center gap-2 pb-3 border-b border-[#e0e3e6]">
+                  <QrCode size={18} className="text-[#003477]" />
+                  <h3 className="text-base font-extrabold text-[#191c1e]">
+                    Official UPI QR Code &amp; Bank Ledger Details
+                  </h3>
                 </div>
 
-                <div className="space-y-2 flex-1 text-center sm:text-left">
-                  <span className="text-xs font-bold text-[#191c1e] block">Live Membership UPI QR</span>
-                  <p className="text-[11px] text-[#737783] leading-relaxed">
-                    Upload a new payment QR code image or paste the image link to update the live scanner immediately.
-                  </p>
-                  <label className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-[#003477] hover:bg-[#024aa3] text-white text-xs font-bold cursor-pointer transition-colors shadow-2xs">
-                    <Upload size={13} />
-                    <span>Upload New QR Image</span>
-                    <input type="file" accept="image/*" onChange={handleQrUpload} className="hidden" />
-                  </label>
-                </div>
-              </div>
-
-              {/* Banking Details Fields */}
-              <div className="space-y-3.5">
-                <div>
-                  <label className="block text-xs font-bold text-[#191c1e] mb-1">APSIWA UPI ID *</label>
-                  <input
-                    type="text"
-                    required
-                    value={settingsForm.upiId}
-                    onChange={(e) => setSettingsForm({ ...settingsForm, upiId: e.target.value })}
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-[#f2f4f7] border border-[#e0e3e6] text-xs font-mono font-bold text-[#003477] focus:bg-white focus:border-[#003477] outline-none"
-                  />
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-                  <div>
-                    <label className="block text-xs font-bold text-[#191c1e] mb-1">SBI Account Number *</label>
-                    <input
-                      type="text"
-                      required
-                      value={settingsForm.accountNumber}
-                      onChange={(e) => setSettingsForm({ ...settingsForm, accountNumber: e.target.value })}
-                      className="w-full px-3.5 py-2.5 rounded-xl bg-[#f2f4f7] border border-[#e0e3e6] text-xs font-mono font-bold text-[#191c1e] focus:bg-white focus:border-[#003477] outline-none"
-                    />
+                {/* QR Code Upload & Preview */}
+                <div className="p-4 rounded-2xl bg-[#f7f9fc] border border-[#e0e3e6] flex flex-col sm:flex-row items-center gap-5">
+                  <div className="w-28 h-28 rounded-xl bg-white border border-[#e0e3e6] p-1 flex items-center justify-center shrink-0 shadow-xs">
+                    {settingsForm.qrCodeUrl ? (
+                      <img src={settingsForm.qrCodeUrl} alt="UPI QR" className="w-full h-full object-contain" />
+                    ) : (
+                      <QrCode size={40} className="text-[#737783]" />
+                    )}
                   </div>
 
+                  <div className="space-y-2 flex-1 text-center sm:text-left">
+                    <span className="text-xs font-bold text-[#191c1e] block">Live Membership UPI QR</span>
+                    <p className="text-[11px] text-[#737783] leading-relaxed">
+                      Upload a new payment QR code image or paste the image link to update the live scanner immediately.
+                    </p>
+                    <label className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-[#003477] hover:bg-[#024aa3] text-white text-xs font-bold cursor-pointer transition-colors shadow-2xs">
+                      <Upload size={13} />
+                      <span>Upload New QR Image</span>
+                      <input type="file" accept="image/*" onChange={handleQrUpload} className="hidden" />
+                    </label>
+                  </div>
+                </div>
+
+                {/* Banking Details Fields */}
+                <div className="space-y-3.5">
                   <div>
-                    <label className="block text-xs font-bold text-[#191c1e] mb-1">IFSC Code *</label>
+                    <label className="block text-xs font-bold text-[#191c1e] mb-1">APSIWA UPI ID *</label>
                     <input
                       type="text"
                       required
-                      value={settingsForm.ifscCode}
-                      onChange={(e) => setSettingsForm({ ...settingsForm, ifscCode: e.target.value.toUpperCase() })}
+                      value={settingsForm.upiId}
+                      onChange={(e) => {
+                        const updated = { ...settingsForm, upiId: e.target.value };
+                        setSettingsForm(updated);
+                        if (autoSaveRealtime) handlePushSettingsRealtime(updated, false);
+                      }}
                       className="w-full px-3.5 py-2.5 rounded-xl bg-[#f2f4f7] border border-[#e0e3e6] text-xs font-mono font-bold text-[#003477] focus:bg-white focus:border-[#003477] outline-none"
                     />
                   </div>
-                </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-                  <div>
-                    <label className="block text-xs font-bold text-[#191c1e] mb-1">Bank Name</label>
-                    <input
-                      type="text"
-                      value={settingsForm.bankName}
-                      onChange={(e) => setSettingsForm({ ...settingsForm, bankName: e.target.value })}
-                      className="w-full px-3.5 py-2.5 rounded-xl bg-[#f2f4f7] border border-[#e0e3e6] text-xs font-medium focus:bg-white focus:border-[#003477] outline-none"
-                    />
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                    <div>
+                      <label className="block text-xs font-bold text-[#191c1e] mb-1">Bank Account Number *</label>
+                      <input
+                        type="text"
+                        required
+                        value={settingsForm.accountNumber}
+                        onChange={(e) => {
+                          const updated = { ...settingsForm, accountNumber: e.target.value };
+                          setSettingsForm(updated);
+                          if (autoSaveRealtime) handlePushSettingsRealtime(updated, false);
+                        }}
+                        className="w-full px-3.5 py-2.5 rounded-xl bg-[#f2f4f7] border border-[#e0e3e6] text-xs font-mono font-bold text-[#191c1e] focus:bg-white focus:border-[#003477] outline-none"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold text-[#191c1e] mb-1">IFSC Code *</label>
+                      <input
+                        type="text"
+                        required
+                        value={settingsForm.ifscCode}
+                        onChange={(e) => {
+                          const updated = { ...settingsForm, ifscCode: e.target.value.toUpperCase() };
+                          setSettingsForm(updated);
+                          if (autoSaveRealtime) handlePushSettingsRealtime(updated, false);
+                        }}
+                        className="w-full px-3.5 py-2.5 rounded-xl bg-[#f2f4f7] border border-[#e0e3e6] text-xs font-mono font-bold text-[#003477] focus:bg-white focus:border-[#003477] outline-none"
+                      />
+                    </div>
                   </div>
 
-                  <div>
-                    <label className="block text-xs font-bold text-[#191c1e] mb-1">Branch Name</label>
-                    <input
-                      type="text"
-                      value={settingsForm.bankBranch}
-                      onChange={(e) => setSettingsForm({ ...settingsForm, bankBranch: e.target.value })}
-                      className="w-full px-3.5 py-2.5 rounded-xl bg-[#f2f4f7] border border-[#e0e3e6] text-xs font-medium focus:bg-white focus:border-[#003477] outline-none"
-                    />
-                  </div>
-                </div>
-              </div>
-            </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                    <div>
+                      <label className="block text-xs font-bold text-[#191c1e] mb-1">Bank Name</label>
+                      <input
+                        type="text"
+                        value={settingsForm.bankName}
+                        onChange={(e) => {
+                          const updated = { ...settingsForm, bankName: e.target.value };
+                          setSettingsForm(updated);
+                          if (autoSaveRealtime) handlePushSettingsRealtime(updated, false);
+                        }}
+                        className="w-full px-3.5 py-2.5 rounded-xl bg-[#f2f4f7] border border-[#e0e3e6] text-xs font-medium focus:bg-white focus:border-[#003477] outline-none"
+                      />
+                    </div>
 
-            {/* Right 6 cols: Pricing, Expo Offer & Secretariat Info */}
-            <div className="lg:col-span-6 space-y-6">
-              {/* Pricing & Expo Offer Card */}
-              <div className="bg-white rounded-3xl p-6 sm:p-7 border border-[#e0e3e6] shadow-xs space-y-5">
-                <div className="flex items-center justify-between pb-3 border-b border-[#e0e3e6]">
-                  <div className="flex items-center gap-2">
-                    <Flame size={18} className="text-[#ffbe3b]" />
-                    <h3 className="text-base font-extrabold text-[#191c1e]">
-                      Membership Pricing &amp; Expo Discount
-                    </h3>
+                    <div>
+                      <label className="block text-xs font-bold text-[#191c1e] mb-1">Branch Name</label>
+                      <input
+                        type="text"
+                        value={settingsForm.bankBranch}
+                        onChange={(e) => {
+                          const updated = { ...settingsForm, bankBranch: e.target.value };
+                          setSettingsForm(updated);
+                          if (autoSaveRealtime) handlePushSettingsRealtime(updated, false);
+                        }}
+                        className="w-full px-3.5 py-2.5 rounded-xl bg-[#f2f4f7] border border-[#e0e3e6] text-xs font-medium focus:bg-white focus:border-[#003477] outline-none"
+                      />
+                    </div>
                   </div>
-                  <label className="inline-flex items-center gap-2 cursor-pointer text-xs font-bold text-[#006e2e]">
-                    <input
-                      type="checkbox"
-                      checked={settingsForm.isExpoActive}
-                      onChange={(e) => setSettingsForm({ ...settingsForm, isExpoActive: e.target.checked })}
-                      className="w-4 h-4 rounded text-[#006e2e] focus:ring-[#006e2e]"
-                    />
-                    <span>Offer Active</span>
-                  </label>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
-                  <div>
-                    <label className="block text-xs font-bold text-[#191c1e] mb-1">Regular Fee (₹)</label>
-                    <input
-                      type="number"
-                      value={settingsForm.regularFee}
-                      onChange={(e) => setSettingsForm({ ...settingsForm, regularFee: Number(e.target.value) })}
-                      className="w-full px-3.5 py-2.5 rounded-xl bg-[#f2f4f7] border border-[#e0e3e6] text-xs font-bold text-[#191c1e] focus:bg-white focus:border-[#003477] outline-none"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-bold text-[#006e2e] mb-1">Expo Offer Fee (₹)</label>
-                    <input
-                      type="number"
-                      value={settingsForm.expoFee}
-                      onChange={(e) => setSettingsForm({ ...settingsForm, expoFee: Number(e.target.value) })}
-                      className="w-full px-3.5 py-2.5 rounded-xl bg-[#f2f4f7] border border-[#006e2e]/40 text-xs font-extrabold text-[#006e2e] focus:bg-white focus:border-[#006e2e] outline-none"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-bold text-[#ffbe3b] mb-1">Discount %</label>
-                    <input
-                      type="number"
-                      value={settingsForm.expoDiscountPercentage}
-                      onChange={(e) => setSettingsForm({ ...settingsForm, expoDiscountPercentage: Number(e.target.value) })}
-                      className="w-full px-3.5 py-2.5 rounded-xl bg-[#f2f4f7] border border-[#e0e3e6] text-xs font-bold text-[#191c1e] focus:bg-white focus:border-[#003477] outline-none"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-[#191c1e] mb-1">Expo Promotional Banner Title</label>
-                  <input
-                    type="text"
-                    value={settingsForm.expoOfferTitle}
-                    onChange={(e) => setSettingsForm({ ...settingsForm, expoOfferTitle: e.target.value })}
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-[#f2f4f7] border border-[#e0e3e6] text-xs font-medium focus:bg-white focus:border-[#003477] outline-none"
-                  />
                 </div>
               </div>
 
@@ -2417,7 +2542,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                     <input
                       type="text"
                       value={settingsForm.secretariatPhone}
-                      onChange={(e) => setSettingsForm({ ...settingsForm, secretariatPhone: e.target.value })}
+                      onChange={(e) => {
+                        const updated = { ...settingsForm, secretariatPhone: e.target.value };
+                        setSettingsForm(updated);
+                        if (autoSaveRealtime) handlePushSettingsRealtime(updated, false);
+                      }}
                       className="w-full px-3.5 py-2.5 rounded-xl bg-[#f2f4f7] border border-[#e0e3e6] text-xs font-medium focus:bg-white focus:border-[#003477] outline-none"
                     />
                   </div>
@@ -2427,7 +2556,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                     <input
                       type="email"
                       value={settingsForm.secretariatEmail}
-                      onChange={(e) => setSettingsForm({ ...settingsForm, secretariatEmail: e.target.value })}
+                      onChange={(e) => {
+                        const updated = { ...settingsForm, secretariatEmail: e.target.value };
+                        setSettingsForm(updated);
+                        if (autoSaveRealtime) handlePushSettingsRealtime(updated, false);
+                      }}
                       className="w-full px-3.5 py-2.5 rounded-xl bg-[#f2f4f7] border border-[#e0e3e6] text-xs font-medium focus:bg-white focus:border-[#003477] outline-none"
                     />
                   </div>
@@ -2438,9 +2571,374 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                   <input
                     type="text"
                     value={settingsForm.secretariatAddress}
-                    onChange={(e) => setSettingsForm({ ...settingsForm, secretariatAddress: e.target.value })}
+                    onChange={(e) => {
+                      const updated = { ...settingsForm, secretariatAddress: e.target.value };
+                      setSettingsForm(updated);
+                      if (autoSaveRealtime) handlePushSettingsRealtime(updated, false);
+                    }}
                     className="w-full px-3.5 py-2.5 rounded-xl bg-[#f2f4f7] border border-[#e0e3e6] text-xs font-medium focus:bg-white focus:border-[#003477] outline-none"
                   />
+                </div>
+              </div>
+            </div>
+
+            {/* Right 6 cols: Pricing, Expo Offer, Membership Structure & Benefits */}
+            <div className="lg:col-span-6 space-y-6">
+              {/* Pricing & Expo Offer Card (Upgraded with Realtime connected calculations & Live Preview) */}
+              <div className="bg-white rounded-3xl p-6 sm:p-7 border border-[#e0e3e6] shadow-xs space-y-5">
+                <div className="flex items-center justify-between pb-3 border-b border-[#e0e3e6]">
+                  <div className="flex items-center gap-2">
+                    <Flame size={20} className="text-[#ffbe3b] fill-[#ffbe3b]" />
+                    <div>
+                      <h3 className="text-base font-black text-[#191c1e]">
+                        Membership Pricing &amp; Expo Discount
+                      </h3>
+                      <span className="text-[11px] text-[#737783] block">
+                        Realtime auto-calculated pricing &amp; promotional offer management
+                      </span>
+                    </div>
+                  </div>
+
+                  <label className="inline-flex items-center gap-2 cursor-pointer text-xs font-extrabold px-3 py-1.5 rounded-xl bg-[#e8f5e9] text-[#006e2e] border border-[#8ef9a0]/50 hover:bg-[#d0f0db] transition-colors">
+                    <input
+                      type="checkbox"
+                      checked={settingsForm.isExpoActive}
+                      onChange={(e) => handleUpdatePricing({ isExpoActive: e.target.checked }, true)}
+                      className="w-4 h-4 rounded text-[#006e2e] focus:ring-[#006e2e] cursor-pointer"
+                    />
+                    <span>{settingsForm.isExpoActive ? '🔥 Offer Active' : 'Offer Inactive'}</span>
+                  </label>
+                </div>
+
+                {/* Quick Presets Bar */}
+                <div>
+                  <label className="block text-[11px] font-bold uppercase tracking-wider text-[#737783] mb-1.5">
+                    Quick Pricing Presets (1-Click Realtime Apply)
+                  </label>
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      onClick={() => handleApplyPreset({
+                        regular: 5000,
+                        expo: 5000,
+                        discount: 0,
+                        title: 'Annual Membership Fee',
+                        active: false
+                      })}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer border ${
+                        !settingsForm.isExpoActive && settingsForm.regularFee === 5000
+                          ? 'bg-[#003477] text-white border-[#003477] shadow-xs'
+                          : 'bg-[#f2f4f7] text-[#434752] border-[#e0e3e6] hover:bg-[#e0e3e6]'
+                      }`}
+                    >
+                      Flat ₹5,000 (No Offer)
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => handleApplyPreset({
+                        regular: 5000,
+                        expo: 2000,
+                        discount: 60,
+                        title: 'Solar Expo Inaugural Offer (60% OFF)',
+                        active: true
+                      })}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer border ${
+                        settingsForm.isExpoActive && settingsForm.expoFee === 2000
+                          ? 'bg-[#006e2e] text-white border-[#006e2e] shadow-xs'
+                          : 'bg-[#e8f5e9] text-[#006e2e] border-[#8ef9a0]/50 hover:bg-[#d0f0db]'
+                      }`}
+                    >
+                      ⚡ Expo ₹2,000 (60% OFF)
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => handleApplyPreset({
+                        regular: 5000,
+                        expo: 2500,
+                        discount: 50,
+                        title: 'Special 50% State Subsidy Discount',
+                        active: true
+                      })}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer border ${
+                        settingsForm.isExpoActive && settingsForm.expoFee === 2500
+                          ? 'bg-[#ffbe3b] text-[#00285e] border-[#ffbe3b] shadow-xs'
+                          : 'bg-[#fff8e1] text-[#b28000] border-[#ffe082] hover:bg-[#ffecb3]'
+                      }`}
+                    >
+                      50% OFF (₹2,500)
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => handleApplyPreset({
+                        regular: 5000,
+                        expo: 3000,
+                        discount: 40,
+                        title: 'Early Bird Enrolment Discount',
+                        active: true
+                      })}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer border ${
+                        settingsForm.isExpoActive && settingsForm.expoFee === 3000
+                          ? 'bg-[#003477] text-white border-[#003477] shadow-xs'
+                          : 'bg-[#f2f4f7] text-[#434752] border-[#e0e3e6] hover:bg-[#e0e3e6]'
+                      }`}
+                    >
+                      40% OFF (₹3,000)
+                    </button>
+                  </div>
+                </div>
+
+                {/* Input Fields Grid */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
+                  <div>
+                    <label className="block text-xs font-bold text-[#191c1e] mb-1">Regular Fee (₹)</label>
+                    <input
+                      type="number"
+                      min="0"
+                      step="100"
+                      value={settingsForm.regularFee}
+                      onChange={(e) => handleUpdatePricing({ regularFee: Number(e.target.value) })}
+                      className="w-full px-3.5 py-2.5 rounded-xl bg-[#f2f4f7] border border-[#e0e3e6] text-xs font-bold text-[#191c1e] focus:bg-white focus:border-[#003477] outline-none"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-[#006e2e] mb-1">Expo Offer Fee (₹)</label>
+                    <input
+                      type="number"
+                      min="0"
+                      step="100"
+                      value={settingsForm.expoFee}
+                      onChange={(e) => handleUpdatePricing({ expoFee: Number(e.target.value) })}
+                      className="w-full px-3.5 py-2.5 rounded-xl bg-[#f2f4f7] border border-[#006e2e]/40 text-xs font-black text-[#006e2e] focus:bg-white focus:border-[#006e2e] outline-none"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-[#ffbe3b] mb-1">Discount %</label>
+                    <input
+                      type="number"
+                      min="0"
+                      max="100"
+                      value={settingsForm.expoDiscountPercentage}
+                      onChange={(e) => handleUpdatePricing({ expoDiscountPercentage: Number(e.target.value) })}
+                      className="w-full px-3.5 py-2.5 rounded-xl bg-[#f2f4f7] border border-[#e0e3e6] text-xs font-bold text-[#191c1e] focus:bg-white focus:border-[#003477] outline-none"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-[#191c1e] mb-1">Expo Promotional Banner Title</label>
+                  <input
+                    type="text"
+                    value={settingsForm.expoOfferTitle}
+                    onChange={(e) => handleUpdatePricing({ expoOfferTitle: e.target.value })}
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-[#f2f4f7] border border-[#e0e3e6] text-xs font-medium focus:bg-white focus:border-[#003477] outline-none"
+                  />
+                </div>
+
+                {/* LIVE PUBLIC PORTAL PREVIEW CARD */}
+                <div className="p-4 rounded-2xl bg-[#f7f9fc] border border-[#e0e3e6] space-y-2.5">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-black uppercase tracking-wider text-[#003477] flex items-center gap-1.5">
+                      <Eye size={13} />
+                      <span>Live Public Portal Preview</span>
+                    </span>
+                    <span className="text-[10.5px] font-bold text-[#006e2e] flex items-center gap-1">
+                      <span className="w-1.5 h-1.5 rounded-full bg-[#006e2e] animate-pulse"></span>
+                      <span>Realtime Active</span>
+                    </span>
+                  </div>
+
+                  <div className="p-3.5 rounded-xl bg-white border border-[#e0e3e6] flex flex-col sm:flex-row items-center justify-between gap-3 shadow-2xs">
+                    <div>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-xs font-black text-[#003477]">
+                          {settingsForm.isExpoActive ? settingsForm.expoOfferTitle : 'Standard Annual Fee'}
+                        </span>
+                        {settingsForm.isExpoActive && (
+                          <span className="px-2 py-0.5 rounded-full bg-[#006e2e] text-white text-[10px] font-black">
+                            {settingsForm.expoDiscountPercentage}% OFF
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-[11px] text-[#737783] mt-0.5">
+                        {settingsForm.isExpoActive ? (
+                          <>
+                            Regular <span className="line-through text-[#ba1a1a]">₹{settingsForm.regularFee.toLocaleString('en-IN')}</span> • Special Price <span className="font-extrabold text-[#006e2e]">₹{settingsForm.expoFee.toLocaleString('en-IN')} / Year</span>
+                          </>
+                        ) : (
+                          <>Flat Membership Fee: <span className="font-extrabold text-[#003477]">₹{settingsForm.regularFee.toLocaleString('en-IN')} / Year</span></>
+                        )}
+                      </p>
+                    </div>
+
+                    <div className="text-right shrink-0">
+                      <span className="text-[10px] uppercase font-bold text-[#737783] block">
+                        {settingsForm.isExpoActive ? 'Applicant Saves' : 'Annual Dues'}
+                      </span>
+                      <span className="text-sm font-black text-[#006e2e]">
+                        {settingsForm.isExpoActive ? `₹${(settingsForm.regularFee - settingsForm.expoFee).toLocaleString('en-IN')}` : `₹${settingsForm.regularFee.toLocaleString('en-IN')}`}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Membership Structure, Tier, Validity & Guidelines Editor */}
+              <div className="bg-white rounded-3xl p-6 sm:p-7 border border-[#e0e3e6] shadow-xs space-y-5">
+                <div className="flex items-center gap-2 pb-3 border-b border-[#e0e3e6]">
+                  <Award size={18} className="text-[#003477]" />
+                  <div>
+                    <h3 className="text-base font-extrabold text-[#191c1e]">
+                      Membership Structure &amp; Institutional Guidelines
+                    </h3>
+                    <span className="text-[11px] text-[#737783] block">
+                      Edit membership tier title, validity duration, and applicant instructions
+                    </span>
+                  </div>
+                </div>
+
+                <div className="space-y-3.5">
+                  <div>
+                    <label className="block text-xs font-bold text-[#191c1e] mb-1">
+                      Membership Tier Title (Printed on Smart ID Card)
+                    </label>
+                    <input
+                      type="text"
+                      value={settingsForm.membershipTierTitle || 'Annual Institutional Membership (Tier-1 EPC)'}
+                      onChange={(e) => {
+                        const updated = { ...settingsForm, membershipTierTitle: e.target.value };
+                        setSettingsForm(updated);
+                        if (autoSaveRealtime) handlePushSettingsRealtime(updated, false);
+                      }}
+                      className="w-full px-3.5 py-2.5 rounded-xl bg-[#f2f4f7] border border-[#e0e3e6] text-xs font-bold text-[#003477] focus:bg-white focus:border-[#003477] outline-none"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                    <div>
+                      <label className="block text-xs font-bold text-[#191c1e] mb-1">
+                        Validity Duration Description
+                      </label>
+                      <input
+                        type="text"
+                        value={settingsForm.membershipValidityPeriod || 'Valid for 1 Year from Date of Enrolment (365 Days)'}
+                        onChange={(e) => {
+                          const updated = { ...settingsForm, membershipValidityPeriod: e.target.value };
+                          setSettingsForm(updated);
+                          if (autoSaveRealtime) handlePushSettingsRealtime(updated, false);
+                        }}
+                        className="w-full px-3.5 py-2.5 rounded-xl bg-[#f2f4f7] border border-[#e0e3e6] text-xs font-medium focus:bg-white focus:border-[#003477] outline-none"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold text-[#191c1e] mb-1">
+                        State Trustmark Badge Text
+                      </label>
+                      <input
+                        type="text"
+                        value={settingsForm.membershipBadgeText || 'Government Recognized State Network'}
+                        onChange={(e) => {
+                          const updated = { ...settingsForm, membershipBadgeText: e.target.value };
+                          setSettingsForm(updated);
+                          if (autoSaveRealtime) handlePushSettingsRealtime(updated, false);
+                        }}
+                        className="w-full px-3.5 py-2.5 rounded-xl bg-[#f2f4f7] border border-[#e0e3e6] text-xs font-medium focus:bg-white focus:border-[#003477] outline-none"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-[#191c1e] mb-1">
+                      Applicant Registration Guidelines &amp; Enrolment Notes
+                    </label>
+                    <textarea
+                      rows={2}
+                      value={settingsForm.membershipGuidelinesNote || 'Registration is open for Solar EPC contractors, system integrators, inverter/module distributors, and green energy professionals operating in Andhra Pradesh.'}
+                      onChange={(e) => {
+                        const updated = { ...settingsForm, membershipGuidelinesNote: e.target.value };
+                        setSettingsForm(updated);
+                        if (autoSaveRealtime) handlePushSettingsRealtime(updated, false);
+                      }}
+                      className="w-full px-3.5 py-2.5 rounded-xl bg-[#f2f4f7] border border-[#e0e3e6] text-xs font-medium focus:bg-white focus:border-[#003477] outline-none resize-none"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Key Membership Privileges & Benefits List (Interactive Add/Delete) */}
+              <div className="bg-white rounded-3xl p-6 sm:p-7 border border-[#e0e3e6] shadow-xs space-y-4">
+                <div className="flex items-center justify-between pb-3 border-b border-[#e0e3e6]">
+                  <div className="flex items-center gap-2">
+                    <ShieldCheck size={18} className="text-[#006e2e]" />
+                    <div>
+                      <h3 className="text-base font-extrabold text-[#191c1e]">
+                        Key Membership Privileges &amp; Benefits
+                      </h3>
+                      <span className="text-[11px] text-[#737783] block">
+                        Features displayed to applicants on public portal
+                      </span>
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={handleResetBenefits}
+                    className="px-2.5 py-1 rounded-lg bg-[#f2f4f7] hover:bg-[#e0e3e6] text-[#434752] text-[11px] font-bold transition-colors cursor-pointer"
+                  >
+                    Reset Defaults
+                  </button>
+                </div>
+
+                {/* Active Benefits List */}
+                <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
+                  {(settingsForm.membershipBenefits && settingsForm.membershipBenefits.length > 0 ? settingsForm.membershipBenefits : DEFAULT_MEMBERSHIP_BENEFITS).map((benefit, idx) => (
+                    <div key={idx} className="flex items-center justify-between gap-2 p-2.5 rounded-xl bg-[#f7f9fc] border border-[#e0e3e6] text-xs group hover:bg-white hover:border-[#003477]/30 transition-all">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <span className="w-5 h-5 rounded-md bg-[#003477]/10 text-[#003477] font-bold text-[10px] flex items-center justify-center shrink-0">
+                          {idx + 1}
+                        </span>
+                        <span className="font-medium text-[#191c1e] truncate">{benefit}</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveBenefit(idx)}
+                        className="p-1 rounded-md text-[#ba1a1a] hover:bg-[#ffdad6] transition-colors cursor-pointer shrink-0 opacity-80 group-hover:opacity-100"
+                        title="Delete Benefit"
+                      >
+                        <Trash2 size={13} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Add New Benefit Input */}
+                <div className="flex items-center gap-2 pt-2">
+                  <input
+                    type="text"
+                    value={newBenefitText}
+                    onChange={(e) => setNewBenefitText(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        handleAddBenefit();
+                      }
+                    }}
+                    placeholder="Add new membership privilege or benefit..."
+                    className="flex-1 px-3.5 py-2 rounded-xl bg-[#f2f4f7] border border-[#e0e3e6] text-xs font-medium focus:bg-white focus:border-[#003477] outline-none"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleAddBenefit}
+                    className="inline-flex items-center gap-1 px-4 py-2 rounded-xl bg-[#003477] hover:bg-[#024aa3] text-white text-xs font-bold transition-all cursor-pointer shadow-xs active:scale-95 shrink-0"
+                  >
+                    <Plus size={14} />
+                    <span>Add</span>
+                  </button>
                 </div>
               </div>
             </div>

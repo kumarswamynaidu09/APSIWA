@@ -30,7 +30,8 @@ import {
   Images,
   ExternalLink,
   Check,
-  Clock
+  Clock,
+  Flame
 } from 'lucide-react';
 
 interface HomeScreenProps {
@@ -86,6 +87,28 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                 Andhra Pradesh Solar Integrators Welfare Association works towards building a stronger,
                 connected and sustainable solar integration community across Andhra Pradesh.
               </p>
+
+              {/* Dynamic Realtime Special Expo / Promotional Offer Banner */}
+              {websiteSettings?.isExpoActive && (
+                <div
+                  onClick={() => {
+                    onNavigate('membership');
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                  }}
+                  className="inline-flex items-center gap-2.5 px-4 py-2.5 rounded-2xl bg-gradient-to-r from-[#fff3d4] via-[#ffe8a3] to-[#fff3d4] border border-[#ffbe3b] text-[#00285e] shadow-xs cursor-pointer hover:shadow-md transition-all group animate-in fade-in"
+                >
+                  <Flame size={18} className="text-[#ffbe3b] fill-[#ffbe3b] animate-bounce shrink-0" />
+                  <div className="flex items-center gap-2 flex-wrap text-left">
+                    <span className="text-xs font-black uppercase tracking-wide text-[#003477]">
+                      {websiteSettings.expoOfferTitle}
+                    </span>
+                    <span className="px-2 py-0.5 rounded-full bg-[#006e2e] text-white text-[10.5px] font-black uppercase">
+                      ₹{websiteSettings.expoFee.toLocaleString('en-IN')} / Year ({websiteSettings.expoDiscountPercentage}% OFF)
+                    </span>
+                  </div>
+                  <ArrowRight size={14} className="text-[#003477] group-hover:translate-x-1 transition-transform ml-1 shrink-0" />
+                </div>
+              )}
 
               {/* CTAs */}
               <div className="flex flex-wrap items-center gap-4 pt-1">
@@ -556,12 +579,29 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                 </p>
               </div>
               <div className="flex flex-col sm:flex-row items-center gap-4 shrink-0">
+                <div className="text-center sm:text-right">
+                  <span className="text-[11px] text-[#8ef9a0] uppercase font-bold block">
+                    {websiteSettings?.isExpoActive ? websiteSettings.expoOfferTitle : (websiteSettings?.membershipTierTitle || 'Annual Membership')}
+                  </span>
+                  <div className="flex items-baseline justify-center sm:justify-end gap-2">
+                    <span className="text-xl sm:text-2xl font-black text-[#ffbe3b]">
+                      ₹{(websiteSettings?.isExpoActive ? websiteSettings.expoFee : (websiteSettings?.regularFee || 5000)).toLocaleString('en-IN')}
+                    </span>
+                    {websiteSettings?.isExpoActive && (
+                      <span className="text-xs text-white/60 line-through">
+                        ₹{(websiteSettings?.regularFee || 5000).toLocaleString('en-IN')}
+                      </span>
+                    )}
+                    <span className="text-xs text-white/80 font-semibold">/ Year</span>
+                  </div>
+                </div>
+
                 <button
                   onClick={() => {
                     onNavigate('membership');
                     window.scrollTo({ top: 0, behavior: 'smooth' });
                   }}
-                  className="w-full sm:w-auto inline-flex items-center justify-center px-8 py-3.5 rounded-xl bg-[#ffffff] text-[#003477] text-[14px] font-bold hover:bg-[#f2f4f7] transition-all shadow-md cursor-pointer gap-2"
+                  className="w-full sm:w-auto inline-flex items-center justify-center px-8 py-3.5 rounded-xl bg-[#ffffff] text-[#003477] text-[14px] font-bold hover:bg-[#f2f4f7] transition-all shadow-md cursor-pointer gap-2 shrink-0 active:scale-98"
                 >
                   <span>Become a Member</span>
                   <Award size={20} />

@@ -441,7 +441,7 @@ export function App() {
           </main>
 
           {/* Global Footer */}
-          <Footer onNavigate={handleNavigate} />
+          <Footer onNavigate={handleNavigate} websiteSettings={websiteSettings} />
 
           {/* Fullscreen Interactive Lightbox Modal */}
           <GalleryLightbox

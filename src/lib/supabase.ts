@@ -557,6 +557,17 @@ export async function deleteApplication(id: string): Promise<{ success: boolean;
   return { success: true, error: null };
 }
 
+export const DEFAULT_MEMBERSHIP_BENEFITS: string[] = [
+  'Official APSIWA Smart Digital ID Card with Live QR Verification',
+  'State Government, NREDCAP & AP DISCOMs Policy Representation',
+  'Priority Access to AP Solar EPC Contractors & Rooftop Leads Directory',
+  'Subsidized Stall Allocation & VIP Delegate Passes at Solar Expos',
+  'Technical Workshops, Quality Standards & Safety Commissioning Training',
+  'Legal Guidance, Dispute Resolution & Inter-EPC Welfare Arbitrations',
+  'Verified Member Listing with State Welfare Trustmark Badge',
+  'Access to Monthly Association Meetings & Policy Updates'
+];
+
 // Default Website Settings
 export const DEFAULT_WEBSITE_SETTINGS: WebsiteSettings = {
   regularFee: 5000,
@@ -574,6 +585,11 @@ export const DEFAULT_WEBSITE_SETTINGS: WebsiteSettings = {
   secretariatPhone: '+91 9866194904 / +91 9440316267',
   secretariatEmail: 'apsiwa2018@gmail.com',
   announcementText: 'Official institutional registrations are now open for APSIWA State Membership.',
+  membershipTierTitle: 'Annual Institutional Membership (Tier-1 EPC)',
+  membershipValidityPeriod: 'Valid for 1 Year from Date of Enrolment (365 Days)',
+  membershipBenefits: DEFAULT_MEMBERSHIP_BENEFITS,
+  membershipGuidelinesNote: 'Registration is open for Solar EPC contractors, system integrators, inverter/module distributors, and green energy professionals operating in Andhra Pradesh.',
+  membershipBadgeText: 'Government Recognized State Network',
   resendApiKey: '',
   resendFromEmail: 'APSIWA Secretariat <onboarding@resend.dev>',
   galleryItems: GALLERY_ITEMS,

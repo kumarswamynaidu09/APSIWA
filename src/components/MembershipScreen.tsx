@@ -21,9 +21,10 @@ import {
   AlertCircle,
   FileCheck,
   Award,
-  ExternalLink
+  ExternalLink,
+  Zap
 } from 'lucide-react';
-import { DEFAULT_WEBSITE_SETTINGS, saveMembershipApplication, calculateValidityDate } from '../lib/supabase';
+import { DEFAULT_WEBSITE_SETTINGS, DEFAULT_MEMBERSHIP_BENEFITS, saveMembershipApplication, calculateValidityDate } from '../lib/supabase';
 import { compressImage, validateImageFile } from '../lib/imageUtils';
 
 interface MembershipScreenProps {
@@ -481,6 +482,56 @@ export const MembershipScreen: React.FC<MembershipScreenProps> = ({
               <div className="flex items-center gap-1.5 text-xs font-semibold text-[#737783]">
                 <CreditCard size={14} />
                 <span>2. Payment (₹{activeFee.toLocaleString('en-IN')})</span>
+              </div>
+            </div>
+
+            {/* Dynamic Membership Privileges & Institutional Tier Overview */}
+            <div className="bg-white rounded-3xl p-5 sm:p-6 border border-[#e0e3e6] shadow-sm space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-[#e0e3e6]">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-9 h-9 rounded-xl bg-[#003477] text-white flex items-center justify-center font-bold shadow-2xs">
+                    <Award size={18} />
+                  </div>
+                  <div>
+                    <h3 className="text-sm sm:text-base font-extrabold text-[#191c1e]">
+                      {websiteSettings.membershipTierTitle || 'Annual Institutional Membership (Tier-1 EPC)'}
+                    </h3>
+                    <span className="text-[11px] text-[#006e2e] font-bold block">
+                      {websiteSettings.membershipValidityPeriod || 'Valid for 1 Year from Date of Enrolment (365 Days)'}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-[#f2f4f7] text-[#003477] text-[11px] font-bold border border-[#e0e3e6]">
+                    <ShieldCheck size={13} className="text-[#006e2e]" />
+                    <span>{websiteSettings.membershipBadgeText || 'Government Recognized Network'}</span>
+                  </span>
+                </div>
+              </div>
+
+              {websiteSettings.membershipGuidelinesNote && (
+                <p className="text-xs text-[#434752] leading-relaxed bg-[#f7f9fc] p-3 rounded-xl border border-[#e0e3e6]/80">
+                  {websiteSettings.membershipGuidelinesNote}
+                </p>
+              )}
+
+              {/* Dynamic Benefits Checklist */}
+              <div>
+                <span className="text-[11px] font-black uppercase tracking-wider text-[#737783] block mb-2">
+                  Institutional Privileges &amp; Member Entitlements
+                </span>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {(websiteSettings.membershipBenefits && websiteSettings.membershipBenefits.length > 0
+                    ? websiteSettings.membershipBenefits
+                    : DEFAULT_MEMBERSHIP_BENEFITS
+                  ).map((benefit, idx) => (
+                    <div key={idx} className="flex items-start gap-2 p-2 rounded-xl bg-[#f7f9fc] text-xs text-[#191c1e]">
+                      <CheckCircle2 size={15} className="text-[#006e2e] shrink-0 mt-0.5" />
+                      <span className="font-medium leading-tight">{benefit}</span>
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
 

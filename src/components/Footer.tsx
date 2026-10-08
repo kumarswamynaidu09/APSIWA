@@ -1,5 +1,5 @@
 import React from 'react';
-import { NavTab } from '../types';
+import { NavTab, WebsiteSettings } from '../types';
 import {
   ShieldCheck,
   Home,
@@ -16,9 +16,10 @@ import {
 
 interface FooterProps {
   onNavigate: (tab: NavTab) => void;
+  websiteSettings?: WebsiteSettings;
 }
 
-export const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
+export const Footer: React.FC<FooterProps> = ({ onNavigate, websiteSettings }) => {
   return (
     <footer className="w-full bg-[#ffffff] border-t border-[#e0e3e6] mt-margin">
       <div className="max-w-7xl mx-auto px-margin py-10">
@@ -135,7 +136,9 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
                 <div className="w-7 h-7 rounded-lg bg-[#f0f4fa] text-[#003477] flex items-center justify-center shrink-0 mt-0.5">
                   <MapPin size={15} />
                 </div>
-                <span className="leading-snug">Association Secretariat, Visakhapatnam, Andhra Pradesh, India</span>
+                <span className="leading-snug">
+                  {websiteSettings?.secretariatAddress || 'Association Secretariat, Visakhapatnam, Andhra Pradesh, India'}
+                </span>
               </div>
 
               {/* Official Email */}
@@ -143,8 +146,11 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
                 <div className="w-7 h-7 rounded-lg bg-[#f0f4fa] text-[#003477] flex items-center justify-center shrink-0">
                   <Mail size={15} />
                 </div>
-                <a className="hover:text-[#003477] transition-colors font-medium underline" href="mailto:apsiwa2018@gmail.com">
-                  apsiwa2018@gmail.com
+                <a
+                  className="hover:text-[#003477] transition-colors font-medium underline"
+                  href={`mailto:${websiteSettings?.secretariatEmail || 'apsiwa2018@gmail.com'}`}
+                >
+                  {websiteSettings?.secretariatEmail || 'apsiwa2018@gmail.com'}
                 </a>
               </div>
 

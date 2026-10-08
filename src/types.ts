@@ -16,6 +16,11 @@ export interface WebsiteSettings {
   secretariatPhone: string;
   secretariatEmail: string;
   announcementText: string;
+  membershipTierTitle?: string;
+  membershipValidityPeriod?: string;
+  membershipBenefits?: string[];
+  membershipGuidelinesNote?: string;
+  membershipBadgeText?: string;
   resendApiKey?: string;
   resendFromEmail?: string;
   galleryItems?: GalleryItem[];

@@ -208,7 +208,9 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, websiteSettings }) =
 
         {/* SCYTE Product Credit */}
         <div className="scyte-product-credit-row">
-          <ScyteProductCredit />
+          <div className="inline-flex items-center px-3.5 py-1.5 rounded-lg bg-[#1b261d] shadow-sm transition-opacity hover:opacity-95">
+            <ScyteProductCredit />
+          </div>
         </div>
 
         {/* Bottom Bar */}

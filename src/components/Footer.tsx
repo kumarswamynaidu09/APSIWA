@@ -206,6 +206,11 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, websiteSettings }) =
           </div>
         </div>
 
+        {/* SCYTE Product Credit */}
+        <div className="scyte-product-credit-row">
+          <ScyteProductCredit />
+        </div>
+
         {/* Bottom Bar */}
         <div className="border-t border-[#e0e3e6] mt-8 pt-6 flex flex-col sm:flex-row items-center justify-between gap-3 text-[12px] text-[#434752]">
           <span>© 2026 APSIWA. All Rights Reserved. Empowering Solar Integrators, Strengthening the Industry.</span>
@@ -225,11 +230,6 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, websiteSettings }) =
               <span>Admin Portal</span>
             </button>
           </div>
-        </div>
-
-        {/* SCYTE Product Credit */}
-        <div className="scyte-product-credit-row">
-          <ScyteProductCredit />
         </div>
       </div>
     </footer>

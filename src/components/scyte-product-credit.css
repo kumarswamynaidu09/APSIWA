@@ -1,0 +1,53 @@
+/* SCYTE brand credit — exact wordmark, responsive and framework-independent. */
+.scyte-product-credit {
+  --scyte-credit-color: #c2b897;
+  --scyte-credit-hover: #e6d5b8;
+
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6em;
+  color: var(--scyte-credit-color);
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 15px;
+  font-weight: 400;
+  letter-spacing: 0.06em;
+  line-height: 1;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: color 180ms ease, opacity 180ms ease;
+}
+
+.scyte-product-credit:hover {
+  color: var(--scyte-credit-hover);
+}
+
+.scyte-product-credit:focus-visible {
+  outline: 1px solid var(--scyte-credit-color);
+  outline-offset: 5px;
+}
+
+.scyte-product-credit__logo {
+  display: block;
+  width: 3.8em;
+  height: auto;
+  fill: currentColor;
+  flex: 0 0 auto;
+}
+
+/* Optional wrapper: puts the credit in the footer's right corner above a line. */
+.scyte-product-credit-row {
+  display: flex;
+  justify-content: flex-end;
+  margin: 36px 0 18px;
+}
+
+@media (max-width: 640px) {
+  .scyte-product-credit {
+    min-height: 38px;
+    font-size: 14px;
+  }
+
+  .scyte-product-credit-row {
+    margin: 30px 0 14px;
+  }
+}

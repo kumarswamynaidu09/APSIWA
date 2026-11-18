@@ -1,5 +1,6 @@
 import React from 'react';
 import { NavTab, WebsiteSettings } from '../types';
+import { ScyteProductCredit } from './ScyteProductCredit';
 import {
   ShieldCheck,
   Home,
@@ -224,6 +225,11 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, websiteSettings }) =
               <span>Admin Portal</span>
             </button>
           </div>
+        </div>
+
+        {/* SCYTE Product Credit */}
+        <div className="scyte-product-credit-row">
+          <ScyteProductCredit />
         </div>
       </div>
     </footer>
